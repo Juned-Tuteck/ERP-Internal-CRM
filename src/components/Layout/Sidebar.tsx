@@ -8,6 +8,7 @@ import {
   Building2, 
   Truck,
   HardHat,
+  FileText,
   BarChart3,
   Settings,
   X
@@ -29,6 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Customers', href: '/customers', icon: Building2 },
     { name: 'Vendors', href: '/vendors', icon: Truck },
     { name: 'Associates', href: '/associates', icon: HardHat },
+    { name: 'BOM', href: '/bom', icon: FileText },
     { name: 'Reports', href: '/reports', icon: BarChart3 },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
