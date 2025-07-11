@@ -10,6 +10,7 @@ import {
   HardHat,
   FileText,
   FileSpreadsheet,
+  ShoppingCart,
   BarChart3,
   Settings,
   X
@@ -34,6 +35,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'BOM', href: '/bom', icon: FileText },
     { name: 'Projects', href: '/projects', icon: FileSpreadsheet },
     { name: 'Quotations', href: '/quotations', icon: FileSpreadsheet },
+    { name: 'Sales Orders', href: '/sales-orders', icon: ShoppingCart },
+    { name: 'Sales Orders', href: '/sales-orders', icon: ShoppingCart },
     { name: 'Reports', href: '/reports', icon: BarChart3 },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
