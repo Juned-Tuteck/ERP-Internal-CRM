@@ -2,9 +2,15 @@ import React, { useState } from 'react';
 import { Save } from 'lucide-react';
 import { useCRM } from '../../../context/CRMContext';
 
+type NotificationSettingsType = {
+  emailNotifications: Record<string, boolean>;
+  pushNotifications: Record<string, boolean>;
+  smsNotifications: Record<string, boolean>;
+};
+
 const NotificationSettings: React.FC = () => {
   const { addNotification } = useCRM();
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<NotificationSettingsType>({
     emailNotifications: {
       newLeads: true,
       dealUpdates: true,
@@ -24,12 +30,12 @@ const NotificationSettings: React.FC = () => {
     },
   });
 
-  const handleToggle = (category: string, setting: string) => {
+  const handleToggle = (category: keyof NotificationSettingsType, setting: string) => {
     setSettings(prev => ({
       ...prev,
       [category]: {
-        ...prev[category as keyof typeof prev],
-        [setting]: !prev[category as keyof typeof prev][setting as keyof typeof prev[category as keyof typeof prev]],
+        ...prev[category],
+        [setting]: !prev[category][setting],
       },
     }));
   };
@@ -37,6 +43,8 @@ const NotificationSettings: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addNotification({
+      id: Date.now().toString(),
+      timestamp: new Date(),
       type: 'success',
       message: 'Notification preferences updated successfully!',
     });
