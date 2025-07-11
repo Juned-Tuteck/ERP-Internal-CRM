@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState } from 'react';
 import { Building2, MapPin, DollarSign, Calendar, Users, Phone, Mail, Globe, FileText, CreditCard } from 'lucide-react';
 
 interface CustomerDetailsProps {
