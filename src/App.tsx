@@ -11,6 +11,7 @@ import Vendors from './pages/Vendors/Vendors';
 import Associates from './pages/Associates/Associates';
 import BOM from './pages/BOM/BOM';
 import Quotations from './pages/Quotations/Quotations';
+import Quotations from './pages/Quotations/Quotations';
 import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
 import { CRMProvider } from './context/CRMContext';
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/vendors" element={<Vendors />} />
                 <Route path="/associates" element={<Associates />} />
                 <Route path="/bom" element={<BOM />} />
+                <Route path="/quotations" element={<Quotations />} />
                 <Route path="/quotations" element={<Quotations />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
