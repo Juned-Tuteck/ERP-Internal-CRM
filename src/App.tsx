@@ -10,6 +10,7 @@ import Customers from './pages/Customers/Customers';
 import Vendors from './pages/Vendors/Vendors';
 import Associates from './pages/Associates/Associates';
 import BOM from './pages/BOM/BOM';
+import Projects from './pages/Projects/Projects';
 import Quotations from './pages/Quotations/Quotations';
 import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/vendors" element={<Vendors />} />
                 <Route path="/associates" element={<Associates />} />
                 <Route path="/bom" element={<BOM />} />
+                <Route path="/projects" element={<Projects />} />
                 <Route path="/quotations" element={<Quotations />} />
                 <Route path="/quotations" element={<Quotations />} />
                 <Route path="/reports" element={<Reports />} />
