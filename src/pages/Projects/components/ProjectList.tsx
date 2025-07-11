@@ -1,5 +1,7 @@
 import React from 'react';
+import { useState } from 'react';
 import { Calendar, Building2, Tag, Clock, ThumbsUp, ThumbsDown, Eye, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { getProjectTypeColor } from '../../../utils/projectUtils';
 
 interface Project {
   id: string;
@@ -61,7 +63,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ selectedProject, onSelectProj
       id: '3',
       projectNumber: 'PRJ-2024-003',
       projectName: 'Hospital Fire Safety System',
-      projectType: 'Fire Safety',
+      projectType: 'construction',
       templateName: 'Healthcare Fire Safety Project',
       createdAt: '2024-01-05',
       customer: 'Digital Solutions Enterprise',
@@ -136,23 +138,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ selectedProject, onSelectProj
         return <Clock className="h-4 w-4 text-orange-600 mr-1" />;
       default:
         return null;
-    }
-  };
-
-  const getProjectTypeColor = (type: string) => {
-    switch (type) {
-      case 'Basement Ventilation':
-        return 'bg-blue-100 text-blue-800';
-      case 'HVAC Systems':
-        return 'bg-purple-100 text-purple-800';
-      case 'Fire Safety':
-        return 'bg-red-100 text-red-800';
-      case 'Electrical':
-        return 'bg-amber-100 text-amber-800';
-      case 'Plumbing':
-        return 'bg-cyan-100 text-cyan-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
     }
   };
 

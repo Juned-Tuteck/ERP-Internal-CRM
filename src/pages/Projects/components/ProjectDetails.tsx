@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Building2, Tag, Clock, FileText, Users, DollarSign, MapPin, Phone, Mail, CheckCircle, XCircle } from 'lucide-react';
+import { getProjectTypeColor } from '../../../utils/projectUtils';
 
 interface ProjectDetailsProps {
   project: any;
@@ -384,7 +385,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center space-x-3">
-                  <User className="h-5 w-5 text-gray-400" />
+                  <Users className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Contact Person</p>
                     <p className="text-sm font-medium text-gray-900">{enhancedProject.customerDetails.contactPerson}</p>
