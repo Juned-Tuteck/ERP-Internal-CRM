@@ -13,7 +13,6 @@ import BOM from './pages/BOM/BOM';
 import Projects from './pages/Projects/Projects';
 import Quotations from './pages/Quotations/Quotations';
 import SalesOrders from './pages/SalesOrders/SalesOrders';
-import SalesOrders from './pages/SalesOrders/SalesOrders';
 import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
 import { CRMProvider } from './context/CRMContext';
@@ -42,7 +41,6 @@ function App() {
                 <Route path="/bom" element={<BOM />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/quotations" element={<Quotations />} />
-                <Route path="/sales-orders" element={<SalesOrders />} />
                 <Route path="/sales-orders" element={<SalesOrders />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
