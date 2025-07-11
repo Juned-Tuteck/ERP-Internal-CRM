@@ -5,7 +5,8 @@ import {
   Users,
   UserPlus,
   TrendingUp,
-  Building2,
+  Building2, 
+  Truck,
   BarChart3,
   Settings,
   X
@@ -25,6 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Leads', href: '/leads', icon: UserPlus },
     { name: 'Sales', href: '/sales', icon: TrendingUp },
     { name: 'Customers', href: '/customers', icon: Building2 },
+    { name: 'Vendors', href: '/vendors', icon: Truck },
     { name: 'Reports', href: '/reports', icon: BarChart3 },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

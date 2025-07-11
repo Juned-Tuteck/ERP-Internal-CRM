@@ -7,6 +7,7 @@ import Contacts from './pages/Contacts/Contacts';
 import Leads from './pages/Leads/Leads';
 import Sales from './pages/Sales/Sales';
 import Customers from './pages/Customers/Customers';
+import Vendors from './pages/Vendors/Vendors';
 import Reports from './pages/Reports/Reports';
 import Settings from './pages/Settings/Settings';
 import { CRMProvider } from './context/CRMContext';
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/leads" element={<Leads />} />
                 <Route path="/sales" element={<Sales />} />
                 <Route path="/customers" element={<Customers />} />
+                <Route path="/vendors" element={<Vendors />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>
