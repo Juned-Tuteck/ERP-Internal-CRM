@@ -10,7 +10,6 @@ import {
   HardHat,
   FileText,
   FileSpreadsheet,
-  FileSpreadsheet,
   BarChart3,
   Settings,
   X
