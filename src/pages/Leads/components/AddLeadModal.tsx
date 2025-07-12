@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Upload, MessageSquare } from 'lucide-react';
+import { X, Save, ChevronLeft, ChevronRight, Upload, MessageSquare, DeleteIcon, Delete, Trash2 } from 'lucide-react';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -38,6 +38,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [showAssociateForm, setShowAssociateForm] = useState(false);
+  const [associateForm, setAssociateForm] = useState({
+    designation: '',
+    associateId: '',
+    otherInfo: ''
+  });
 
   const steps = [
     { id: 1, name: 'General Information', description: 'Basic lead details' },
@@ -74,6 +80,23 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
   const leadSources = ['Website', 'LinkedIn', 'Referral', 'Cold Call', 'Trade Show', 'Advertisement'];
   const leadStages = ['New Lead', 'Qualified', 'Meeting', 'Quotation Submitted', 'Won', 'Lost'];
   const associates = ['Architect A', 'Consultant B', 'Engineer C', 'Designer D'];
+
+  const associateDesignations = [
+    'Architect',
+    'Consultant',
+    'Engineer',
+    'Designer',
+    'Contractor',
+    'Other'
+  ];
+
+  // Replace this with your actual registered associates source
+  const registeredAssociates = [
+    { id: '1', name: 'Architect A' },
+    { id: '2', name: 'Consultant B' },
+    { id: '3', name: 'Engineer C' },
+    { id: '4', name: 'Designer D' }
+  ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -168,6 +191,40 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
     });
     setUploadedFiles([]);
     setNewComment('');
+  };
+
+  const handleAssociateFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setAssociateForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const addAssociate = () => {
+    if (!associateForm.designation || !associateForm.associateId) return;
+    const associateName = registeredAssociates.find(a => a.id === associateForm.associateId)?.name || '';
+    setFormData(prev => ({
+      ...prev,
+      involvedAssociates: [
+        ...prev.involvedAssociates,
+        {
+          designation: associateForm.designation,
+          associateId: associateForm.associateId,
+          associateName,
+          otherInfo: associateForm.otherInfo
+        }
+      ]
+    }));
+    setAssociateForm({ designation: '', associateId: '', otherInfo: '' });
+    setShowAssociateForm(false);
+  };
+
+  const removeAssociate = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      involvedAssociates: prev.involvedAssociates.filter((_, i) => i !== index)
+    }));
   };
 
   if (!isOpen) return null;
@@ -503,19 +560,101 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Involved Associates
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {associates.map(associate => (
-                      <label key={associate} className="flex items-center space-x-2">
+                  {formData.involvedAssociates.length === 0 && !showAssociateForm && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAssociateForm(true)}
+                      className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
+                    >
+                      + Tag Associate
+                    </button>
+                  )}
+
+                  {showAssociateForm && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                      <div>
+                        <select
+                          name="designation"
+                          value={associateForm.designation}
+                          onChange={handleAssociateFormChange}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                        >
+                          <option value="">Select Designation</option>
+                          {associateDesignations.map(des => (
+                            <option key={des} value={des}>{des}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <select
+                          name="associateId"
+                          value={associateForm.associateId}
+                          onChange={handleAssociateFormChange}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                        >
+                          <option value="">Select Associate</option>
+                          {registeredAssociates.map(a => (
+                            <option key={a.id} value={a.id}>{a.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
                         <input
-                          type="checkbox"
-                          checked={formData.involvedAssociates.includes(associate)}
-                          onChange={() => handleMultiSelectChange('involvedAssociates', associate)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          type="text"
+                          name="otherInfo"
+                          value={associateForm.otherInfo}
+                          onChange={handleAssociateFormChange}
+                          placeholder="Other Information"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
                         />
-                        <span className="text-sm text-gray-700">{associate}</span>
-                      </label>
-                    ))}
-                  </div>
+                      </div>
+                      <div className="col-span-3 flex gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={addAssociate}
+                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                          disabled={!associateForm.designation || !associateForm.associateId}
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAssociateForm(false)}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.involvedAssociates.length > 0 && (
+                    <div className="space-y-2">
+                      {formData.involvedAssociates.map((a, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <div>
+                            <span className="font-thin text-sm">{a.designation}</span>{' '}
+                            <span className="text-gray-700 text-sm">{a.associateName}</span>
+                            {a.otherInfo && <span className="text-gray-500 ml-2 text-xs">({a.otherInfo})</span>}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeAssociate(idx)}
+                            className="text-red-600 hover:text-red-800 text-xs"
+                          >
+                            <Trash2 className='h-5 w-5'/>
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setShowAssociateForm(true)}
+                        className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs mt-1"
+                      >
+                        + Tag Another Associate
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
