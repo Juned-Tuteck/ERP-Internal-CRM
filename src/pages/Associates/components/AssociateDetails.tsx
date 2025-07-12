@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { HardHat, MapPin, DollarSign, Calendar, Tag, Phone, Mail, FileText, CreditCard, Globe, Building2 } from 'lucide-react';
+import { HardHat, MapPin, DollarSign, Calendar, Tag, Phone, Mail, FileText, CreditCard, Globe, Building2, Trash2, Power, SquarePen } from 'lucide-react';
+import AddAssociateModal from './AddAssociateModal';
 
 interface AssociateDetailsProps {
   associate: any;
@@ -17,6 +18,43 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
       </div>
     );
   }
+
+  // State for modals
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Transform associate data for edit modal (if needed)
+  const transformToFormData = (associate: any) => ({
+    // Step 1: General Information
+    associateCategory: associate.associateCategory || associate.category || '',
+    associateType: associate.associateType || associate.type || '',
+    businessName: associate.businessName || associate.name || '',
+    name: associate.name || '',
+    contactNo: associate.contactNo || associate.phone || '',
+    email: associate.email || '',
+    country: associate.country || 'India',
+    currency: associate.currency || 'INR',
+    state: associate.state || '',
+    district: associate.district || '',
+    city: associate.city || '',
+    pincode: associate.pincode || '',
+    active: typeof associate.active === 'boolean' ? associate.active : (associate.status ? associate.status === 'active' : true),
+    // Bank Details
+    panNumber: associate.panNumber || '',
+    tanNumber: associate.tanNumber || '',
+    gstNumber: associate.gstNumber || '',
+    bankName: associate.bankName || '',
+    bankAccountNumber: associate.bankAccountNumber || '',
+    branchName: associate.branchName || '',
+    ifscCode: associate.ifscCode || '',
+    // Contact Persons
+    contactPersons: associate.contactPersons || [],
+    // Step 2: Branch Information
+    branches: associate.branches || [],
+    // Step 3: Upload Files
+    uploadedFiles: associate.uploadedFiles || [],
+  });
 
   // Enhanced associate data with additional details
   const enhancedAssociate = {
@@ -56,11 +94,6 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
       { name: 'Portfolio_2023.pdf', size: '8.2 MB', uploadDate: '2023-09-15' },
       { name: 'Architecture_License.pdf', size: '1.5 MB', uploadDate: '2023-09-15' },
       { name: 'Professional_Certificates.pdf', size: '3.8 MB', uploadDate: '2023-09-15' }
-    ],
-    projects: [
-      { name: 'Commercial Complex Design', category: 'Architecture', completionTime: '6 months' },
-      { name: 'Residential Layout Planning', category: 'Urban Planning', completionTime: '3 months' },
-      { name: 'Interior Design Consultation', category: 'Interior Design', completionTime: '2 months' }
     ]
   };
 
@@ -82,7 +115,6 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
   const tabs = [
     { id: 'general', name: 'General Information', icon: HardHat },
     { id: 'branches', name: 'Branch Information', icon: Building2 },
-    { id: 'projects', name: 'Projects & Services', icon: Tag },
     { id: 'documents', name: 'Documents', icon: FileText },
   ];
 
@@ -90,7 +122,7 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Associate Header */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-4">
             <div className="h-16 w-16 bg-teal-600 rounded-lg flex items-center justify-center">
               <span className="text-xl font-medium text-white">{associate.avatar}</span>
@@ -105,18 +137,123 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Associate since</p>
-            <p className="text-sm font-medium text-gray-900">
-              {new Date(associate.joinDate).toLocaleDateString('en-IN', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
+          <div className="flex flex-col md:items-end gap-2 w-full md:w-auto">
+            <div className="flex flex-col items-right">
+              <p className="text-sm text-gray-500">Associate since</p>
+              <span className="text-sm font-medium text-gray-900">
+                {new Date(associate.joinDate).toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                title="Edit Associate"
+              >
+                <SquarePen className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setIsDeactivateModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
+                title="Deactivate Associate"
+              >
+                <Power className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
+                title="Delete Associate"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+            {/* Edit Associate Modal (AddAssociateModal in edit mode) */}
+            {isEditModalOpen && (
+              <AddAssociateModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSubmit={(updatedAssociateData) => {
+                  // Replace with actual update logic, e.g., API call or state update
+                  console.log('Updated Associate:', updatedAssociateData);
+                  setIsEditModalOpen(false);
+                }}
+                initialData={transformToFormData(enhancedAssociate)}
+              />
+            )}
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <Trash2 className="h-6 w-6 text-red-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Delete Associate</h3>
+            </div>
+            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-red-600">permanently delete</span> this associate? This action cannot be undone.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                onClick={() => {
+                  // TODO: Replace with actual delete logic
+                  alert('Associate deleted!');
+                  setIsDeleteModalOpen(false);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {isDeactivateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <Power className="h-6 w-6 text-yellow-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Deactivate Associate</h3>
+            </div>
+            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-yellow-600">deactivate</span> this associate? You can reactivate them later.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => setIsDeactivateModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
+                onClick={() => {
+                  // TODO: Replace with actual deactivate logic
+                  alert('Associate deactivated!');
+                  setIsDeactivateModalOpen(false);
+                }}
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal Placeholder (implement your own edit modal if needed) */}
+      {/* {isEditModalOpen && (
+        <YourEditAssociateModal ... />
+      )} */}
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
@@ -349,33 +486,6 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {activeTab === 'projects' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Projects & Services</h3>
-            
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Project/Service</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Category</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Completion Time</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {enhancedAssociate.projects.map((project: any, index: number) => (
-                    <tr key={index}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{project.name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{project.category}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{project.completionTime}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 

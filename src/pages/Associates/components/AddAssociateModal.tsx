@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Upload, Plus, Trash2, Copy, Camera } from 'lucide-react';
 
 interface AddAssociateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (associateData: any) => void;
+  initialData?: any;
 }
 
 interface ContactPerson {
@@ -29,9 +30,9 @@ interface Branch {
   contactPersons: ContactPerson[];
 }
 
-const AddAssociateModal: React.FC<AddAssociateModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const AddAssociateModal: React.FC<AddAssociateModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState( initialData || {
     // Step 1: General Information
     associateCategory: '',
     associateType: '',
@@ -86,6 +87,18 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({ isOpen, onClose, 
     'Mumbai': ['Mumbai', 'Navi Mumbai', 'Thane', 'Kalyan', 'Vasai-Virar'],
     'Pune': ['Pune', 'Pimpri-Chinchwad', 'Wakad', 'Hinjewadi', 'Kharadi'],
     'Bangalore Urban': ['Bangalore', 'Electronic City', 'Whitefield', 'Koramangala', 'Indiranagar']
+  };
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+      setUploadedFiles(initialData.uploadedFiles || []);
+    }
+  }, [initialData]);
+
+  const isEditMode = Boolean(initialData);
+  const handleBreadcrumbClick = (stepId: number) => {
+    if (isEditMode) setCurrentStep(stepId);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -324,21 +337,44 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({ isOpen, onClose, 
           <nav className="flex space-x-4">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-2 ${
-                  currentStep === step.id ? 'text-blue-600' : 
-                  currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                    currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                {isEditMode ? (
+                  <button
+                    type="button"
+                    onClick={() => handleBreadcrumbClick(step.id)}
+                    className={`flex items-center space-x-2 focus:outline-none ${
+                      currentStep === step.id ? 'text-blue-600' : 
+                      currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                    }`}
+                    style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      currentStep === step.id ? 'bg-blue-100 text-blue-600' :
+                      currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {step.id}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{step.name}</p>
+                      <p className="text-xs">{step.description}</p>
+                    </div>
+                  </button>
+                ) : (
+                  <div className={`flex items-center space-x-2 ${
+                    currentStep === step.id ? 'text-blue-600' : 
+                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
                   }`}>
-                    {step.id}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      currentStep === step.id ? 'bg-blue-100 text-blue-600' :
+                      currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {step.id}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{step.name}</p>
+                      <p className="text-xs">{step.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{step.name}</p>
-                    <p className="text-xs">{step.description}</p>
-                  </div>
-                </div>
+                )}
                 {index < steps.length - 1 && (
                   <ChevronRight className="h-4 w-4 text-gray-400 mx-2" />
                 )}
@@ -1045,25 +1081,35 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({ isOpen, onClose, 
             >
               Cancel
             </button>
-            
-            {currentStep < 3 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </button>
-            ) : (
+            {isEditMode ? (
               <button
                 type="submit"
                 onClick={handleSubmit}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Register Associate
+                Save
               </button>
+            ) : (
+              currentStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  onClick={handleSubmit}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Register Associate
+                </button>
+              )
             )}
           </div>
         </div>
