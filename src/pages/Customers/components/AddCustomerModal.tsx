@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Upload, Plus, Trash2, Copy, Camera } from 'lucide-react';
 
 interface AddCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (customerData: any) => void;
+  initialData?: any; 
 }
 
 interface ContactPerson {
@@ -29,9 +30,9 @@ interface Branch {
   contactPersons: ContactPerson[];
 }
 
-const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(initialData || {
     // Step 1: General Information
     businessName: '',
     contactNo: '',
@@ -61,7 +62,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     uploadedFiles: [] as File[]
   });
 
+  // If initialData has files, use them as initial uploaded files (for edit mode)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [initialFiles, setInitialFiles] = useState<any[]>(initialData?.uploadedFiles || []);
+  const [activeFileTab, setActiveFileTab] = useState<number>(0);
 
   const steps = [
     { id: 1, name: 'General Information', description: 'Business and bank details' },
@@ -88,16 +92,24 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   const customerTypes = ['Enterprise', 'SME', 'Startup', 'Government', 'NGO'];
   const customerPotentials = ['High', 'Medium', 'Low'];
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+      setInitialFiles(initialData.uploadedFiles || []);
+      setUploadedFiles([]); // Reset uploaded files for edit mode
+    }
+  }, [initialData]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
   };
 
   const handleToggle = (name: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
       [name]: !prev[name as keyof typeof prev]
     }));
@@ -112,25 +124,25 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       email: '',
       photo: ''
     };
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
       contactPersons: [...prev.contactPersons, newContactPerson]
     }));
   };
 
   const updateContactPerson = (id: string, field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      contactPersons: prev.contactPersons.map(cp => 
+      contactPersons: prev.contactPersons.map((cp: ContactPerson) => 
         cp.id === id ? { ...cp, [field]: value } : cp
       )
     }));
   };
 
   const removeContactPerson = (id: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      contactPersons: prev.contactPersons.filter(cp => cp.id !== id)
+      contactPersons: prev.contactPersons.filter((cp: ContactPerson) => cp.id !== id)
     }));
   };
 
@@ -149,16 +161,16 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       pincode: '',
       contactPersons: []
     };
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
       branches: [...prev.branches, newBranch]
     }));
   };
 
   const copyFromCustomerDetails = (branchId: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
+      branches: prev.branches.map((branch: Branch) => 
         branch.id === branchId ? {
           ...branch,
           contactNumber: prev.contactNo,
@@ -176,18 +188,18 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   };
 
   const updateBranch = (id: string, field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
+      branches: prev.branches.map((branch: Branch) => 
         branch.id === id ? { ...branch, [field]: value } : branch
       )
     }));
   };
 
   const removeBranch = (id: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.filter(branch => branch.id !== id)
+      branches: prev.branches.filter((branch: Branch) => branch.id !== id)
     }));
   };
 
@@ -199,9 +211,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       email: '',
       photo: ''
     };
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
+      branches: prev.branches.map((branch: Branch) => 
         branch.id === branchId ? {
           ...branch,
           contactPersons: [...branch.contactPersons, newContactPerson]
@@ -211,12 +223,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   };
 
   const updateBranchContactPerson = (branchId: string, contactId: string, field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
+      branches: prev.branches.map((branch: Branch) => 
         branch.id === branchId ? {
           ...branch,
-          contactPersons: branch.contactPersons.map(cp => 
+          contactPersons: branch.contactPersons.map((cp: ContactPerson) => 
             cp.id === contactId ? { ...cp, [field]: value } : cp
           )
         } : branch
@@ -225,12 +237,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   };
 
   const removeBranchContactPerson = (branchId: string, contactId: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
+      branches: prev.branches.map((branch: Branch) => 
         branch.id === branchId ? {
           ...branch,
-          contactPersons: branch.contactPersons.filter(cp => cp.id !== contactId)
+          contactPersons: branch.contactPersons.filter((cp: ContactPerson) => cp.id !== contactId)
         } : branch
       )
     }));
@@ -242,9 +254,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     setUploadedFiles(prev => [...prev, ...files]);
   };
 
+  // Remove uploaded file (newly added in this session)
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Remove file from initial files (already uploaded in edit mode)
+  const removeInitialFile = (index: number) => {
+    setInitialFiles(prev => prev.filter((_, i) => i !== index));
+    // If the active tab is deleted, move to previous tab if possible
+    setActiveFileTab(prev => prev > 0 ? prev - 1 : 0);
+  };
+
+
+  // If in edit mode, Save button is shown instead of Next, and navigation is via breadcrumbs
+  const isEditMode = Boolean(initialData);
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -258,47 +282,57 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     }
   };
 
+  // Breadcrumb navigation handler
+  const handleBreadcrumbClick = (stepId: number) => {
+    setCurrentStep(stepId);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalData = {
       ...formData,
-      uploadedFiles: uploadedFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type
-      })),
+      uploadedFiles: [
+        ...initialFiles,
+        ...uploadedFiles.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type
+        }))
+      ],
       status: 'Pending Approval',
       registrationDate: new Date().toISOString()
     };
     onSubmit(finalData);
-    
-    // Reset form
-    setCurrentStep(1);
-    setFormData({
-      businessName: '',
-      contactNo: '',
-      email: '',
-      country: 'India',
-      currency: 'INR',
-      state: '',
-      district: '',
-      city: '',
-      customerType: '',
-      customerPotential: '',
-      pincode: '',
-      active: true,
-      panNumber: '',
-      tanNumber: '',
-      gstNumber: '',
-      bankName: '',
-      bankAccountNumber: '',
-      branchName: '',
-      ifscCode: '',
-      contactPersons: [],
-      branches: [],
-      uploadedFiles: []
-    });
-    setUploadedFiles([]);
+    // Reset form only if not in edit mode
+    if (!isEditMode) {
+      setCurrentStep(1);
+      setFormData({
+        businessName: '',
+        contactNo: '',
+        email: '',
+        country: 'India',
+        currency: 'INR',
+        state: '',
+        district: '',
+        city: '',
+        customerType: '',
+        customerPotential: '',
+        pincode: '',
+        active: true,
+        panNumber: '',
+        tanNumber: '',
+        gstNumber: '',
+        bankName: '',
+        bankAccountNumber: '',
+        branchName: '',
+        ifscCode: '',
+        contactPersons: [],
+        branches: [],
+        uploadedFiles: []
+      });
+      setUploadedFiles([]);
+      setInitialFiles([]);
+    }
   };
 
   if (!isOpen) return null;
@@ -324,10 +358,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
           <nav className="flex space-x-4">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-2 ${
-                  currentStep === step.id ? 'text-blue-600' : 
-                  currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                }`}>
+                <button
+                  type="button"
+                  onClick={() => handleBreadcrumbClick(step.id)}
+                  className={`flex items-center space-x-2 focus:outline-none ${
+                    currentStep === step.id ? 'text-blue-600' : 
+                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                  }`}
+                  style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+                >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     currentStep === step.id ? 'bg-blue-100 text-blue-600' :
                     currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
@@ -338,7 +377,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                     <p className="text-sm font-medium">{step.name}</p>
                     <p className="text-xs">{step.description}</p>
                   </div>
-                </div>
+                </button>
                 {index < steps.length - 1 && (
                   <ChevronRight className="h-4 w-4 text-gray-400 mx-2" />
                 )}
@@ -1012,27 +1051,61 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                   </div>
                 </div>
 
-                {uploadedFiles.length > 0 && (
+                {/* Tabs for initial files (edit mode) and newly uploaded files */}
+                {(initialFiles.length > 0 || uploadedFiles.length > 0) && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Files</h4>
-                    <div className="space-y-2">
-                      {uploadedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
+                    <div className="border-b border-gray-200 mb-2 flex flex-wrap">
+                      {initialFiles.map((file, idx) => (
+                        <div
+                          key={file.name + idx}
+                          className={`flex items-center px-3 py-1 mr-2 mb-2 rounded-t cursor-pointer ${activeFileTab === idx ? 'bg-blue-100 border-t-2 border-blue-500' : 'bg-gray-100'}`}
+                          onClick={() => setActiveFileTab(idx)}
+                        >
+                          <span className="text-xs font-medium text-gray-800 mr-2">{file.name}</span>
                           <button
                             type="button"
-                            onClick={() => removeFile(index)}
-                            className="text-red-600 hover:text-red-800"
+                            className="ml-1 text-gray-400 hover:text-red-600"
+                            onClick={e => { e.stopPropagation(); removeInitialFile(idx); }}
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3 w-3" />
                           </button>
                         </div>
                       ))}
+                      {uploadedFiles.map((file, idx) => (
+                        <div
+                          key={file.name + idx + initialFiles.length}
+                          className={`flex items-center px-3 py-1 mr-2 mb-2 rounded-t cursor-pointer ${activeFileTab === (idx + initialFiles.length) ? 'bg-blue-100 border-t-2 border-blue-500' : 'bg-gray-100'}`}
+                          onClick={() => setActiveFileTab(idx + initialFiles.length)}
+                        >
+                          <span className="text-xs font-medium text-gray-800 mr-2">{file.name}</span>
+                          <button
+                            type="button"
+                            className="ml-1 text-gray-400 hover:text-red-600"
+                            onClick={e => { e.stopPropagation(); removeFile(idx); }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {/* File preview/info for the active tab */}
+                    <div className="p-4 bg-gray-50 rounded-b">
+                      {activeFileTab < initialFiles.length && initialFiles[activeFileTab] && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{initialFiles[activeFileTab].name}</p>
+                          <p className="text-xs text-gray-500">{(initialFiles[activeFileTab].size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-xs text-gray-500">{initialFiles[activeFileTab].type}</p>
+                          {/* Optionally, add a download/view link if you have a URL */}
+                        </div>
+                      )}
+                      {activeFileTab >= initialFiles.length && uploadedFiles[activeFileTab - initialFiles.length] && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{uploadedFiles[activeFileTab - initialFiles.length].name}</p>
+                          <p className="text-xs text-gray-500">{(uploadedFiles[activeFileTab - initialFiles.length].size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-xs text-gray-500">{uploadedFiles[activeFileTab - initialFiles.length].type}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1061,25 +1134,36 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
             >
               Cancel
             </button>
-            
-            {currentStep < 3 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </button>
-            ) : (
+            {/* If in edit mode, show Save button always, else show Next/Save as per step */}
+            {isEditMode ? (
               <button
                 type="submit"
                 onClick={handleSubmit}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Register Customer
+                Save
               </button>
+            ) : (
+              currentStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  onClick={handleSubmit}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Register Customer
+                </button>
+              )
             )}
           </div>
         </div>

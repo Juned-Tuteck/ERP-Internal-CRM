@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
-import { Building2, MapPin, DollarSign, Calendar, Users, Phone, Mail, Globe, FileText, CreditCard } from 'lucide-react';
+import { Building2, MapPin, DollarSign, Calendar, Users, Phone, Mail, Globe, FileText, CreditCard, SquarePen } from 'lucide-react';
+import AddCustomerModal from './AddCustomerModal';
 
 interface CustomerDetailsProps {
   customer: any;
@@ -18,6 +19,37 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
       </div>
     );
   }
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const transformToFormData = (customer: any) => {
+    return {
+      businessName: customer.name || '',
+      contactNo: customer.phone || '',
+      email: customer.email || '',
+      country: customer.country || 'India',
+      currency: customer.currency || 'INR',
+      state: customer.state || '',
+      district: customer.district || '',
+      city: customer.city || '',
+      customerType: customer.type || '',
+      customerPotential: customer.potential || '',
+      pincode: customer.pincode || '',
+      active: customer.status === 'active',
+      panNumber: customer.panNumber || '',
+      tanNumber: customer.tanNumber || '',
+      gstNumber: customer.gstNumber || '',
+      bankName: customer.bankName || '',
+      bankAccountNumber: customer.bankAccountNumber || '',
+      branchName: customer.branchName || '',
+      ifscCode: customer.ifscCode || '',
+      contactPersons: customer.contactPersons || [],
+      branches: customer.branches || [],
+      uploadedFiles: customer.uploadedFiles || [],
+    };
+  };
+
+
 
   // Mock enhanced customer data
   const enhancedCustomer = {
@@ -98,6 +130,12 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
           <div className="text-right">
             <div className="text-2xl font-bold text-green-600">{customer.revenue}</div>
             <p className="text-sm text-gray-500">Total Revenue</p>
+            <button
+                onClick={() => setIsEditModalOpen(true)}
+                className=" rounded-full text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+              >
+                <SquarePen className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -385,6 +423,16 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
           </div>
         )}
       </div>
+          <AddCustomerModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSubmit={(updatedCustomerData) => {
+          // Replace with actual update logic, e.g., API call or state update
+          console.log('Updated Customer:', updatedCustomerData);
+          setIsEditModalOpen(false);
+        }}
+        initialData={transformToFormData(enhancedCustomer)}
+      />
     </div>
   );
 };
