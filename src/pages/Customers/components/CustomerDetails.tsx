@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState } from 'react';
-import { Building2, MapPin, DollarSign, Calendar, Users, Phone, Mail, Globe, FileText, CreditCard, SquarePen } from 'lucide-react';
+import { Building2, MapPin, DollarSign, Calendar, Users, Phone, Mail, Globe, FileText, CreditCard, SquarePen, Trash2, Power } from 'lucide-react';
 import AddCustomerModal from './AddCustomerModal';
 
 interface CustomerDetailsProps {
@@ -21,6 +21,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
   }
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
 
   const transformToFormData = (customer: any) => {
     return {
@@ -114,28 +116,47 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Customer Header */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-xl font-medium text-white">{customer.avatar}</span>
+            <div className="h-16 w-16 bg-purple-600 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-2xl font-bold text-white">{customer.avatar}</span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">{customer.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">{customer.name}</h2>
               <p className="text-sm text-gray-600">{customer.industry}</p>
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${getStatusColor(customer.status)}`}>
                 {customer.status}
               </span>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-green-600">{customer.revenue}</div>
-            <p className="text-sm text-gray-500">Total Revenue</p>
-            <button
+          <div className="flex flex-col md:items-end gap-1 w-full md:w-auto">
+           <div className="flex flex-col items-end">
+              <div className="text-2xl font-bold text-green-600">{customer.revenue}</div>
+              <p className="text-xs text-gray-500">Total Revenue</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <button
                 onClick={() => setIsEditModalOpen(true)}
-                className=" rounded-full text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                title="Edit Customer"
               >
                 <SquarePen className="h-5 w-5" />
-            </button>
+              </button>
+              <button
+                onClick={() => setIsDeactivateModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
+                title="Deactivate Customer"
+              >
+                <Power className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
+                title="Delete Customer"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -423,7 +444,69 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
           </div>
         )}
       </div>
-          <AddCustomerModal
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <Trash2 className="h-6 w-6 text-red-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Delete Customer</h3>
+            </div>
+            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-red-600">permanently delete</span> this customer? This action cannot be undone.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                onClick={() => {
+                  // TODO: Replace with actual delete logic
+                  alert('Customer deleted!');
+                  setIsDeleteModalOpen(false);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {isDeactivateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <Power className="h-6 w-6 text-yellow-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Deactivate Customer</h3>
+            </div>
+            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-yellow-600">deactivate</span> this customer? You can reactivate them later.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => setIsDeactivateModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
+                onClick={() => {
+                  // TODO: Replace with actual deactivate logic
+                  alert('Customer deactivated!');
+                  setIsDeactivateModalOpen(false);
+                }}
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AddCustomerModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSubmit={(updatedCustomerData) => {
