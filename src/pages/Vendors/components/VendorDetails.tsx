@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Truck, MapPin, DollarSign, Calendar, Tag, Phone, Mail, FileText, CreditCard, Globe, Building2 } from 'lucide-react';
+import { Truck, MapPin, DollarSign, Calendar, Tag, Phone, Mail, FileText, CreditCard, Globe, Building2, Trash2, Power, SquarePen } from 'lucide-react';
+import AddVendorModal from './AddVendorModal';
 
 interface VendorDetailsProps {
   vendor: any;
@@ -17,6 +18,41 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
       </div>
     );
   }
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // Transform vendor data for edit modal (if needed)
+  // Map all fields required by AddVendorModal's formData
+  const transformToFormData = (vendor: any) => ({
+    // Step 1: General Information
+    vendorCategory: vendor.vendorCategory || vendor.category || '',
+    vendorType: vendor.vendorType || vendor.type || '',
+    businessName: vendor.businessName || vendor.name || '',
+    contactNo: vendor.contactNo || vendor.phone || '',
+    email: vendor.email || '',
+    country: vendor.country || 'India',
+    currency: vendor.currency || 'INR',
+    state: vendor.state || '',
+    district: vendor.district || '',
+    city: vendor.city || '',
+    pincode: vendor.pincode || '',
+    active: typeof vendor.active === 'boolean' ? vendor.active : (vendor.status ? vendor.status === 'active' : true),
+    // Bank Details
+    panNumber: vendor.panNumber || '',
+    tanNumber: vendor.tanNumber || '',
+    gstNumber: vendor.gstNumber || '',
+    bankName: vendor.bankName || '',
+    bankAccountNumber: vendor.bankAccountNumber || '',
+    branchName: vendor.branchName || '',
+    ifscCode: vendor.ifscCode || '',
+    // Contact Persons
+    contactPersons: vendor.contactPersons || [],
+    // Step 2: Branch Information
+    branches: vendor.branches || [],
+    // Step 3: Upload Files
+    uploadedFiles: vendor.uploadedFiles || [],
+  });
 
   // Enhanced vendor data with additional details
   const enhancedVendor = {
@@ -56,11 +92,6 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
       { name: 'Company_Profile.pdf', size: '3.2 MB', uploadDate: '2023-09-15' },
       { name: 'ISO_Certificate.pdf', size: '1.5 MB', uploadDate: '2023-09-15' },
       { name: 'GST_Registration.pdf', size: '0.8 MB', uploadDate: '2023-09-15' }
-    ],
-    products: [
-      { name: 'Industrial Motors', category: 'Machinery', leadTime: '15-20 days' },
-      { name: 'Control Panels', category: 'Electronics', leadTime: '7-10 days' },
-      { name: 'Power Cables', category: 'Electrical', leadTime: '3-5 days' }
     ]
   };
 
@@ -82,7 +113,6 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
   const tabs = [
     { id: 'general', name: 'General Information', icon: Truck },
     { id: 'branches', name: 'Branch Information', icon: Building2 },
-    { id: 'products', name: 'Products & Services', icon: Tag },
     { id: 'documents', name: 'Documents', icon: FileText },
   ];
 
@@ -90,33 +120,132 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Vendor Header */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-xl font-medium text-white">{vendor.avatar}</span>
+            <div className="h-16 w-16 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-2xl font-bold text-white">{vendor.avatar}</span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">{vendor.name}</h2>
-              <div className="flex items-center mt-1">
-                <span className="text-sm text-gray-600 mr-2">{vendor.type}</span>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">{vendor.name}</h2>
+              <div className="flex items-center mt-1 gap-2">
+                <span className="text-sm text-gray-600">{vendor.type}</span>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status)}`}>
                   {vendor.status}
                 </span>
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Vendor since</p>
-            <p className="text-sm font-medium text-gray-900">
-              {new Date(vendor.joinDate).toLocaleDateString('en-IN', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
+          <div className="flex flex-col md:items-end gap-2 w-full md:w-auto">
+            <div className="flex flex-col items-right">
+              <p className="text-sm text-gray-500">Vendor since</p>
+              <span className="text-sm font-medium text-gray-900">
+                {new Date(vendor.joinDate).toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                title="Edit Vendor"
+              >
+                <SquarePen className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setIsDeactivateModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
+                title="Deactivate Vendor"
+              >
+                <Power className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
+                title="Delete Vendor"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+      {/* Edit Vendor Modal (AddVendorModal in edit mode) */}
+      {isEditModalOpen && (
+        <AddVendorModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSubmit={(updatedVendorData) => {
+            // Replace with actual update logic, e.g., API call or state update
+            console.log('Updated Vendor:', updatedVendorData);
+            setIsEditModalOpen(false);
+          }}
+          initialData={() =>  {return transformToFormData(enhancedVendor)}}
+        />
+      )}
           </div>
         </div>
       </div>
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <Trash2 className="h-6 w-6 text-red-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Delete Vendor</h3>
+            </div>
+            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-red-600">permanently delete</span> this vendor? This action cannot be undone.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                onClick={() => {
+                  // TODO: Replace with actual delete logic
+                  alert('Vendor deleted!');
+                  setIsDeleteModalOpen(false);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {isDeactivateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <div className="flex items-center mb-4">
+              <Power className="h-6 w-6 text-yellow-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Deactivate Vendor</h3>
+            </div>
+            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-yellow-600">deactivate</span> this vendor? You can reactivate them later.</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={() => setIsDeactivateModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
+                onClick={() => {
+                  // TODO: Replace with actual deactivate logic
+                  alert('Vendor deactivated!');
+                  setIsDeactivateModalOpen(false);
+                }}
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
@@ -349,33 +478,6 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {activeTab === 'products' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Products & Services</h3>
-            
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Product/Service</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Category</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Lead Time</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {enhancedVendor.products.map((product: any, index: number) => (
-                    <tr key={index}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{product.name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{product.category}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{product.leadTime}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 
