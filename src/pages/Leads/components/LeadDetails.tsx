@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { 
   Phone, Mail, Building, Globe, Star, TrendingUp, UserCheck, Calendar, 
-  AlertTriangle, Clock, FileText, Users, Edit, CheckCircle, XCircle 
+  AlertTriangle, Clock, FileText, Users, Edit, CheckCircle, XCircle, 
+  GitPullRequestArrow,
+  Link
 } from 'lucide-react';
 
 interface LeadDetailsProps {
@@ -82,29 +84,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     setWinLossReason('');
   };
 
-  const mockFollowUps = [
-    {
-      id: 1,
-      author: 'Priya Sharma',
-      timestamp: '2024-01-16T10:30:00',
-      text: 'Initial call completed. Client is interested in basement ventilation solution. Scheduled site visit for next week.',
-      type: 'call'
-    },
-    {
-      id: 2,
-      author: 'Rajesh Kumar',
-      timestamp: '2024-01-14T15:45:00',
-      text: 'Received RFQ documents. Technical specifications reviewed. Need to prepare detailed quotation.',
-      type: 'email'
-    },
-    {
-      id: 3,
-      author: 'Amit Singh',
-      timestamp: '2024-01-12T09:15:00',
-      text: 'Lead created from government tender portal. High priority project with tight deadline.',
-      type: 'note'
-    }
-  ];
+
 
   const mockFiles = [
     { name: 'RFQ_Mumbai_Metro_Ventilation.pdf', size: '2.4 MB', type: 'PDF' },
@@ -149,10 +129,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               {lead.leadStage !== 'Won' && lead.leadStage !== 'Lost' && (
                 <button
                   onClick={() => setShowWinLossModal(true)}
-                  className="inline-flex items-center px-3 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="rounded-full p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition"
+                  title="Update Status"
                 >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Update Status
+                  <GitPullRequestArrow className="h-5 w-5" />
                 </button>
               )}
               {lead.leadStage === 'Won' && (
@@ -287,38 +267,54 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         </div>
       </div>
 
-      {/* Follow-up History */}
+      {/* Additional Lead Details */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Communication History</h3>
-        <div className="space-y-4">
-          {mockFollowUps.map((followUp) => (
-            <div key={followUp.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className={`p-1 rounded-full ${
-                followUp.type === 'call' ? 'bg-green-100' :
-                followUp.type === 'email' ? 'bg-blue-100' : 'bg-gray-100'
-              }`}>
-                {followUp.type === 'call' ? (
-                  <Phone className={`h-4 w-4 ${
-                    followUp.type === 'call' ? 'text-green-600' :
-                    followUp.type === 'email' ? 'text-blue-600' : 'text-gray-600'
-                  }`} />
-                ) : followUp.type === 'email' ? (
-                  <Mail className="h-4 w-4 text-blue-600" />
-                ) : (
-                  <FileText className="h-4 w-4 text-gray-600" />
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-900">{followUp.author}</span>
-                  <span className="text-xs text-gray-500">
-                    {new Date(followUp.timestamp).toLocaleString('en-IN')}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700">{followUp.text}</p>
-              </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="flex items-center space-x-2">
+            <Building className="h-4 w-4 text-gray-400" />
+            <span className="text-gray-500">Customer Branch</span>
+            <div className="font-medium text-gray-900 ml-2">{lead.customerBranch || '-'}</div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Star className="h-4 w-4 text-yellow-500" />
+            <span className="text-gray-500">Currency</span>
+            <div className="font-medium text-gray-900 ml-2">{lead.currency || '-'}</div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Link className="h-4 w-4 text-blue-500" />
+            <span className="text-gray-500">Referenced By</span>
+            <div className="font-medium text-gray-900 ml-2">{lead.referencedBy || '-'}</div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <span className="text-gray-500">Lead Generated Date</span>
+            <div className="font-medium text-gray-900 ml-2">
+              {lead.leadGeneratedDate ? new Date(lead.leadGeneratedDate).toLocaleDateString('en-IN') : '-'}
             </div>
-          ))}
+          </div>
+          <div className="md:col-span-2 flex items-center space-x-2">
+            <Users className="h-4 w-4 text-blue-500" />
+            <span className="text-gray-500">Involved Associates</span>
+            {lead.involvedAssociates && lead.involvedAssociates.length > 0 ? (
+              <div className="flex flex-wrap gap-2 ml-2">
+                {lead.involvedAssociates.map((a: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
+                  >
+                    <span className="mr-1">{a.designation}</span>
+                    <span className="font-semibold">{a.associateName}</span>
+                    {a.otherInfo && (
+                      <span className="ml-1 text-gray-500">({a.otherInfo})</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="font-medium text-gray-900 ml-2">-</div>
+            )}
+          </div>
         </div>
       </div>
 

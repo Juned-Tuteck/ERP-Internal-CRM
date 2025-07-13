@@ -100,6 +100,26 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    // Reset dependent fields
+    if (name === 'businessName') {
+      setFormData(prev => ({
+        ...prev,
+        businessName: value,
+        customerBranch: '',
+        contactPerson: ''
+      }));
+      return;
+    }
+    if (name === 'customerBranch') {
+      setFormData(prev => ({
+        ...prev,
+        customerBranch: value,
+        contactPerson: ''
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -346,9 +366,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     >
                       <option value="">Select Contact Person</option>
-                      {formData.customerBranch && contactPersons[formData.customerBranch as keyof typeof contactPersons]?.map(person => (
-                        <option key={person} value={person}>{person}</option>
-                      ))}
+                      {formData.customerBranch &&
+                        (contactPersons[formData.customerBranch as keyof typeof contactPersons] || []).map(person => (
+                          <option key={person} value={person}>{person}</option>
+                        ))}
                     </select>
                   </div>
 

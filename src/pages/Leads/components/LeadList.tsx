@@ -3,22 +3,41 @@ import { Phone, Mail, Star, TrendingUp, Calendar, AlertTriangle } from 'lucide-r
 
 interface Lead {
   id: string;
-  projectName: string;
   businessName: string;
+  customerBranch: string;
+  currency: string;
   contactPerson: string;
-  email: string;
-  phone: string;
+  contactNo: string;
+  leadGeneratedDate: string;
+  referencedBy: string;
+  projectName: string;
   projectValue: string;
   leadType: string;
-  leadCriticality: string;
-  leadStage: string;
-  leadSource: string;
   workType: string;
-  eta: string;
+  leadCriticality: string;
+  leadSource: string;
+  leadStage: string;
+  leadStagnation: string;
   approximateResponseTime: string;
-  avatar: string;
-  submittedDate: string;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
+  eta: string;
+  leadDetails: string;
+  involvedAssociates: Array<{
+    designation: string;
+    associateId: string;
+    associateName: string;
+    otherInfo: string;
+  }>;
+  uploadedFiles: Array<{
+    name: string;
+    size: number;
+    type: string;
+  }>;
+  followUpComments: Array<{
+    id: number;
+    text: string;
+    timestamp: string;
+    author: string;
+  }>;
 }
 
 interface LeadListProps {
@@ -30,98 +49,193 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   const leads: Lead[] = [
     {
       id: '1',
-      projectName: 'Mumbai Metro Ventilation System',
       businessName: 'TechCorp Solutions Pvt Ltd',
+      customerBranch: 'Mumbai HQ',
+      currency: 'INR',
       contactPerson: 'Rajesh Kumar',
-      email: 'rajesh.kumar@techcorp.in',
-      phone: '+91 98765 43210',
-      projectValue: '₹25,00,000',
+      contactNo: '+91 98765 43210',
+      leadGeneratedDate: '2025-07-10',
+      referencedBy: 'LinkedIn',
+      projectName: 'Mumbai Metro Ventilation System',
+      projectValue: '2500000',
       leadType: 'Government',
-      leadCriticality: 'Critical',
-      leadStage: 'Quotation Submitted',
-      leadSource: 'Government Tender',
       workType: 'Basement Ventilation',
-      eta: '2024-06-30',
+      leadCriticality: 'Critical',
+      leadSource: 'Government Tender',
+      leadStage: 'Quotation Submitted',
+      leadStagnation: '',
       approximateResponseTime: '7',
-      avatar: 'MM',
-      submittedDate: '2024-01-15',
-      approvalStatus: 'approved'
+      eta: '2025-08-01',
+      leadDetails: 'Ventilation system for Mumbai Metro project.',
+      involvedAssociates: [
+        {
+          designation: 'Consultant',
+          associateId: '2',
+          associateName: 'Consultant B',
+          otherInfo: 'Lead Consultant'
+        },
+        {
+          designation: 'Consultant',
+          associateId: '2',
+          associateName: 'Consultant B',
+          otherInfo: 'Lead Consultant'
+        }
+      ],
+      uploadedFiles: [
+        { name: 'rfq.pdf', size: 204800, type: 'application/pdf' }
+      ],
+      followUpComments: [
+        {
+          id: 1,
+          text: 'Initial call with client completed.',
+          timestamp: '2025-07-11T10:00:00Z',
+          author: 'Sales User'
+        }
+      ]
     },
     {
       id: '2',
-      projectName: 'Corporate Office HVAC Upgrade',
       businessName: 'Innovate India Limited',
+      customerBranch: 'Pune Main',
+      currency: 'INR',
       contactPerson: 'Priya Sharma',
-      email: 'priya.sharma@innovate.co.in',
-      phone: '+91 87654 32109',
-      projectValue: '₹15,75,000',
+      contactNo: '+91 87654 32109',
+      leadGeneratedDate: '2025-07-12',
+      referencedBy: 'Referral',
+      projectName: 'Corporate Office HVAC Upgrade',
+      projectValue: '1575000',
       leadType: 'Corporate',
-      leadCriticality: 'High',
-      leadStage: 'Meeting',
-      leadSource: 'LinkedIn',
       workType: 'HVAC Systems',
-      eta: '2024-05-15',
+      leadCriticality: 'High',
+      leadSource: 'LinkedIn',
+      leadStage: 'Meeting',
+      leadStagnation: '',
       approximateResponseTime: '5',
-      avatar: 'CO',
-      submittedDate: '2024-01-14',
-      approvalStatus: 'approved'
+      eta: '2025-08-15',
+      leadDetails: 'Upgrade HVAC for corporate office.',
+      involvedAssociates: [
+        {
+          designation: 'Engineer',
+          associateId: '3',
+          associateName: 'Engineer C',
+          otherInfo: ''
+        }
+      ],
+      uploadedFiles: [
+        { name: 'drawing.dwg', size: 1048576, type: 'application/acad' }
+      ],
+      followUpComments: [
+        {
+          id: 2,
+          text: 'Site visit scheduled.',
+          timestamp: '2025-07-13T09:30:00Z',
+          author: 'Sales User'
+        }
+      ]
     },
     {
       id: '3',
-      projectName: 'Hospital Fire Safety System',
       businessName: 'Digital Solutions Enterprise',
+      customerBranch: 'Gurgaon HQ',
+      currency: 'INR',
       contactPerson: 'Amit Singh',
-      email: 'amit@digitalsolutions.in',
-      phone: '+91 76543 21098',
-      projectValue: '₹35,50,000',
+      contactNo: '+91 76543 21098',
+      leadGeneratedDate: '2025-07-09',
+      referencedBy: 'Trade Show',
+      projectName: 'Hospital Fire Safety System',
+      projectValue: '3550000',
       leadType: 'Private',
-      leadCriticality: 'Critical',
-      leadStage: 'Qualified',
-      leadSource: 'Referral',
       workType: 'Fire Safety',
-      eta: '2024-08-20',
+      leadCriticality: 'Critical',
+      leadSource: 'Referral',
+      leadStage: 'Qualified',
+      leadStagnation: '',
       approximateResponseTime: '10',
-      avatar: 'HF',
-      submittedDate: '2024-01-13',
-      approvalStatus: 'approved'
+      eta: '2025-09-10',
+      leadDetails: 'Fire safety system for hospital.',
+      involvedAssociates: [
+        {
+          designation: 'Architect',
+          associateId: '1',
+          associateName: 'Architect A',
+          otherInfo: 'External Consultant'
+        }
+      ],
+      uploadedFiles: [
+        { name: 'site-photo.jpg', size: 512000, type: 'image/jpeg' }
+      ],
+      followUpComments: [
+        {
+          id: 3,
+          text: 'Meeting with architect scheduled.',
+          timestamp: '2025-07-10T15:00:00Z',
+          author: 'Sales User'
+        }
+      ]
     },
     {
       id: '4',
-      projectName: 'Residential Complex Electrical',
       businessName: 'Manufacturing Industries Co',
+      customerBranch: 'Aurangabad Factory',
+      currency: 'INR',
       contactPerson: 'Sneha Patel',
-      email: 'sneha.patel@manufacturing.in',
-      phone: '+91 65432 10987',
-      projectValue: '₹12,25,000',
+      contactNo: '+91 65432 10987',
+      leadGeneratedDate: '2025-07-08',
+      referencedBy: 'Website',
+      projectName: 'Residential Complex Electrical',
+      projectValue: '1225000',
       leadType: 'Private',
-      leadCriticality: 'Medium',
-      leadStage: 'New Lead',
-      leadSource: 'Website',
       workType: 'Electrical',
-      eta: '2024-07-10',
+      leadCriticality: 'Medium',
+      leadSource: 'Website',
+      leadStage: 'New Lead',
+      leadStagnation: '',
       approximateResponseTime: '14',
-      avatar: 'RC',
-      submittedDate: '2024-01-12',
-      approvalStatus: 'pending'
+      eta: '2025-08-20',
+      leadDetails: 'Electrical system for residential complex.',
+      involvedAssociates: [],
+      uploadedFiles: [],
+      followUpComments: []
     },
     {
       id: '5',
-      projectName: 'Shopping Mall Plumbing System',
       businessName: 'FinTech Innovations Pvt Ltd',
+      customerBranch: 'Bangalore HQ',
+      currency: 'INR',
       contactPerson: 'Vikram Gupta',
-      email: 'vikram@fintech.in',
-      phone: '+91 54321 09876',
-      projectValue: '₹18,90,000',
+      contactNo: '+91 54321 09876',
+      leadGeneratedDate: '2025-07-07',
+      referencedBy: 'Trade Show',
+      projectName: 'Shopping Mall Plumbing System',
+      projectValue: '1890000',
       leadType: 'Corporate',
-      leadCriticality: 'High',
-      leadStage: 'Won',
-      leadSource: 'Trade Show',
       workType: 'Plumbing',
-      eta: '2024-04-25',
+      leadCriticality: 'High',
+      leadSource: 'Trade Show',
+      leadStage: 'Won',
+      leadStagnation: '',
       approximateResponseTime: '3',
-      avatar: 'SM',
-      submittedDate: '2024-01-10',
-      approvalStatus: 'approved'
+      eta: '2025-08-05',
+      leadDetails: 'Plumbing system for new shopping mall.',
+      involvedAssociates: [
+        {
+          designation: 'Designer',
+          associateId: '4',
+          associateName: 'Designer D',
+          otherInfo: ''
+        }
+      ],
+      uploadedFiles: [
+        { name: 'plumbing-plan.pdf', size: 307200, type: 'application/pdf' }
+      ],
+      followUpComments: [
+        {
+          id: 4,
+          text: 'Project won and contract signed.',
+          timestamp: '2025-07-14T11:00:00Z',
+          author: 'Sales User'
+        }
+      ]
     }
   ];
 
@@ -191,7 +305,15 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <div className="h-10 w-10 bg-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-white">{lead.avatar}</span>
+                  {/* Use initials as avatar */}
+                  <span className="text-sm font-medium text-white">
+                    {lead.businessName
+                      .split(' ')
+                      .map(word => word[0])
+                      .join('')
+                      .substring(0, 2)
+                      .toUpperCase()}
+                  </span>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
@@ -206,7 +328,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
                 </div>
                 <p className="text-sm text-gray-600 truncate">{lead.businessName}</p>
                 <p className="text-xs text-gray-500 truncate">{lead.contactPerson}</p>
-                
+
                 <div className="flex items-center justify-between mt-2">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStageColor(lead.leadStage)}`}>
                     {lead.leadStage}
@@ -216,26 +338,27 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
                     {lead.projectValue}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center text-xs text-gray-500">
                       <Phone className="h-3 w-3 mr-1" />
-                      {lead.phone.replace('+91 ', '')}
+                      {lead.contactNo.replace('+91 ', '')}
                     </div>
                     <div className="text-xs text-gray-500">
                       {lead.workType}
                     </div>
                   </div>
-                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${getApprovalStatusColor(lead.approvalStatus)}`}>
+                  {/* approvalStatus is not in Lead, so remove this */}
+                  {/* <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${getApprovalStatusColor(lead.approvalStatus)}`}>
                     {lead.approvalStatus}
-                  </span>
+                  </span> */}
                 </div>
-                
+
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center text-xs text-gray-500">
                     <Calendar className="h-3 w-3 mr-1" />
-                    ETA: {new Date(lead.eta).toLocaleDateString('en-IN')}
+                    ETA: {lead.eta ? new Date(lead.eta).toLocaleDateString('en-IN') : 'N/A'}
                   </div>
                   <div className="text-xs text-gray-500">
                     Response: {lead.approximateResponseTime}d
