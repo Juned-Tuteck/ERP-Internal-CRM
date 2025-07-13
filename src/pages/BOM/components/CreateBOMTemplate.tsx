@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search, Edit } from 'lucide-react';
 
 interface CreateBOMTemplateProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (templateData: any) => void;
+  initialData?: {
+    workType: string;
+    name: string;
+    description: string;
+    items: BOMItem[];
+    // add other fields as needed
+  };
 }
 
 interface BOMItem {
@@ -18,7 +25,12 @@ interface BOMItem {
   specifications?: string;
 }
 
-const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, onSubmit }) => {
+const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData // <-- new prop
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [method, setMethod] = useState<'manual' | 'upload'>('manual');
   const [formData, setFormData] = useState({
@@ -80,6 +92,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
       setSelectedItem(null);
       setQuantity(1);
       setSpecification('');
+      setSearchQuery(''); // <-- clear search after adding
     }
   };
 
@@ -125,6 +138,12 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
       setShowSpecModal(true);
     }
   };
+
+  const handleIncreaseQuantity = (id: string) => {
+    setItems(prev => prev.map(item => 
+      item.id === id ? { ...item, quantity: item.quantity + 1, price: item.rate * (item.quantity + 1) } : item
+    ));
+  }
 
   const handleSaveSpecification = () => {
     if (editingItemId) {
@@ -203,67 +222,113 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
     }
   };
 
+  const isEditMode = !!initialData;
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setFormData({
+        workType: initialData.workType || '',
+        name: initialData.name || '',
+        description: initialData.description || '',
+      });
+      setItems(initialData.items || []);
+      setCurrentStep(1);
+      setMethod('manual');
+    } else if (isOpen && !initialData) {
+      setFormData({
+        workType: '',
+        name: '',
+        description: '',
+      });
+      setItems([]);
+      setCurrentStep(1);
+      setMethod('manual');
+    }
+  }, [isOpen, initialData]);
+
   const handleSubmit = () => {
     const templateData = {
       ...formData,
       items,
       totalItems: items.length,
       totalValue: items.reduce((sum, item) => sum + item.price, 0),
-      createdDate: new Date().toISOString(),
-      status: 'active'
+      createdDate: isEditMode && initialData?.createdDate ? initialData.createdDate : new Date().toISOString(),
+      status: isEditMode && initialData?.status ? initialData.status : 'active'
     };
-    
     onSubmit(templateData);
-    
-    // Reset form
-    setCurrentStep(1);
-    setFormData({
-      workType: '',
-      name: '',
-      description: '',
-    });
-    setItems([]);
-    setMethod('manual');
-    setCsvFile(null);
+    // Reset only if not editing
+    if (!isEditMode) {
+      setCurrentStep(1);
+      setFormData({
+        workType: '',
+        name: '',
+        description: '',
+      });
+      setItems([]);
+      setMethod('manual');
+      setCsvFile(null);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 min-h-[540px] sm:min-h-[600px] md:min-h-[650px] max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Create BOM Template</h3>
-            <p className="text-sm text-gray-500">Step {currentStep} of 2</p>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {isEditMode ? 'Edit BOM Template' : 'Create BOM Template'}
+            </h3>
+            {method === 'manual' && (
+              <nav className="flex items-center space-x-2 mt-1" aria-label="Breadcrumb">
+                <span
+                  className={`text-xs font-medium cursor-pointer ${currentStep === 1 ? 'text-blue-700 underline' : 'text-gray-500 hover:underline'}`}
+                  onClick={() => isEditMode && setCurrentStep(1)}
+                  style={isEditMode ? { pointerEvents: 'auto' } : { pointerEvents: 'none' }}
+                >
+                  Step 1: Template Details
+                </span>
+                <span className="text-gray-400">→</span>
+                <span
+                  className={`text-xs font-medium cursor-pointer ${currentStep === 2 ? 'text-blue-700 underline' : 'text-gray-500 hover:underline'}`}
+                  onClick={() => isEditMode && setCurrentStep(2)}
+                  style={isEditMode ? { pointerEvents: 'auto' } : { pointerEvents: 'none' }}
+                >
+                  Step 2: Add Items
+                </span>
+              </nav>
+            )}
+            {method === 'upload' && (
+              <p className="text-xs text-gray-500 mt-1">Upload a CSV file to create a BOM template</p>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-6 w-6" />
           </button>
         </div>
 
         {/* Method Selection */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <label className="block text-xs font-medium text-gray-700 mb-2">Choose Method</label>
           <div className="flex space-x-4">
             <button
-              onClick={() => setMethod('manual')}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
+              onClick={() => { setMethod('manual'); setCurrentStep(1); }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                 method === 'manual' 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                  : 'bg-gray-100 text-gray-700 border border-gray-300'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow'
+                  : 'bg-white text-gray-700 border border-gray-300'
               }`}
             >
               Manual Creation
             </button>
             <button
-              onClick={() => setMethod('upload')}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
+              onClick={() => { setMethod('upload'); setCurrentStep(1); }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                 method === 'upload' 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                  : 'bg-gray-100 text-gray-700 border border-gray-300'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow'
+                  : 'bg-white text-gray-700 border border-gray-300'
               }`}
             >
               Upload from CSV
@@ -271,14 +336,21 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        <div
+          className="
+            flex-1
+            p-6
+            overflow-y-auto
+            min-h-[350px] sm:min-h-[400px] md:min-h-[450px]
+          "
+        >
           {method === 'manual' ? (
             <>
               {/* Step 1: Define Template Details */}
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
                       Work Type *
                     </label>
                     <select
@@ -296,7 +368,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
                       BOM Template Name *
                     </label>
                     <input
@@ -311,7 +383,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Description
                     </label>
                     <textarea
@@ -319,7 +391,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
                       value={formData.description}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter template description"
                     />
                   </div>
@@ -329,20 +401,6 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
               {/* Step 2: Add BOM Items */}
               {currentStep === 2 && (
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      name="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter template description"
-                    />
-                  </div>
-
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Add Items</h4>
                     
@@ -405,7 +463,10 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
                                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
                                 <td className="px-4 py-2 whitespace-nowrap">
                                   <button
-                                    onClick={() => setSelectedItem(item)}
+                                    onClick={() => {
+                                      setSelectedItem(item);
+                                      setSearchQuery('');
+                                    }}
                                     className="text-blue-600 hover:text-blue-900 text-sm font-medium"
                                   >
                                     Select
@@ -503,16 +564,16 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
                               <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                                 <div className="flex space-x-2">
                                   <button
+                                    onClick={() => handleIncreaseQuantity(item.id)}
+                                    className="text-green-600 hover:text-green-900 pr-5"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </button>
+                                  <button
                                     onClick={() => handleEditItem(item)}
                                     className="text-blue-600 hover:text-blue-900"
                                   >
                                     <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleAddSpecification(item.id)}
-                                    className="text-green-600 hover:text-green-900"
-                                  >
-                                    <Plus className="h-4 w-4" />
                                   </button>
                                   <button
                                     onClick={() => handleRemoveItem(item.id)}
@@ -667,18 +728,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
                 >
                   Cancel
                 </button>
-                
-                {currentStep < 2 ? (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!formData.workType || !formData.name}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </button>
-                ) : (
+                {isEditMode ? (
                   <button
                     type="button"
                     onClick={handleSubmit}
@@ -686,8 +736,30 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({ isOpen, onClose, 
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    Save Template
+                    Update Template
                   </button>
+                ) : (
+                  currentStep < 2 ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      disabled={!formData.workType || !formData.name}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={items.length === 0}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Template
+                    </button>
+                  )
                 )}
               </div>
             </>
