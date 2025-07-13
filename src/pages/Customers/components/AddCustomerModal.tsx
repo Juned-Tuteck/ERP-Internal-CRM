@@ -267,7 +267,6 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   };
 
 
-  // If in edit mode, Save button is shown instead of Next, and navigation is via breadcrumbs
   const isEditMode = Boolean(initialData);
 
   const handleNext = () => {
@@ -360,7 +359,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
               <div key={step.id} className="flex items-center">
                 <button
                   type="button"
-                  onClick={() => handleBreadcrumbClick(step.id)}
+                  disabled={!isEditMode}
+                  onClick={() => isEditMode && handleBreadcrumbClick(step.id)}
                   className={`flex items-center space-x-2 focus:outline-none ${
                     currentStep === step.id ? 'text-blue-600' : 
                     currentStep > step.id ? 'text-green-600' : 'text-gray-400'

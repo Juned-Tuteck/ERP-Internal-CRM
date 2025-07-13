@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Upload, MessageSquare, DeleteIcon, Delete, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Save, ChevronLeft, ChevronRight, Upload, MessageSquare, Trash2 } from 'lucide-react';
 
 interface AddLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (leadData: any) => void;
+  initialData?: any;
 }
 
-const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(initialData || {
     // Step 1: General Information
     businessName: '',
+    avatar: '',
     customerBranch: '',
     currency: 'INR',
     contactPerson: '',
@@ -79,7 +81,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
   const leadCriticalities = ['Critical', 'High', 'Medium', 'Low'];
   const leadSources = ['Website', 'LinkedIn', 'Referral', 'Cold Call', 'Trade Show', 'Advertisement'];
   const leadStages = ['New Lead', 'Qualified', 'Meeting', 'Quotation Submitted', 'Won', 'Lost'];
-  const associates = ['Architect A', 'Consultant B', 'Engineer C', 'Designer D'];
 
   const associateDesignations = [
     'Architect',
@@ -97,6 +98,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
     { id: '3', name: 'Engineer C' },
     { id: '4', name: 'Designer D' }
   ];
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+      setUploadedFiles(formData.uploadedFiles || []);
+    }
+  }, [initialData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -247,6 +255,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
     }));
   };
 
+  const isEditMode = !!initialData;
+
   if (!isOpen) return null;
 
   return (
@@ -270,10 +280,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
           <nav className="flex space-x-4">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-2 ${
-                  currentStep === step.id ? 'text-blue-600' : 
-                  currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                }`}>
+                <button
+                  type="button"
+                  disabled={!isEditMode}
+                  onClick={() => isEditMode && setCurrentStep(step.id)}
+                  className={`flex items-center space-x-2 focus:outline-none ${
+                    currentStep === step.id ? 'text-blue-600' : 
+                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                  }`}
+                >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     currentStep === step.id ? 'bg-blue-100 text-blue-600' :
                     currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
@@ -284,7 +299,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
                     <p className="text-sm font-medium">{step.name}</p>
                     <p className="text-xs">{step.description}</p>
                   </div>
-                </div>
+                </button>
                 {index < steps.length - 1 && (
                   <ChevronRight className="h-4 w-4 text-gray-400 mx-2" />
                 )}
@@ -809,7 +824,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit }
               Cancel
             </button>
             
-            {currentStep < 3 ? (
+            {isEditMode ? (
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </button>
+            ) : currentStep < 3 ? (
               <button
                 type="button"
                 onClick={handleNext}

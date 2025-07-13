@@ -3,8 +3,12 @@ import {
   Phone, Mail, Building, Globe, Star, TrendingUp, UserCheck, Calendar, 
   AlertTriangle, Clock, FileText, Users, Edit, CheckCircle, XCircle, 
   GitPullRequestArrow,
-  Link
+  Link,
+  History,
+  Edit2,
+  Trash2
 } from 'lucide-react';
+import AddLeadModal from './AddLeadModal'; // Make sure this import exists
 
 interface LeadDetailsProps {
   lead: any;
@@ -15,6 +19,24 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [showWinLossModal, setShowWinLossModal] = useState(false);
   const [winLossReason, setWinLossReason] = useState('');
   const [selectedOutcome, setSelectedOutcome] = useState<'Won' | 'Lost'>('Won');
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Add state for edit modal
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Dummy history data for modal
+  const historyData = [
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '05-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '05-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '05-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '05-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '06-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '06-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '06-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '06-07-2025', stage: 'LEAD' },
+    { user: 'js.qa@tuteck.com', type: 'UPDATE', date: '06-07-2025', stage: 'LEAD' }
+  ];
 
   if (!lead) {
     return (
@@ -126,6 +148,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               {lead.projectValue}
             </div>
             <div className="flex space-x-2 mt-2">
+              {/* Update Status */}
               {lead.leadStage !== 'Won' && lead.leadStage !== 'Lost' && (
                 <button
                   onClick={() => setShowWinLossModal(true)}
@@ -135,6 +158,31 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <GitPullRequestArrow className="h-5 w-5" />
                 </button>
               )}
+              {/* History Button */}
+              <button
+                onClick={() => setShowHistoryModal(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition"
+                title="View History"
+              >
+                <History className="h-5 w-5" />
+              </button>
+              {/* Edit Button */}
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 transition"
+                title="Edit Lead"
+              >
+                <Edit2 className="h-5 w-5" />
+              </button>
+              {/* Delete Button */}
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="rounded-full p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 transition"
+                title="Delete Lead"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+              {/* Create Project Button */}
               {lead.leadStage === 'Won' && (
                 <button
                   onClick={() => onConvert(lead.id)}
@@ -255,7 +303,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Supporting Documents</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {mockFiles.map((file, index) => (
+          {lead?.uploadedFiles?.map((file, index) => (
             <div key={index} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
               <FileText className="h-8 w-8 text-blue-600 mr-3" />
               <div className="flex-1 min-w-0">
@@ -411,6 +459,117 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">History Details</h3>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="border rounded-lg">
+                <div className="p-4 border-b bg-gray-50 flex items-center">
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="border border-gray-300 rounded px-3 py-1 w-1/3 text-sm"
+                  />
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-blue-50">
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700">User Name</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700">Operation Type</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700">Operation Date</th>
+                        <th className="px-4 py-2 text-left font-semibold text-gray-700">Lead Stage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyData.map((row, idx) => (
+                        <tr key={idx} className="border-b">
+                          <td className="px-4 py-2">{row.user}</td>
+                          <td className="px-4 py-2">{row.type}</td>
+                          <td className="px-4 py-2">{row.date}</td>
+                          <td className="px-4 py-2">{row.stage}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-t">
+                  <span className="text-xs text-gray-500"></span>
+                  <button
+                    onClick={() => setShowHistoryModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded hover:bg-teal-700"
+                  >
+                    CLOSE
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Delete Lead</h3>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to delete this lead? This action cannot be undone.
+              </p>
+              <div className="flex items-center justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    // Add your delete logic here (same as AddVendorModal)
+                    setShowDeleteModal(false);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Lead Modal */}
+      {showEditModal && (
+        <AddLeadModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={(updatedLead) => {
+            // Handle update logic here (e.g., call API or update state)
+            setShowEditModal(false);
+          }}
+          initialData={lead}
+        />
       )}
     </div>
   );

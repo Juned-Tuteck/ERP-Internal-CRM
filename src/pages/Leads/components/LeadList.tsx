@@ -4,6 +4,7 @@ import { Phone, Mail, Star, TrendingUp, Calendar, AlertTriangle } from 'lucide-r
 interface Lead {
   id: string;
   businessName: string;
+  avatar: string; 
   customerBranch: string;
   currency: string;
   contactPerson: string;
@@ -50,6 +51,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     {
       id: '1',
       businessName: 'TechCorp Solutions Pvt Ltd',
+      avatar: 'LD',
       customerBranch: 'Mumbai HQ',
       currency: 'INR',
       contactPerson: 'Rajesh Kumar',
@@ -77,13 +79,15 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
         {
           designation: 'Consultant',
           associateId: '2',
-          associateName: 'Consultant B',
+          associateName: 'Consultant A',
           otherInfo: 'Lead Consultant'
         }
       ],
       uploadedFiles: [
-        { name: 'rfq.pdf', size: 204800, type: 'application/pdf' }
-      ],
+    { name: 'RFQ_Mumbai_Metro_Ventilation.pdf', size: '2.4 MB', type: 'PDF' },
+    { name: 'Technical_Drawings.dwg', size: '5.1 MB', type: 'DWG' },
+    { name: 'Site_Photos.zip', size: '8.7 MB', type: 'ZIP' }
+  ],
       followUpComments: [
         {
           id: 1,
@@ -96,6 +100,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     {
       id: '2',
       businessName: 'Innovate India Limited',
+      avatar: 'LD',
       customerBranch: 'Pune Main',
       currency: 'INR',
       contactPerson: 'Priya Sharma',
@@ -136,6 +141,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     {
       id: '3',
       businessName: 'Digital Solutions Enterprise',
+      avatar: 'LD',
       customerBranch: 'Gurgaon HQ',
       currency: 'INR',
       contactPerson: 'Amit Singh',
@@ -176,6 +182,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     {
       id: '4',
       businessName: 'Manufacturing Industries Co',
+      avatar: 'LD',
       customerBranch: 'Aurangabad Factory',
       currency: 'INR',
       contactPerson: 'Sneha Patel',
@@ -200,6 +207,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     {
       id: '5',
       businessName: 'FinTech Innovations Pvt Ltd',
+      avatar: 'LD',
       customerBranch: 'Bangalore HQ',
       currency: 'INR',
       contactPerson: 'Vikram Gupta',
