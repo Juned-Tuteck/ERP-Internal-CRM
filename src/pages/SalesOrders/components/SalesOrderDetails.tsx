@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin } from 'lucide-react';
+import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import CreateSalesOrderModal from './CreateSalesOrderModal';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
@@ -7,6 +8,8 @@ interface SalesOrderDetailsProps {
 
 const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => {
   const [activeTab, setActiveTab] = useState('general');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   if (!salesOrder) {
     return (
@@ -117,7 +120,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
       {/* Sales Order Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900">{salesOrder.orderNumber}</h2>
             <p className="text-sm text-gray-600">{salesOrder.businessName}</p>
             <div className="flex items-center space-x-2 mt-1">
@@ -129,9 +132,9 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
               </span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right flex flex-col items-end">
             <div className="text-2xl font-bold text-green-600">{salesOrder.totalValue}</div>
-            <div className="flex space-x-2 mt-2">
+            <div className="flex space-x-2 mt-2 items-center">
               <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
                 <Download className="h-3 w-3 mr-1" />
                 Export
@@ -139,6 +142,20 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
               <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
                 <Printer className="h-3 w-3 mr-1" />
                 Print
+              </button>
+              <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </button>
+              <button 
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50"
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Delete
               </button>
             </div>
           </div>
@@ -651,6 +668,62 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
           </div>
         )}
       </div>
+      
+      {/* Edit Modal */}
+      {isEditModalOpen && (
+        <CreateSalesOrderModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSubmit={(updatedSalesOrder) => {
+            console.log('Updated sales order:', updatedSalesOrder);
+            // In a real app, this would update the sales order in the database
+            setIsEditModalOpen(false);
+          }}
+          initialData={salesOrder}
+        />
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center">
+                <AlertTriangle className="h-6 w-6 text-red-600 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900">Delete Sales Order</h3>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to delete this sales order? This action cannot be undone.
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                <span className="font-semibold">{salesOrder.orderNumber}</span> - {salesOrder.totalValue}
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3 p-4 border-t border-gray-200">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Deleting sales order:', salesOrder.id);
+                  // In a real app, this would delete the sales order from the database
+                  setIsDeleteModalOpen(false);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+              >
+                Delete Sales Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

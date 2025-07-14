@@ -180,6 +180,12 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const handleBreadcrumbClick = (stepId: number) => {
     if (isEditMode) setCurrentStep(stepId);
   };
+  
+  // Calculate total items cost for Step 2
+  const totalItemsCost = formData.items.reduce(
+    (sum: number, item: any) => sum + (item.supplyOwnAmount || 0) + (item.installationOwnAmount || 0), 
+    0
+  );
 
   if (!isOpen) return null;
 
@@ -246,8 +252,9 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
           {/* Step 2: POC */}
           {currentStep === 2 && (
             <QuotationStep2 
-              formData={formData} 
-              setFormData={setFormData} 
+              formData={formData}
+              setFormData={setFormData}
+              totalItemsCost={totalItemsCost}
             />
           )}
 
@@ -322,7 +329,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Create Quotation
+                {isEditMode ? 'Save Changes' : 'Create Quotation'}
               </button>
             )}
           </div>

@@ -4,9 +4,10 @@ import { Plus, Trash2, X } from 'lucide-react';
 interface QuotationStep2Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  totalItemsCost: number;
 }
 
-const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }) => {
+const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData, totalItemsCost }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [costCategory, setCostCategory] = useState<'project' | 'supervision' | 'finance' | 'contingency'>('project');
   const [costItem, setCostItem] = useState({
@@ -33,13 +34,34 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
 
     // Calculate amount if all required fields are filled
     if (name === 'nosPercentage' || name === 'monthlyExpense' || name === 'months' || name === 'diversity') {
+      calculateAmount();
+    }
+  };
+
+  const calculateAmount = () => {
+    if (costCategory === 'finance' || costCategory === 'contingency') {
+      // For finance and contingency, calculate based on percentage of total items cost
+      if (costItem.nosPercentage) {
+        const percentage = parseFloat(costItem.nosPercentage) || 0;
+        const amount = (percentage / 100) * totalItemsCost;
+        setCostItem(prev => ({
+          ...prev,
+          amount: amount,
+          // Set default values for other fields if they're empty
+          monthlyExpense: prev.monthlyExpense || '0',
+          months: prev.months || '1',
+          diversity: prev.diversity || '100'
+        }));
+      }
+    } else {
+      // For project and supervision, use the full calculation
       if (costItem.nosPercentage && costItem.monthlyExpense && costItem.months && costItem.diversity) {
-        const nos = parseFloat(costItem.nosPercentage);
-        const expense = parseFloat(costItem.monthlyExpense);
-        const months = parseFloat(costItem.months);
-        const diversity = parseFloat(costItem.diversity) / 100;
+        const nos = parseFloat(costItem.nosPercentage) || 0;
+        const expense = parseFloat(costItem.monthlyExpense) || 0;
+        const months = parseFloat(costItem.months) || 0;
+        const diversity = parseFloat(costItem.diversity) || 0;
         
-        const amount = nos * expense * months * diversity;
+        const amount = nos * expense * months * (diversity / 100);
         setCostItem(prev => ({
           ...prev,
           amount: amount
@@ -114,6 +136,14 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
 
   const openAddModal = (category: 'project' | 'supervision' | 'finance' | 'contingency') => {
     setCostCategory(category);
+    setCostItem({
+      description: '',
+      nosPercentage: '',
+      monthlyExpense: '',
+      months: '',
+      diversity: '',
+      amount: 0
+    });
     setShowAddModal(true);
   };
 
@@ -124,8 +154,32 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
   const totalContingencyCost = formData.contingencyCosts.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0);
   const totalOverheadsCost = totalProjectCost + totalSupervisionCost + totalFinanceCost + totalContingencyCost;
 
+  // Handle project summary changes
+  const handleProjectSummaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const numValue = parseFloat(value) || 0;
+    
+    const updatedSummary = {
+      ...formData.projectSummary,
+      [name]: numValue
+    };
+    
+    // Calculate total own cost
+    updatedSummary.totalOwnCost = updatedSummary.materialCost + updatedSummary.labourCost;
+    
+    setFormData({
+      ...formData,
+      projectSummary: updatedSummary
+    });
+  };
+
   return (
     <div className="space-y-6">
+      <div className="bg-gray-50 p-4 rounded-lg mb-4">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
+        <p className="text-sm text-gray-600">Overhead costs associated with this project.</p>
+      </div>
+      
       {/* Project Management & Site Establishment Cost */}
       <div className="border border-gray-200 rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
@@ -404,6 +458,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
            </label>
            <input
              type="number"
+             name="contractValue"
+             value={formData.projectSummary.contractValue}
+             onChange={handleProjectSummaryChange}
              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
              placeholder="Enter contract value"
            />
@@ -415,6 +472,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
            </label>
            <input
              type="number"
+             name="materialCost"
+             value={formData.projectSummary.materialCost}
+             onChange={handleProjectSummaryChange}
              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
              placeholder="Enter material cost"
            />
@@ -426,6 +486,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
            </label>
            <input
              type="number"
+             name="labourCost"
+             value={formData.projectSummary.labourCost}
+             onChange={handleProjectSummaryChange}
              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
              placeholder="Enter labour cost"
            />
@@ -437,6 +500,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
            </label>
            <input
              type="number"
+             value={formData.projectSummary.totalOwnCost}
              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
              placeholder="0.00"
              readOnly
@@ -451,7 +515,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                Add {costCategory === 'supervision' ? 'Supervision' : costCategory === 'finance' ? 'Finance' : 'Contingency'} Cost
+                Add {costCategory === 'project' ? 'Project Management' : 
+                     costCategory === 'supervision' ? 'Supervision' : 
+                     costCategory === 'finance' ? 'Finance' : 'Contingency'} Cost
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -492,7 +558,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    NOS / % *
+                    {costCategory === 'finance' || costCategory === 'contingency' ? 'Percentage (%)' : 'NOS'} *
                   </label>
                   <input
                     type="number"
@@ -501,10 +567,15 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                     onChange={handleInputChange}
                     required
                     min="0"
-                    step={costCategory === 'supervision' || costCategory === 'project' ? "1" : "0.1"}
+                    step={costCategory === 'finance' || costCategory === 'contingency' ? "0.1" : "1"}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={costCategory === 'supervision' || costCategory === 'project' ? "Enter number" : "Enter percentage"}
+                    placeholder={costCategory === 'finance' || costCategory === 'contingency' ? "Enter percentage" : "Enter number"}
                   />
+                  {(costCategory === 'finance' || costCategory === 'contingency') && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Percentage of total items cost (₹{totalItemsCost.toLocaleString('en-IN')})
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -516,10 +587,13 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                     name="monthlyExpense"
                     value={costItem.monthlyExpense}
                     onChange={handleInputChange}
-                    required
+                    required={costCategory !== 'finance' && costCategory !== 'contingency'}
                     min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      costCategory === 'finance' || costCategory === 'contingency' ? 'bg-gray-50' : ''
+                    }`}
                     placeholder="Enter amount"
+                    readOnly={costCategory === 'finance' || costCategory === 'contingency'}
                   />
                 </div>
 
@@ -532,11 +606,14 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                     name="months"
                     value={costItem.months}
                     onChange={handleInputChange}
-                    required
+                    required={costCategory !== 'finance' && costCategory !== 'contingency'}
                     min="0"
                     step="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      costCategory === 'finance' || costCategory === 'contingency' ? 'bg-gray-50' : ''
+                    }`}
                     placeholder="Enter months"
+                    readOnly={costCategory === 'finance' || costCategory === 'contingency'}
                   />
                 </div>
 
@@ -549,11 +626,14 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                     name="diversity"
                     value={costItem.diversity}
                     onChange={handleInputChange}
-                    required
+                    required={costCategory !== 'finance' && costCategory !== 'contingency'}
                     min="0"
                     max="100"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      costCategory === 'finance' || costCategory === 'contingency' ? 'bg-gray-50' : ''
+                    }`}
                     placeholder="Enter percentage"
+                    readOnly={costCategory === 'finance' || costCategory === 'contingency'}
                   />
                 </div>
 
@@ -577,7 +657,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
               </button>
               <button
                 onClick={handleAddCost}
-                disabled={!costItem.description || !costItem.nosPercentage || !costItem.monthlyExpense || !costItem.months || !costItem.diversity}
+                disabled={!costItem.description || !costItem.nosPercentage}
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 Add Cost
