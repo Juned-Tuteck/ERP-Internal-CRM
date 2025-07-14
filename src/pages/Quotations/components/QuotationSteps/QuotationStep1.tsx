@@ -1,6 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, Search, X } from 'lucide-react';
 
+// Mock data for leads and BOMs
+const leads = [
+  { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: 'BOM-2024-001' },
+  { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: 'BOM-2024-002' },
+  { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: 'BOM-2024-003' },
+];
+
+const boms = [
+  { 
+    id: 'BOM-2024-001', 
+    items: [
+      { id: '101', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500, quantity: 4, price: 50000 },
+      { id: '102', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', rate: 850, quantity: 120, price: 102000 },
+      { id: '103', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', rate: 3200, quantity: 6, price: 19200 },
+    ]
+  },
+  { 
+    id: 'BOM-2024-002', 
+    items: [
+      { id: '201', itemCode: 'AC-001', itemName: 'Central AC Unit', uomName: 'Nos', rate: 85000, quantity: 2, price: 170000 },
+      { id: '202', itemCode: 'DUCT-002', itemName: 'Insulated Duct', uomName: 'Meter', rate: 1200, quantity: 80, price: 96000 },
+      { id: '203', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500, quantity: 6, price: 27000 },
+    ]
+  },
+  { 
+    id: 'BOM-2024-003', 
+    items: [
+      { id: '301', itemCode: 'ALARM-001', itemName: 'Fire Alarm Control Panel', uomName: 'Nos', rate: 35000, quantity: 1, price: 35000 },
+      { id: '302', itemCode: 'SENSOR-002', itemName: 'Smoke Detector', uomName: 'Nos', rate: 1200, quantity: 24, price: 28800 },
+      { id: '303', itemCode: 'SPRINKLER-001', itemName: 'Automatic Sprinkler', uomName: 'Nos', rate: 800, quantity: 36, price: 28800 },
+    ]
+  },
+];
+
 interface QuotationStep1Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
@@ -28,39 +62,20 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
     installationPOVariancePercentage: 1,
   });
 
-  // Mock data for leads and BOMs
-  const leads = [
-    { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: 'BOM-2024-001' },
-    { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: 'BOM-2024-002' },
-    { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: 'BOM-2024-003' },
-  ];
-
-  const boms = [
-    { 
-      id: 'BOM-2024-001', 
-      items: [
-        { id: '101', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500, quantity: 4, price: 50000 },
-        { id: '102', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', rate: 850, quantity: 120, price: 102000 },
-        { id: '103', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', rate: 3200, quantity: 6, price: 19200 },
-      ]
-    },
-    { 
-      id: 'BOM-2024-002', 
-      items: [
-        { id: '201', itemCode: 'AC-001', itemName: 'Central AC Unit', uomName: 'Nos', rate: 85000, quantity: 2, price: 170000 },
-        { id: '202', itemCode: 'DUCT-002', itemName: 'Insulated Duct', uomName: 'Meter', rate: 1200, quantity: 80, price: 96000 },
-        { id: '203', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500, quantity: 6, price: 27000 },
-      ]
-    },
-    { 
-      id: 'BOM-2024-003', 
-      items: [
-        { id: '301', itemCode: 'ALARM-001', itemName: 'Fire Alarm Control Panel', uomName: 'Nos', rate: 35000, quantity: 1, price: 35000 },
-        { id: '302', itemCode: 'SENSOR-002', itemName: 'Smoke Detector', uomName: 'Nos', rate: 1200, quantity: 24, price: 28800 },
-        { id: '303', itemCode: 'SPRINKLER-001', itemName: 'Automatic Sprinkler', uomName: 'Nos', rate: 800, quantity: 36, price: 28800 },
-      ]
-    },
-  ];
+  // Effect to auto-select lead when in edit mode
+  useEffect(() => {
+    if (isEditMode && formData.leadName && !formData.leadId) {
+      // Find the lead ID based on the lead name
+      const lead = leads.find(l => l.name === formData.leadName);
+      if (lead) {
+        setFormData(prev => ({
+          ...prev,
+          leadId: lead.id,
+          bomId: lead.bomId
+        }));
+      }
+    }
+  }, [isEditMode, formData.leadName]);
 
   const handleLeadChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const leadId = e.target.value;
@@ -258,7 +273,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
           <input
             type="text"
             name="businessName"
-            value={formData.businessName}
+            value={formData.businessName || ''}
             readOnly
             className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
           />
@@ -270,7 +285,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
           </label>
           <input
             type="text"
-            value={formData.bomId}
+            value={formData.bomId || ''}
             readOnly
             className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
           />
@@ -283,7 +298,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
           <input
             type="date"
             name="quotationDate"
-            value={formData.quotationDate}
+            value={formData.quotationDate || ''}
             onChange={handleInputChange}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -297,7 +312,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
           <input
             type="date"
             name="expiryDate"
-            value={formData.expiryDate}
+            value={formData.expiryDate || ''}
             onChange={handleInputChange}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -380,7 +395,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
         </label>
         <textarea
           name="note"
-          value={formData.note}
+          value={formData.note || ''}
           onChange={handleInputChange}
           rows={3}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

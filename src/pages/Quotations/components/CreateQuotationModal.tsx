@@ -6,6 +6,13 @@ import QuotationStep3 from './QuotationSteps/QuotationStep3';
 import QuotationStep4 from './QuotationSteps/QuotationStep4';
 import QuotationStep5 from './QuotationSteps/QuotationStep5';
 
+// Mock data for leads
+const leads = [
+  { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: 'BOM-2024-001' },
+  { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: 'BOM-2024-002' },
+  { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: 'BOM-2024-003' },
+];
+
 interface CreateQuotationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -89,10 +96,19 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const [formData, setFormData] = useState(() => {
     const defaultData = getDefaultFormData();
     if (initialData) {
+      // Find the lead ID based on the lead name if it's not provided
+      let leadId = initialData.leadId;
+      if (!leadId && initialData.leadName) {
+        const lead = leads.find(l => l.name === initialData.leadName);
+        if (lead) {
+          leadId = lead.id;
+        }
+      }
+      
       return {
         ...defaultData,
         ...initialData,
-        leadId: initialData.leadId || '',
+        leadId: leadId || '',
         bomId: initialData.bomId || '',
         items: initialData.items || [],
         projectCosts: initialData.projectCosts || [],
@@ -136,10 +152,20 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   useEffect(() => {
     if (initialData) {
       const defaultData = getDefaultFormData();
+      
+      // Find the lead ID based on the lead name if it's not provided
+      let leadId = initialData.leadId;
+      if (!leadId && initialData.leadName) {
+        const lead = leads.find(l => l.name === initialData.leadName);
+        if (lead) {
+          leadId = lead.id;
+        }
+      }
+      
       setFormData({
         ...defaultData,
         ...initialData,
-        leadId: initialData.leadId || '',
+        leadId: leadId || '',
         bomId: initialData.bomId || '',
         items: initialData.items || [],
         projectCosts: initialData.projectCosts || [],
