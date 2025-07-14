@@ -20,7 +20,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   initialData 
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(initialData || {
+  
+  const getDefaultFormData = () => ({
     // Step 1: Costing Sheet
     leadId: '',
     leadName: '',
@@ -85,6 +86,43 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     comments: []
   });
 
+  const [formData, setFormData] = useState(() => {
+    const defaultData = getDefaultFormData();
+    if (initialData) {
+      return {
+        ...defaultData,
+        ...initialData,
+        items: initialData.items || [],
+        projectCosts: initialData.projectCosts || [],
+        supervisionCosts: initialData.supervisionCosts || [],
+        financeCosts: initialData.financeCosts || [],
+        contingencyCosts: initialData.contingencyCosts || [],
+        projectSummary: {
+          ...defaultData.projectSummary,
+          ...(initialData.projectSummary || {})
+        },
+        supplyData: {
+          ...defaultData.supplyData,
+          ...(initialData.supplyData || {})
+        },
+        labourData: {
+          ...defaultData.labourData,
+          ...(initialData.labourData || {})
+        },
+        sitcData: {
+          ...defaultData.sitcData,
+          ...(initialData.sitcData || {})
+        },
+        gstRates: {
+          ...defaultData.gstRates,
+          ...(initialData.gstRates || {})
+        },
+        comments: initialData.comments || []
+      };
+    }
+    return defaultData;
+  });
+
   const steps = [
     { id: 1, name: 'Costing Sheet', description: 'Item costs and details' },
     { id: 2, name: 'POC', description: 'Project overhead costs' },
@@ -95,7 +133,37 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      const defaultData = getDefaultFormData();
+      setFormData({
+        ...defaultData,
+        ...initialData,
+        items: initialData.items || [],
+        projectCosts: initialData.projectCosts || [],
+        supervisionCosts: initialData.supervisionCosts || [],
+        financeCosts: initialData.financeCosts || [],
+        contingencyCosts: initialData.contingencyCosts || [],
+        projectSummary: {
+          ...defaultData.projectSummary,
+          ...(initialData.projectSummary || {})
+        },
+        supplyData: {
+          ...defaultData.supplyData,
+          ...(initialData.supplyData || {})
+        },
+        labourData: {
+          ...defaultData.labourData,
+          ...(initialData.labourData || {})
+        },
+        sitcData: {
+          ...defaultData.sitcData,
+          ...(initialData.sitcData || {})
+        },
+        gstRates: {
+          ...defaultData.gstRates,
+          ...(initialData.gstRates || {})
+        },
+        comments: initialData.comments || []
+      });
     }
   }, [initialData]);
 
@@ -116,64 +184,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     
     // Reset form
     setCurrentStep(1);
-    setFormData({
-      leadId: '',
-      leadName: '',
-      businessName: '',
-      quotationDate: new Date().toISOString().split('T')[0],
-      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
-      bomId: '',
-      items: [],
-      note: '',
-      supervisionCosts: [],
-      financeCosts: [],
-      contingencyCosts: [],
-     projectSummary: {
-       contractValue: 0,
-       materialCost: 0,
-       labourCost: 0,
-       totalOwnCost: 0
-     },
-      supplyData: {
-        ownAmount: 0,
-        overheadsPercentage: 10,
-        overheadsAmount: 0,
-        subtotal1: 0,
-        marginPercentage: 15,
-        marginAmount: 0,
-        subtotal2: 0,
-        sellingAmount: 0,
-        mf: 0
-      },
-      labourData: {
-        ownAmount: 0,
-        overheadsPercentage: 12,
-        overheadsAmount: 0,
-        subtotal1: 0,
-        marginPercentage: 20,
-        marginAmount: 0,
-        subtotal2: 0,
-        sellingAmount: 0,
-        mf: 0
-      },
-      sitcData: {
-        ownAmount: 0,
-        overheadsPercentage: 8,
-        overheadsAmount: 0,
-        subtotal1: 0,
-        marginPercentage: 18,
-        marginAmount: 0,
-        subtotal2: 0,
-        sellingAmount: 0,
-        mf: 0
-      },
-      gstRates: {
-        highSideSupply: 18,
-        lowSideSupply: 18,
-        installation: 18
-      },
-      comments: []
-    });
+    setFormData(getDefaultFormData());
   };
 
   const isEditMode = !!initialData;
@@ -182,7 +193,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   };
   
   // Calculate total items cost for Step 2
-  const totalItemsCost = formData.items.reduce(
+  const totalItemsCost = (formData.items || []).reduce(
     (sum: number, item: any) => sum + (item.supplyOwnAmount || 0) + (item.installationOwnAmount || 0), 
     0
   );
