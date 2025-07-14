@@ -1,102 +1,124 @@
-import React, { useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Calculator } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Edit, Calculator } from 'lucide-react';
 
 interface CreateQuotationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (quotationData: any) => void;
+  initialData?: any;
 }
 
-const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onClose, onSubmit }) => {
+interface QuotationItem {
+  id: string;
+  itemCode: string;
+  itemName: string;
+  uomName: string;
+  supplyRate: number;
+  installationRate: number;
+  quantity: number;
+  supplyPrice: number;
+  installationPrice: number;
+  specifications?: string;
+  supplyCosts?: {
+    discount: number;
+    wastage: number;
+    transportation: number;
+    contingency: number;
+    miscellaneous: number;
+    outstation: number;
+    officeOverhead: number;
+    poVariance: number;
+  };
+  installationCosts?: {
+    wastage: number;
+    transportation: number;
+    contingency: number;
+    miscellaneous: number;
+    outstation: number;
+    officeOverhead: number;
+    poVariance: number;
+  };
+}
+
+const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(initialData || {
     // Step 1: Costing Sheet
     leadId: '',
     leadName: '',
     businessName: '',
+    workType: '',
     quotationDate: new Date().toISOString().split('T')[0],
-    expiryDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0],
+    expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
     bomId: '',
-    items: [] as any[],
-    supplyDiscount: 0,
-    supplyWastagePercentage: 0,
-    supplyTransportationPercentage: 0,
-    supplyContingencyPercentage: 0,
-    supplyMiscellaneousPercentage: 0,
-    supplyOutstationPercentage: 0,
-    supplyOfficeOverheadPercentage: 0,
-    supplyPOVariancePercentage: 0,
-    installationWastagePercentage: 0,
-    installationTransportationPercentage: 0,
-    installationContingencyPercentage: 0,
-    installationMiscellaneousPercentage: 0,
-    installationOutstationPercentage: 0,
-    installationOfficeOverheadPercentage: 0,
-    installationPOVariancePercentage: 0,
+    bomName: '',
+    items: [] as QuotationItem[],
     note: '',
-    
     // Step 2: POC
-    supervisionCosts: [] as any[],
-    financeCosts: [] as any[],
-    contingencyCosts: [] as any[],
-    
+    supervisionCosts: [],
+    financeCosts: [],
+    contingencyCosts: [],
     // Step 3: Summary
-    supplyMarginPercentage: 0,
-    installationMarginPercentage: 0,
-    sitcMarginPercentage: 0,
-    
+    supplyMargin: 15,
+    installationMargin: 20,
     // Step 4: Final Costing
-    highSideSupplyGST: 18,
-    lowSideSupplyGST: 18,
-    installationGST: 18,
-    
+    gstRate: 18,
     // Step 5: Comments
-    comments: [] as any[]
+    comments: []
   });
-
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  
+  const [selectedItemForCosts, setSelectedItemForCosts] = useState<QuotationItem | null>(null);
   const [showCostModal, setShowCostModal] = useState(false);
-  const [showAddDescriptionModal, setShowAddDescriptionModal] = useState(false);
-  const [costCategory, setCostCategory] = useState('');
   const [newComment, setNewComment] = useState('');
+
+  // Breadcrumb steps
+  const steps = [
+    { id: 1, name: 'Costing Sheet', description: 'Item costs' },
+    { id: 2, name: 'POC', description: 'Project costs' },
+    { id: 3, name: 'Summary', description: 'Margin application' },
+    { id: 4, name: 'Final Costing', description: 'GST calculation' },
+    { id: 5, name: 'Comments', description: 'Internal notes' }
+  ];
 
   // Mock data for dropdowns
   const leads = [
-    { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd' },
-    { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited' },
-    { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise' },
-    { id: '4', name: 'Residential Complex Electrical', businessName: 'Manufacturing Industries Co' },
-    { id: '5', name: 'Shopping Mall Plumbing System', businessName: 'FinTech Innovations Pvt Ltd' },
-  ];
-  
-  const boms = [
-    { id: '1', name: 'Mumbai Metro Ventilation System BOM', leadId: '1' },
-    { id: '2', name: 'Corporate Office HVAC Upgrade BOM', leadId: '2' },
-    { id: '3', name: 'Hospital Fire Safety System BOM', leadId: '3' },
-    { id: '4', name: 'Residential Complex Electrical BOM', leadId: '4' },
-    { id: '5', name: 'Shopping Mall Plumbing System BOM', leadId: '5' },
+    { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', workType: 'Basement Ventilation', bomId: 'BOM-2024-001' },
+    { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', workType: 'HVAC Systems', bomId: 'BOM-2024-002' },
+    { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', workType: 'Fire Safety', bomId: 'BOM-2024-003' },
+    { id: '4', name: 'Residential Complex Electrical', businessName: 'Manufacturing Industries Co', workType: 'Electrical', bomId: 'BOM-2023-045' },
+    { id: '5', name: 'Shopping Mall Plumbing System', businessName: 'FinTech Innovations Pvt Ltd', workType: 'Plumbing', bomId: 'BOM-2023-044' },
   ];
 
-  const bomItems = [
-    { id: '101', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', itemType: 'High Side', uomName: 'Nos', basicSupplyRate: 10000, basicInstallationRate: 2000, quantity: 4 },
-    { id: '102', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', itemType: 'Low Side', uomName: 'Meter', basicSupplyRate: 700, basicInstallationRate: 300, quantity: 120 },
-    { id: '103', itemCode: 'DAMPER-001', itemName: 'Fire Damper', itemType: 'High Side', uomName: 'Nos', basicSupplyRate: 2500, basicInstallationRate: 700, quantity: 6 },
-    { id: '104', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', itemType: 'High Side', uomName: 'Nos', basicSupplyRate: 1500, basicInstallationRate: 300, quantity: 8 },
-  ];
-
-  const descriptionOptions = {
-    supervision: ['Project Manager', 'Site Engineer', 'Safety Officer', 'Quality Control Engineer'],
-    finance: ['Bank Guarantee', 'Insurance', 'Performance Bond'],
-    contingency: ['Project Contingency', 'Design Contingency', 'Execution Contingency']
+  // Mock BOM data
+  const bomItems = {
+    'BOM-2024-001': [
+      { id: '101', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500, quantity: 4, price: 50000, specifications: 'High efficiency, low noise' },
+      { id: '102', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', rate: 850, quantity: 120, price: 102000, specifications: 'Corrosion resistant, fire retardant' },
+      { id: '103', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', rate: 3200, quantity: 6, price: 19200 },
+      { id: '104', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', rate: 1800, quantity: 8, price: 14400 },
+    ],
+    'BOM-2024-002': [
+      { id: '201', itemCode: 'AC-001', itemName: 'Central AC Unit', uomName: 'Nos', rate: 85000, quantity: 2, price: 170000 },
+      { id: '202', itemCode: 'DUCT-002', itemName: 'Insulated Duct', uomName: 'Meter', rate: 1200, quantity: 80, price: 96000 },
+      { id: '203', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500, quantity: 6, price: 27000 },
+    ],
+    'BOM-2024-003': [
+      { id: '301', itemCode: 'ALARM-001', itemName: 'Fire Alarm Control Panel', uomName: 'Nos', rate: 35000, quantity: 1, price: 35000 },
+      { id: '302', itemCode: 'SENSOR-002', itemName: 'Smoke Detector', uomName: 'Nos', rate: 1200, quantity: 24, price: 28800 },
+      { id: '303', itemCode: 'SPRINKLER-001', itemName: 'Automatic Sprinkler', uomName: 'Nos', rate: 800, quantity: 36, price: 28800 },
+    ],
   };
 
-  const steps = [
-    { id: 1, name: 'Costing Sheet' },
-    { id: 2, name: 'POC' },
-    { id: 3, name: 'Summary' },
-    { id: 4, name: 'Final Costing' },
-    { id: 5, name: 'Comments' }
-  ];
+  // POC description options
+  const supervisionDescriptions = ['Project Manager', 'Site Engineer', 'Safety Officer', 'Quality Control'];
+  const financeDescriptions = ['Bank Guarantee', 'Insurance', 'Letter of Credit'];
+  const contingencyDescriptions = ['Project Contingency', 'Weather Contingency', 'Material Price Fluctuation'];
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    }
+  }, [initialData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -105,79 +127,203 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
       [name]: value
     }));
 
-    // If lead is selected, update lead name and business name
+    // If lead is selected, auto-select the BOM and populate items
     if (name === 'leadId') {
       const selectedLead = leads.find(lead => lead.id === value);
       if (selectedLead) {
+        const bomId = selectedLead.bomId;
+        const bomItems = getBOMItems(bomId);
+        
         setFormData(prev => ({
           ...prev,
           leadName: selectedLead.name,
-          businessName: selectedLead.businessName
+          businessName: selectedLead.businessName,
+          workType: selectedLead.workType,
+          bomId: bomId,
+          items: bomItems.map(item => ({
+            id: item.id,
+            itemCode: item.itemCode,
+            itemName: item.itemName,
+            uomName: item.uomName,
+            supplyRate: item.rate,
+            installationRate: Math.round(item.rate * 0.3), // Example: installation rate is 30% of supply rate
+            quantity: item.quantity,
+            supplyPrice: item.price,
+            installationPrice: Math.round(item.rate * 0.3 * item.quantity),
+            specifications: item.specifications,
+            supplyCosts: {
+              discount: 0,
+              wastage: 2,
+              transportation: 3,
+              contingency: 2,
+              miscellaneous: 1,
+              outstation: 0,
+              officeOverhead: 3,
+              poVariance: 1
+            },
+            installationCosts: {
+              wastage: 2,
+              transportation: 3,
+              contingency: 2,
+              miscellaneous: 1,
+              outstation: 0,
+              officeOverhead: 3,
+              poVariance: 1
+            }
+          }))
         }));
       }
     }
-
-    // If BOM is selected, load BOM items
-    if (name === 'bomId') {
-      setFormData(prev => ({
-        ...prev,
-        items: bomItems.map(item => ({
-          ...item,
-          supplyRate: item.basicSupplyRate,
-          installationRate: item.basicInstallationRate,
-          supplyAmount: item.basicSupplyRate * item.quantity,
-          installationAmount: item.basicInstallationRate * item.quantity
-        }))
-      }));
-    }
   };
 
-  const handlePercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const getBOMItems = (bomId: string) => {
+    return bomItems[bomId as keyof typeof bomItems] || [];
+  };
+
+  const handleCostChange = (field: string, value: string, costType: 'supply' | 'installation') => {
+    if (!selectedItemForCosts) return;
+    
+    const numValue = parseFloat(value) || 0;
+    
+    setSelectedItemForCosts(prev => {
+      if (!prev) return null;
+      
+      if (costType === 'supply') {
+        return {
+          ...prev,
+          supplyCosts: {
+            ...prev.supplyCosts,
+            [field]: numValue
+          }
+        };
+      } else {
+        return {
+          ...prev,
+          installationCosts: {
+            ...prev.installationCosts,
+            [field]: numValue
+          }
+        };
+      }
+    });
+  };
+
+  const saveCostChanges = () => {
+    if (!selectedItemForCosts) return;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: parseFloat(value) || 0
+      items: prev.items.map(item => 
+        item.id === selectedItemForCosts.id ? selectedItemForCosts : item
+      )
     }));
+    
+    setShowCostModal(false);
+    setSelectedItemForCosts(null);
   };
 
-  const handleAddCostDetail = (itemId: string) => {
-    setSelectedItem(formData.items.find(item => item.id === itemId));
+  const openCostModal = (item: QuotationItem) => {
+    setSelectedItemForCosts(item);
     setShowCostModal(true);
   };
 
-  const handleSaveCostDetail = () => {
-    // In a real app, this would update the selected item with additional costs
-    setShowCostModal(false);
-    setSelectedItem(null);
+  const addCostItem = (category: string, item: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [category]: [...prev[category as keyof typeof prev], item]
+    }));
   };
 
-  const handleAddDescription = (category: string) => {
-    setCostCategory(category);
-    setShowAddDescriptionModal(true);
+  const removeCostItem = (category: string, index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [category]: (prev[category as keyof typeof prev] as any[]).filter((_, i) => i !== index)
+    }));
   };
 
-  const handleSaveDescription = () => {
-    // In a real app, this would add a new cost line item to the selected category
-    setShowAddDescriptionModal(false);
-    setCostCategory('');
-  };
-
-  const handleAddComment = () => {
+  const addComment = () => {
     if (newComment.trim()) {
+      const comment = {
+        id: Date.now().toString(),
+        text: newComment,
+        author: 'Current User',
+        timestamp: new Date().toISOString()
+      };
+      
       setFormData(prev => ({
         ...prev,
-        comments: [
-          ...prev.comments,
-          {
-            id: Date.now(),
-            text: newComment,
-            author: 'Current User',
-            timestamp: new Date().toISOString()
-          }
-        ]
+        comments: [...prev.comments, comment]
       }));
+      
       setNewComment('');
     }
+  };
+
+  const calculateItemCosts = (item: QuotationItem) => {
+    if (!item.supplyCosts || !item.installationCosts) return { supplyOwnCost: 0, installationOwnCost: 0 };
+    
+    const supplyBaseAmount = item.supplyRate * item.quantity;
+    const installationBaseAmount = item.installationRate * item.quantity;
+    
+    // Calculate supply own cost
+    const supplyDiscount = supplyBaseAmount * (item.supplyCosts.discount / 100);
+    const supplyWastage = supplyBaseAmount * (item.supplyCosts.wastage / 100);
+    const supplyTransportation = supplyBaseAmount * (item.supplyCosts.transportation / 100);
+    const supplyContingency = supplyBaseAmount * (item.supplyCosts.contingency / 100);
+    const supplyMiscellaneous = supplyBaseAmount * (item.supplyCosts.miscellaneous / 100);
+    const supplyOutstation = supplyBaseAmount * (item.supplyCosts.outstation / 100);
+    const supplyOfficeOverhead = supplyBaseAmount * (item.supplyCosts.officeOverhead / 100);
+    const supplyPoVariance = supplyBaseAmount * (item.supplyCosts.poVariance / 100);
+    
+    const supplyOwnCost = supplyBaseAmount - supplyDiscount + supplyWastage + supplyTransportation + 
+                          supplyContingency + supplyMiscellaneous + supplyOutstation + 
+                          supplyOfficeOverhead + supplyPoVariance;
+    
+    // Calculate installation own cost
+    const installationWastage = installationBaseAmount * (item.installationCosts.wastage / 100);
+    const installationTransportation = installationBaseAmount * (item.installationCosts.transportation / 100);
+    const installationContingency = installationBaseAmount * (item.installationCosts.contingency / 100);
+    const installationMiscellaneous = installationBaseAmount * (item.installationCosts.miscellaneous / 100);
+    const installationOutstation = installationBaseAmount * (item.installationCosts.outstation / 100);
+    const installationOfficeOverhead = installationBaseAmount * (item.installationCosts.officeOverhead / 100);
+    const installationPoVariance = installationBaseAmount * (item.installationCosts.poVariance / 100);
+    
+    const installationOwnCost = installationBaseAmount + installationWastage + installationTransportation + 
+                               installationContingency + installationMiscellaneous + installationOutstation + 
+                               installationOfficeOverhead + installationPoVariance;
+    
+    return { supplyOwnCost, installationOwnCost };
+  };
+
+  const calculateTotalCosts = () => {
+    let totalSupplyOwnCost = 0;
+    let totalInstallationOwnCost = 0;
+    
+    formData.items.forEach(item => {
+      const { supplyOwnCost, installationOwnCost } = calculateItemCosts(item);
+      totalSupplyOwnCost += supplyOwnCost;
+      totalInstallationOwnCost += installationOwnCost;
+    });
+    
+    return { totalSupplyOwnCost, totalInstallationOwnCost };
+  };
+
+  const calculateSellingAmounts = () => {
+    const { totalSupplyOwnCost, totalInstallationOwnCost } = calculateTotalCosts();
+    
+    const supplySellingAmount = totalSupplyOwnCost * (1 + formData.supplyMargin / 100);
+    const installationSellingAmount = totalInstallationOwnCost * (1 + formData.installationMargin / 100);
+    const totalSellingAmount = supplySellingAmount + installationSellingAmount;
+    const gstAmount = totalSellingAmount * (formData.gstRate / 100);
+    const grandTotal = totalSellingAmount + gstAmount;
+    
+    return {
+      supplySellingAmount,
+      installationSellingAmount,
+      totalSellingAmount,
+      gstAmount,
+      grandTotal
+    };
   };
 
   const handleNext = () => {
@@ -193,15 +339,18 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
   };
 
   const handleSubmit = () => {
-    // Calculate totals
-    const totalSupplyAmount = formData.items.reduce((sum, item) => sum + item.supplyAmount, 0);
-    const totalInstallationAmount = formData.items.reduce((sum, item) => sum + item.installationAmount, 0);
+    const { totalSupplyOwnCost, totalInstallationOwnCost } = calculateTotalCosts();
+    const { supplySellingAmount, installationSellingAmount, totalSellingAmount, gstAmount, grandTotal } = calculateSellingAmounts();
     
     const quotationData = {
       ...formData,
-      totalSupplyAmount,
-      totalInstallationAmount,
-      totalAmount: totalSupplyAmount + totalInstallationAmount,
+      totalSupplyOwnCost,
+      totalInstallationOwnCost,
+      supplySellingAmount,
+      installationSellingAmount,
+      totalSellingAmount,
+      gstAmount,
+      grandTotal,
       status: 'pending_approval',
       createdDate: new Date().toISOString()
     };
@@ -214,83 +363,31 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
       leadId: '',
       leadName: '',
       businessName: '',
+      workType: '',
       quotationDate: new Date().toISOString().split('T')[0],
-      expiryDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0],
+      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
       bomId: '',
+      bomName: '',
       items: [],
-      supplyDiscount: 0,
-      supplyWastagePercentage: 0,
-      supplyTransportationPercentage: 0,
-      supplyContingencyPercentage: 0,
-      supplyMiscellaneousPercentage: 0,
-      supplyOutstationPercentage: 0,
-      supplyOfficeOverheadPercentage: 0,
-      supplyPOVariancePercentage: 0,
-      installationWastagePercentage: 0,
-      installationTransportationPercentage: 0,
-      installationContingencyPercentage: 0,
-      installationMiscellaneousPercentage: 0,
-      installationOutstationPercentage: 0,
-      installationOfficeOverheadPercentage: 0,
-      installationPOVariancePercentage: 0,
       note: '',
       supervisionCosts: [],
       financeCosts: [],
       contingencyCosts: [],
-      supplyMarginPercentage: 0,
-      installationMarginPercentage: 0,
-      sitcMarginPercentage: 0,
-      highSideSupplyGST: 18,
-      lowSideSupplyGST: 18,
-      installationGST: 18,
+      supplyMargin: 15,
+      installationMargin: 20,
+      gstRate: 18,
       comments: []
     });
   };
 
   if (!isOpen) return null;
 
-  // Calculate totals for display
-  const totalSupplyBasic = formData.items.reduce((sum, item) => sum + (item.basicSupplyRate * item.quantity), 0);
-  const totalInstallationBasic = formData.items.reduce((sum, item) => sum + (item.basicInstallationRate * item.quantity), 0);
-  
-  const supplyAdditionalCosts = 
-    (totalSupplyBasic * formData.supplyWastagePercentage / 100) +
-    (totalSupplyBasic * formData.supplyTransportationPercentage / 100) +
-    (totalSupplyBasic * formData.supplyContingencyPercentage / 100) +
-    (totalSupplyBasic * formData.supplyMiscellaneousPercentage / 100) +
-    (totalSupplyBasic * formData.supplyOutstationPercentage / 100) +
-    (totalSupplyBasic * formData.supplyOfficeOverheadPercentage / 100) +
-    (totalSupplyBasic * formData.supplyPOVariancePercentage / 100);
-  
-  const installationAdditionalCosts = 
-    (totalInstallationBasic * formData.installationWastagePercentage / 100) +
-    (totalInstallationBasic * formData.installationTransportationPercentage / 100) +
-    (totalInstallationBasic * formData.installationContingencyPercentage / 100) +
-    (totalInstallationBasic * formData.installationMiscellaneousPercentage / 100) +
-    (totalInstallationBasic * formData.installationOutstationPercentage / 100) +
-    (totalInstallationBasic * formData.installationOfficeOverheadPercentage / 100) +
-    (totalInstallationBasic * formData.installationPOVariancePercentage / 100);
-  
-  const totalSupplyCost = totalSupplyBasic + supplyAdditionalCosts;
-  const totalInstallationCost = totalInstallationBasic + installationAdditionalCosts;
-  
-  const totalSupplySellingPrice = totalSupplyCost * (1 + formData.supplyMarginPercentage / 100);
-  const totalInstallationSellingPrice = totalInstallationCost * (1 + formData.installationMarginPercentage / 100);
-  
-  const totalSellingPrice = totalSupplySellingPrice + totalInstallationSellingPrice;
-  
-  const highSideSupplyGSTAmount = totalSupplySellingPrice * 0.4 * formData.highSideSupplyGST / 100; // Assuming 40% is high side
-  const lowSideSupplyGSTAmount = totalSupplySellingPrice * 0.6 * formData.lowSideSupplyGST / 100; // Assuming 60% is low side
-  const installationGSTAmount = totalInstallationSellingPrice * formData.installationGST / 100;
-  
-  const grandTotal = totalSellingPrice + highSideSupplyGSTAmount + lowSideSupplyGSTAmount + installationGSTAmount;
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Create New Quotation</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Create Quotation</h3>
             <p className="text-sm text-gray-500">Step {currentStep} of 5</p>
           </div>
           <button
@@ -301,38 +398,39 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
           </button>
         </div>
 
-        {/* Step Navigation */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* Breadcrumb Navigation */}
+        <div className="px-6 py-4 border-b border-gray-200 overflow-x-auto">
+          <nav className="flex space-x-4">
             {steps.map((step, index) => (
-              <div key={step.id} className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                  currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {step.id}
-                </div>
-                <span className={`text-xs mt-1 ${
-                  currentStep === step.id ? 'text-blue-600' :
+              <div key={step.id} className="flex items-center">
+                <div className={`flex items-center space-x-2 ${
+                  currentStep === step.id ? 'text-blue-600' : 
                   currentStep > step.id ? 'text-green-600' : 'text-gray-400'
                 }`}>
-                  {step.name}
-                </span>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep === step.id ? 'bg-blue-100 text-blue-600' :
+                    currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {step.id}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{step.name}</p>
+                    <p className="text-xs">{step.description}</p>
+                  </div>
+                </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mt-4 hidden md:block ${
-                    currentStep > step.id ? 'bg-green-500' : 'bg-gray-200'
-                  }`}></div>
+                  <ChevronRight className="h-4 w-4 text-gray-400 mx-2" />
                 )}
               </div>
             ))}
-          </div>
+          </nav>
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {/* Step 1: Costing Sheet */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Lead *
@@ -350,6 +448,46 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                     ))}
                   </select>
                 </div>
+
+                {formData.leadId && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Business Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.businessName}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Work Type
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.workType}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        BOM ID
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.bomId}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -380,90 +518,60 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                 </div>
               </div>
 
-              {formData.leadId && (
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Lead Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Lead Name:</span> {formData.leadName}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Business Name:</span> {formData.businessName}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  BOM *
-                </label>
-                <select
-                  name="bomId"
-                  value={formData.bomId}
-                  onChange={handleInputChange}
-                  required
-                  disabled={!formData.leadId}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                >
-                  <option value="">Select BOM</option>
-                  {boms
-                    .filter(bom => !formData.leadId || bom.leadId === formData.leadId)
-                    .map(bom => (
-                      <option key={bom.id} value={bom.id}>{bom.name}</option>
-                    ))
-                  }
-                </select>
-              </div>
-
               {formData.items.length > 0 && (
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Item Table</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Item List</h4>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Amount</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Amount</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Price</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Price</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {formData.items.map((item) => (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.itemType}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.basicSupplyRate.toLocaleString('en-IN')}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(item.basicSupplyRate * item.quantity).toLocaleString('en-IN')}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.basicInstallationRate.toLocaleString('en-IN')}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(item.basicInstallationRate * item.quantity).toLocaleString('en-IN')}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                              <button
-                                onClick={() => handleAddCostDetail(item.id)}
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {formData.items.map(item => {
+                          const { supplyOwnCost, installationOwnCost } = calculateItemCosts(item);
+                          return (
+                            <tr key={item.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.supplyRate.toLocaleString('en-IN')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.supplyPrice.toLocaleString('en-IN')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.installationRate.toLocaleString('en-IN')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.installationPrice.toLocaleString('en-IN')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => openCostModal(item)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Edit Cost Details"
+                                >
+                                  <Calculator className="h-4 w-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot className="bg-gray-50">
                         <tr>
-                          <td colSpan={6} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
-                          <td className="px-3 py-2 text-sm font-medium text-gray-900">₹{totalSupplyBasic.toLocaleString('en-IN')}</td>
+                          <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total:</td>
+                          <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                            ₹{formData.items.reduce((sum, item) => sum + item.supplyPrice, 0).toLocaleString('en-IN')}
+                          </td>
                           <td></td>
-                          <td className="px-3 py-2 text-sm font-medium text-gray-900">₹{totalInstallationBasic.toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                            ₹{formData.items.reduce((sum, item) => sum + item.installationPrice, 0).toLocaleString('en-IN')}
+                          </td>
                           <td></td>
                         </tr>
                       </tfoot>
@@ -471,209 +579,6 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                   </div>
                 </div>
               )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Supply Cost</h4>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Supply Discount:</label>
-                      <div className="col-span-1">
-                        <input
-                          type="number"
-                          name="supplyDiscount"
-                          value={formData.supplyDiscount}
-                          onChange={handlePercentageChange}
-                          min="0"
-                          max="100"
-                          step="0.1"
-                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                        />
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalSupplyBasic * formData.supplyDiscount / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Supply Wastage:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="supplyWastagePercentage"
-                            value={formData.supplyWastagePercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalSupplyBasic * formData.supplyWastagePercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Supply Transportation:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="supplyTransportationPercentage"
-                            value={formData.supplyTransportationPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalSupplyBasic * formData.supplyTransportationPercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Supply Contingency:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="supplyContingencyPercentage"
-                            value={formData.supplyContingencyPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalSupplyBasic * formData.supplyContingencyPercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Supply Office Overhead:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="supplyOfficeOverheadPercentage"
-                            value={formData.supplyOfficeOverheadPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalSupplyBasic * formData.supplyOfficeOverheadPercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="border-t border-gray-200 pt-2 mt-2">
-                      <div className="grid grid-cols-3 gap-2 items-center">
-                        <label className="text-sm font-medium text-gray-700">Total Supply Cost:</label>
-                        <div className="col-span-2 text-sm font-medium text-gray-900">₹{totalSupplyCost.toLocaleString('en-IN')}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Installation Cost</h4>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Installation Wastage:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="installationWastagePercentage"
-                            value={formData.installationWastagePercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalInstallationBasic * formData.installationWastagePercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Installation Transportation:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="installationTransportationPercentage"
-                            value={formData.installationTransportationPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalInstallationBasic * formData.installationTransportationPercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Installation Contingency:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="installationContingencyPercentage"
-                            value={formData.installationContingencyPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalInstallationBasic * formData.installationContingencyPercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 items-center">
-                      <label className="text-sm text-gray-600">Installation Office Overhead:</label>
-                      <div className="col-span-1">
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            name="installationOfficeOverheadPercentage"
-                            value={formData.installationOfficeOverheadPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                          <span className="ml-1">%</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-900">₹{(totalInstallationBasic * formData.installationOfficeOverheadPercentage / 100).toLocaleString('en-IN')}</div>
-                    </div>
-                    
-                    <div className="border-t border-gray-200 pt-2 mt-2">
-                      <div className="grid grid-cols-3 gap-2 items-center">
-                        <label className="text-sm font-medium text-gray-700">Total Installation Cost:</label>
-                        <div className="col-span-2 text-sm font-medium text-gray-900">₹{totalInstallationCost.toLocaleString('en-IN')}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -685,199 +590,756 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                   onChange={handleInputChange}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter any notes for this quotation..."
+                  placeholder="Enter any notes specific to this quotation..."
                 />
               </div>
+
+              {/* Cost Details Modal */}
+              {showCostModal && selectedItemForCosts && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">Cost Details: {selectedItemForCosts.itemName}</h3>
+                      <button
+                        onClick={() => {
+                          setShowCostModal(false);
+                          setSelectedItemForCosts(null);
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-6 w-6" />
+                      </button>
+                    </div>
+                    
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Supply Cost Section */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-md font-medium text-gray-900 mb-3">Supply Cost Details</h4>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <label className="text-sm text-gray-600">Base Supply Rate:</label>
+                              <div className="text-sm font-medium">₹{selectedItemForCosts.supplyRate.toLocaleString('en-IN')}</div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <label className="text-sm text-gray-600">Quantity:</label>
+                              <div className="text-sm font-medium">{selectedItemForCosts.quantity}</div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <label className="text-sm text-gray-600">Base Supply Amount:</label>
+                              <div className="text-sm font-medium">₹{selectedItemForCosts.supplyPrice.toLocaleString('en-IN')}</div>
+                            </div>
+                            
+                            <div className="border-t border-gray-200 my-2"></div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply Discount (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.discount || 0}
+                                onChange={(e) => handleCostChange('discount', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.discount || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply Wastage (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.wastage || 0}
+                                onChange={(e) => handleCostChange('wastage', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.wastage || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply Transportation (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.transportation || 0}
+                                onChange={(e) => handleCostChange('transportation', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.transportation || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply Contingency (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.contingency || 0}
+                                onChange={(e) => handleCostChange('contingency', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.contingency || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply Miscellaneous (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.miscellaneous || 0}
+                                onChange={(e) => handleCostChange('miscellaneous', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.miscellaneous || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply Outstation (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.outstation || 0}
+                                onChange={(e) => handleCostChange('outstation', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.outstation || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply Office Overhead (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.officeOverhead || 0}
+                                onChange={(e) => handleCostChange('officeOverhead', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.officeOverhead || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Supply PO-variance (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.supplyCosts?.poVariance || 0}
+                                onChange={(e) => handleCostChange('poVariance', e.target.value, 'supply')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.supplyPrice * (selectedItemForCosts.supplyCosts?.poVariance || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="border-t border-gray-200 my-2"></div>
+                            
+                            <div className="flex justify-between font-medium">
+                              <span className="text-sm text-gray-900">Total Supply Own Cost:</span>
+                              <span className="text-sm text-gray-900">
+                                ₹{calculateItemCosts(selectedItemForCosts).supplyOwnCost.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Installation Cost Section */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-md font-medium text-gray-900 mb-3">Installation Cost Details</h4>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <label className="text-sm text-gray-600">Base Installation Rate:</label>
+                              <div className="text-sm font-medium">₹{selectedItemForCosts.installationRate.toLocaleString('en-IN')}</div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <label className="text-sm text-gray-600">Quantity:</label>
+                              <div className="text-sm font-medium">{selectedItemForCosts.quantity}</div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <label className="text-sm text-gray-600">Base Installation Amount:</label>
+                              <div className="text-sm font-medium">₹{selectedItemForCosts.installationPrice.toLocaleString('en-IN')}</div>
+                            </div>
+                            
+                            <div className="border-t border-gray-200 my-2"></div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Installation Wastage (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.installationCosts?.wastage || 0}
+                                onChange={(e) => handleCostChange('wastage', e.target.value, 'installation')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.installationPrice * (selectedItemForCosts.installationCosts?.wastage || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Installation Transportation (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.installationCosts?.transportation || 0}
+                                onChange={(e) => handleCostChange('transportation', e.target.value, 'installation')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.installationPrice * (selectedItemForCosts.installationCosts?.transportation || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Installation Contingency (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.installationCosts?.contingency || 0}
+                                onChange={(e) => handleCostChange('contingency', e.target.value, 'installation')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.installationPrice * (selectedItemForCosts.installationCosts?.contingency || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Installation Miscellaneous (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.installationCosts?.miscellaneous || 0}
+                                onChange={(e) => handleCostChange('miscellaneous', e.target.value, 'installation')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.installationPrice * (selectedItemForCosts.installationCosts?.miscellaneous || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Installation Outstation (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.installationCosts?.outstation || 0}
+                                onChange={(e) => handleCostChange('outstation', e.target.value, 'installation')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.installationPrice * (selectedItemForCosts.installationCosts?.outstation || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Installation Office Overhead (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.installationCosts?.officeOverhead || 0}
+                                onChange={(e) => handleCostChange('officeOverhead', e.target.value, 'installation')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.installationPrice * (selectedItemForCosts.installationCosts?.officeOverhead || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-2 items-center">
+                              <label className="text-sm text-gray-600">Installation PO-variance (%):</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={selectedItemForCosts.installationCosts?.poVariance || 0}
+                                onChange={(e) => handleCostChange('poVariance', e.target.value, 'installation')}
+                                className="col-span-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="text-sm font-medium text-right">
+                                ₹{((selectedItemForCosts.installationPrice * (selectedItemForCosts.installationCosts?.poVariance || 0)) / 100).toLocaleString('en-IN')}
+                              </div>
+                            </div>
+                            
+                            <div className="border-t border-gray-200 my-2"></div>
+                            
+                            <div className="flex justify-between font-medium">
+                              <span className="text-sm text-gray-900">Total Installation Own Cost:</span>
+                              <span className="text-sm text-gray-900">
+                                ₹{calculateItemCosts(selectedItemForCosts).installationOwnCost.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+                      <button
+                        onClick={() => {
+                          setShowCostModal(false);
+                          setSelectedItemForCosts(null);
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveCostChanges}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.items.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Supply Cost Summary</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Total Supply Base Amount:</span>
+                        <span className="text-sm font-medium">
+                          ₹{formData.items.reduce((sum, item) => sum + item.supplyPrice, 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Total Supply Own Cost:</span>
+                        <span className="text-sm font-medium">
+                          ₹{calculateTotalCosts().totalSupplyOwnCost.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Installation Cost Summary</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Total Installation Base Amount:</span>
+                        <span className="text-sm font-medium">
+                          ₹{formData.items.reduce((sum, item) => sum + item.installationPrice, 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Total Installation Own Cost:</span>
+                        <span className="text-sm font-medium">
+                          ₹{calculateTotalCosts().totalInstallationOwnCost.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Step 2: POC */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Project Management & Site Establishment Cost</h4>
-                <p className="text-xs text-gray-500">Add overhead costs related to project management and site establishment.</p>
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
+                <p className="text-sm text-gray-600">Overhead costs associated with this project.</p>
               </div>
               
+              {/* Supervision Costs */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-medium text-gray-700">Supervision</h4>
+                  <h4 className="text-md font-medium text-gray-900">Supervision Costs</h4>
                   <button
                     type="button"
-                    onClick={() => handleAddDescription('supervision')}
-                    className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      addCostItem('supervisionCosts', {
+                        id: Date.now().toString(),
+                        description: supervisionDescriptions[0],
+                        nos: 1,
+                        monthlyExpense: 0,
+                        months: 1,
+                        diversity: 100,
+                        amount: 0
+                      });
+                    }}
+                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Add
+                    Add Cost
                   </button>
                 </div>
                 
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    <tr>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Project Manager</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">1</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹60,000</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">3</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">50%</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹90,000</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                        <button className="text-red-600 hover:text-red-900">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Site Engineer</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">2</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹35,000</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">3</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">100%</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹210,000</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                        <button className="text-red-600 hover:text-red-900">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
+                    {formData.supervisionCosts.map((cost, index) => (
+                      <tr key={cost.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <select
+                            value={cost.description}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].description = e.target.value;
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          >
+                            {supervisionDescriptions.map(desc => (
+                              <option key={desc} value={desc}>{desc}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={cost.nos}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].nos = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            value={cost.monthlyExpense}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].monthlyExpense = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={cost.months}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].months = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={cost.diversity}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].diversity = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₹{cost.amount.toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => removeCostItem('supervisionCosts', index)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {formData.supervisionCosts.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
+                          No supervision costs added yet.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
-                  <tfoot className="bg-gray-50">
-                    <tr>
-                      <td colSpan={5} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
-                      <td className="px-3 py-2 text-sm font-medium text-gray-900">₹300,000</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
+                  {formData.supervisionCosts.length > 0 && (
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
+                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                          ₹{formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
               
+              {/* Finance Costs */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-medium text-gray-700">Finance Cost</h4>
+                  <h4 className="text-md font-medium text-gray-900">Finance Costs</h4>
                   <button
                     type="button"
-                    onClick={() => handleAddDescription('finance')}
-                    className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      addCostItem('financeCosts', {
+                        id: Date.now().toString(),
+                        description: financeDescriptions[0],
+                        percentage: 1,
+                        amount: calculateSellingAmounts().totalSellingAmount * 0.01
+                      });
+                    }}
+                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Add
+                    Add Cost
                   </button>
                 </div>
                 
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    <tr>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Bank Guarantee</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">2%</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹5,709</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                        <button className="text-red-600 hover:text-red-900">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Insurance</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">1%</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹2,854</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                        <button className="text-red-600 hover:text-red-900">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
+                    {formData.financeCosts.map((cost, index) => (
+                      <tr key={cost.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <select
+                            value={cost.description}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.financeCosts];
+                              updatedCosts[index].description = e.target.value;
+                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          >
+                            {financeDescriptions.map(desc => (
+                              <option key={desc} value={desc}>{desc}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={cost.percentage}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.financeCosts];
+                              updatedCosts[index].percentage = parseFloat(e.target.value) || 0;
+                              updatedCosts[index].amount = calculateSellingAmounts().totalSellingAmount * (updatedCosts[index].percentage / 100);
+                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₹{cost.amount.toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => removeCostItem('financeCosts', index)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {formData.financeCosts.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-4 text-sm text-gray-500 text-center">
+                          No finance costs added yet.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
-                  <tfoot className="bg-gray-50">
-                    <tr>
-                      <td colSpan={2} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
-                      <td className="px-3 py-2 text-sm font-medium text-gray-900">₹8,563</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
+                  {formData.financeCosts.length > 0 && (
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Finance Cost:</td>
+                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                          ₹{formData.financeCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
               
+              {/* Contingencies */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-medium text-gray-700">Contingencies</h4>
+                  <h4 className="text-md font-medium text-gray-900">Contingencies</h4>
                   <button
                     type="button"
-                    onClick={() => handleAddDescription('contingency')}
-                    className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      addCostItem('contingencyCosts', {
+                        id: Date.now().toString(),
+                        description: contingencyDescriptions[0],
+                        percentage: 3,
+                        amount: calculateSellingAmounts().totalSellingAmount * 0.03
+                      });
+                    }}
+                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Add
+                    Add Cost
                   </button>
                 </div>
                 
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    <tr>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Project Contingency</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">3%</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹8,563</td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                        <button className="text-red-600 hover:text-red-900">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
+                    {formData.contingencyCosts.map((cost, index) => (
+                      <tr key={cost.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <select
+                            value={cost.description}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.contingencyCosts];
+                              updatedCosts[index].description = e.target.value;
+                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          >
+                            {contingencyDescriptions.map(desc => (
+                              <option key={desc} value={desc}>{desc}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={cost.percentage}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.contingencyCosts];
+                              updatedCosts[index].percentage = parseFloat(e.target.value) || 0;
+                              updatedCosts[index].amount = calculateSellingAmounts().totalSellingAmount * (updatedCosts[index].percentage / 100);
+                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₹{cost.amount.toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => removeCostItem('contingencyCosts', index)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {formData.contingencyCosts.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-4 text-sm text-gray-500 text-center">
+                          No contingency costs added yet.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
-                  <tfoot className="bg-gray-50">
-                    <tr>
-                      <td colSpan={2} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
-                      <td className="px-3 py-2 text-sm font-medium text-gray-900">₹8,563</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
+                  {formData.contingencyCosts.length > 0 && (
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Contingency:</td>
+                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                          ₹{formData.contingencyCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
               
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between font-medium">
                   <span className="text-md text-gray-900">Total Overheads Cost:</span>
-                  <span className="text-md text-gray-900">₹317,126</span>
-                </div>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Contract Value:</span>
-                    <span className="font-medium">₹285,440</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Material Cost:</span>
-                    <span className="font-medium">₹185,600</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Labour Cost:</span>
-                    <span className="font-medium">₹60,000</span>
-                  </div>
+                  <span className="text-md text-gray-900">
+                    ₹{(
+                      formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0) +
+                      formData.financeCosts.reduce((sum, cost) => sum + cost.amount, 0) +
+                      formData.contingencyCosts.reduce((sum, cost) => sum + cost.amount, 0)
+                    ).toLocaleString('en-IN')}
+                  </span>
                 </div>
               </div>
             </div>
@@ -886,134 +1348,103 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
           {/* Step 3: Summary */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Quotation Summary</h4>
-                <p className="text-xs text-gray-500">Apply margins and view the final selling price breakdown.</p>
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Margin Application</h3>
+                <p className="text-sm text-gray-600">Apply margins to calculate final selling prices.</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Supply Margin */}
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Supply</h4>
+                  <h4 className="text-md font-medium text-gray-900 mb-3">Supply Margin</h4>
                   <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Basic Cost:</span>
-                      <span className="text-sm text-gray-900">₹{totalSupplyBasic.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-gray-600">Supply Own Cost:</span>
+                      <span className="text-sm font-medium">₹{calculateTotalCosts().totalSupplyOwnCost.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm text-gray-600">Margin (%):</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        name="supplyMargin"
+                        value={formData.supplyMargin}
+                        onChange={handleInputChange}
+                        className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Additional Costs:</span>
-                      <span className="text-sm text-gray-900">₹{supplyAdditionalCosts.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-gray-600">Margin Amount:</span>
+                      <span className="text-sm font-medium">
+                        ₹{(calculateTotalCosts().totalSupplyOwnCost * (formData.supplyMargin / 100)).toLocaleString('en-IN')}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total Own Cost:</span>
-                      <span className="text-sm font-medium text-gray-900">₹{totalSupplyCost.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm text-gray-600">Margin %:</label>
-                        <div className="w-20">
-                          <input
-                            type="number"
-                            name="supplyMarginPercentage"
-                            value={formData.supplyMarginPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <div className="border-t border-gray-200 my-2"></div>
                     <div className="flex justify-between font-medium">
-                      <span className="text-sm text-gray-900">Selling Amount:</span>
-                      <span className="text-sm text-green-600">₹{totalSupplySellingPrice.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-gray-900">Supply Selling Amount:</span>
+                      <span className="text-sm text-green-600">
+                        ₹{calculateSellingAmounts().supplySellingAmount.toLocaleString('en-IN')}
+                      </span>
                     </div>
                   </div>
                 </div>
                 
+                {/* Installation Margin */}
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Installation</h4>
+                  <h4 className="text-md font-medium text-gray-900 mb-3">Installation Margin</h4>
                   <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Basic Cost:</span>
-                      <span className="text-sm text-gray-900">₹{totalInstallationBasic.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-gray-600">Installation Own Cost:</span>
+                      <span className="text-sm font-medium">₹{calculateTotalCosts().totalInstallationOwnCost.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm text-gray-600">Margin (%):</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        name="installationMargin"
+                        value={formData.installationMargin}
+                        onChange={handleInputChange}
+                        className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                      />
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Additional Costs:</span>
-                      <span className="text-sm text-gray-900">₹{installationAdditionalCosts.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-gray-600">Margin Amount:</span>
+                      <span className="text-sm font-medium">
+                        ₹{(calculateTotalCosts().totalInstallationOwnCost * (formData.installationMargin / 100)).toLocaleString('en-IN')}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total Own Cost:</span>
-                      <span className="text-sm font-medium text-gray-900">₹{totalInstallationCost.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm text-gray-600">Margin %:</label>
-                        <div className="w-20">
-                          <input
-                            type="number"
-                            name="installationMarginPercentage"
-                            value={formData.installationMarginPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <div className="border-t border-gray-200 my-2"></div>
                     <div className="flex justify-between font-medium">
-                      <span className="text-sm text-gray-900">Selling Amount:</span>
-                      <span className="text-sm text-green-600">₹{totalInstallationSellingPrice.toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">SITC</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Supply Selling:</span>
-                      <span className="text-sm text-gray-900">₹{totalSupplySellingPrice.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Installation Selling:</span>
-                      <span className="text-sm text-gray-900">₹{totalInstallationSellingPrice.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total Selling:</span>
-                      <span className="text-sm font-medium text-gray-900">₹{totalSellingPrice.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="border-t border-gray-200 pt-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm text-gray-600">SITC Margin %:</label>
-                        <div className="w-20">
-                          <input
-                            type="number"
-                            name="sitcMarginPercentage"
-                            value={formData.sitcMarginPercentage}
-                            onChange={handlePercentageChange}
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between font-medium">
-                      <span className="text-sm text-gray-900">Final Amount:</span>
-                      <span className="text-sm text-green-600">₹{(totalSellingPrice * (1 + formData.sitcMarginPercentage / 100)).toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-gray-900">Installation Selling Amount:</span>
+                      <span className="text-sm text-green-600">
+                        ₹{calculateSellingAmounts().installationSellingAmount.toLocaleString('en-IN')}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex justify-between font-medium">
-                  <span className="text-md text-gray-900">Total Selling Price (Before GST):</span>
-                  <span className="text-md text-green-600">₹{totalSellingPrice.toLocaleString('en-IN')}</span>
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Total Selling Amount</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Supply Selling Amount:</span>
+                    <span className="text-sm font-medium">₹{calculateSellingAmounts().supplySellingAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Installation Selling Amount:</span>
+                    <span className="text-sm font-medium">₹{calculateSellingAmounts().installationSellingAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="border-t border-gray-200 my-2"></div>
+                  <div className="flex justify-between font-medium">
+                    <span className="text-sm text-gray-900">Total Selling Amount (Before GST):</span>
+                    <span className="text-sm text-green-600">₹{calculateSellingAmounts().totalSellingAmount.toLocaleString('en-IN')}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1022,53 +1453,57 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
           {/* Step 4: Final Costing Sheet */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Final Costing Sheet</h4>
-                <p className="text-xs text-gray-500">Customer-facing summary of the final costs.</p>
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Final Costing Sheet</h3>
+                <p className="text-sm text-gray-600">Customer-facing summary of costs.</p>
               </div>
               
               <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Itemized List</h4>
+                <h4 className="text-md font-medium text-gray-900 mb-3">Itemized List</h4>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Price</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Price</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Price</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Price</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {formData.items.map((item) => {
-                        const supplyRate = item.basicSupplyRate * (1 + formData.supplyMarginPercentage / 100);
-                        const installRate = item.basicInstallationRate * (1 + formData.installationMarginPercentage / 100);
+                      {formData.items.map(item => {
+                        const { supplyOwnCost, installationOwnCost } = calculateItemCosts(item);
+                        const supplySellingRate = item.supplyRate * (1 + formData.supplyMargin / 100);
+                        const installSellingRate = item.installationRate * (1 + formData.installationMargin / 100);
+                        
                         return (
                           <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.itemType}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{supplyRate.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(supplyRate * item.quantity).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{installRate.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(installRate * item.quantity).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{Math.round(supplySellingRate).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{Math.round(supplySellingRate * item.quantity).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{Math.round(installSellingRate).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{Math.round(installSellingRate * item.quantity).toLocaleString('en-IN')}</td>
                           </tr>
                         );
                       })}
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={6} className="px-3 py-2 text-sm font-medium text-right">Subtotal:</td>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900">₹{totalSupplySellingPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Subtotal:</td>
+                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                          ₹{Math.round(calculateSellingAmounts().supplySellingAmount).toLocaleString('en-IN')}
+                        </td>
                         <td></td>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900">₹{totalInstallationSellingPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                          ₹{Math.round(calculateSellingAmounts().installationSellingAmount).toLocaleString('en-IN')}
+                        </td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1076,407 +1511,128 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
               </div>
               
               <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">GST Application</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST %</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">High Side Supply</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(totalSupplySellingPrice * 0.4).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <input
-                              type="number"
-                              name="highSideSupplyGST"
-                              value={formData.highSideSupplyGST}
-                              onChange={handlePercentageChange}
-                              min="0"
-                              max="100"
-                              step="0.1"
-                              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md"
-                            />
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Low Side Supply</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(totalSupplySellingPrice * 0.6).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <input
-                              type="number"
-                              name="lowSideSupplyGST"
-                              value={formData.lowSideSupplyGST}
-                              onChange={handlePercentageChange}
-                              min="0"
-                              max="100"
-                              step="0.1"
-                              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md"
-                            />
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Installation</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{totalInstallationSellingPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <input
-                              type="number"
-                              name="installationGST"
-                              value={formData.installationGST}
-                              onChange={handlePercentageChange}
-                              min="0"
-                              max="100"
-                              step="0.1"
-                              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md"
-                            />
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  
-                  <div>
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST Amount</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total with GST</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">High Side Supply</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{highSideSupplyGSTAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(totalSupplySellingPrice * 0.4 + highSideSupplyGSTAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Low Side Supply</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{lowSideSupplyGSTAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(totalSupplySellingPrice * 0.6 + lowSideSupplyGSTAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                        </tr>
-                        <tr>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">Installation</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{installationGSTAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(totalInstallationSellingPrice + installationGSTAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                        </tr>
-                      </tbody>
-                      <tfoot className="bg-gray-50">
-                        <tr>
-                          <td className="px-3 py-2 text-sm font-medium text-right">Grand Total:</td>
-                          <td className="px-3 py-2 text-sm font-medium text-gray-900">₹{(highSideSupplyGSTAmount + lowSideSupplyGSTAmount + installationGSTAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 text-sm font-medium text-green-600">₹{grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
+                <h4 className="text-md font-medium text-gray-900 mb-3">GST Summary</h4>
+                <div className="flex items-center space-x-4 mb-4">
+                  <span className="text-sm text-gray-600">GST Rate (%):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    name="gstRate"
+                    value={formData.gstRate}
+                    onChange={handleInputChange}
+                    className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                  />
                 </div>
+                
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST %</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Supply</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                        ₹{Math.round(calculateSellingAmounts().supplySellingAmount).toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{formData.gstRate}%</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                        ₹{Math.round(calculateSellingAmounts().supplySellingAmount * (formData.gstRate / 100)).toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ₹{Math.round(calculateSellingAmounts().supplySellingAmount * (1 + formData.gstRate / 100)).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Installation</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                        ₹{Math.round(calculateSellingAmounts().installationSellingAmount).toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{formData.gstRate}%</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                        ₹{Math.round(calculateSellingAmounts().installationSellingAmount * (formData.gstRate / 100)).toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ₹{Math.round(calculateSellingAmounts().installationSellingAmount * (1 + formData.gstRate / 100)).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot className="bg-gray-50">
+                    <tr>
+                      <td colSpan={3} className="px-4 py-2 text-sm font-medium text-right">Grand Total:</td>
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                        ₹{Math.round(calculateSellingAmounts().gstAmount).toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-2 text-sm font-medium text-green-600">
+                        ₹{Math.round(calculateSellingAmounts().grandTotal).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </div>
           )}
 
-          {/* Step 5: Quotation Comments */}
+          {/* Step 5: Comments */}
           {currentStep === 5 && (
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Quotation Comments</h4>
-                <p className="text-xs text-gray-500">Add internal comments and notes about this quotation.</p>
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Quotation Comments</h3>
+                <p className="text-sm text-gray-600">Internal communication regarding this quotation.</p>
               </div>
               
               <div className="border border-gray-200 rounded-lg p-4">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Add Comment
-                  </label>
-                  <div className="flex space-x-3">
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      rows={3}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter your comments or notes about this quotation..."
-                    ></textarea>
-                    <button
-                      type="button"
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim()}
-                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed self-end"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-                
                 <div className="space-y-4">
-                  {formData.comments.length > 0 ? (
-                    formData.comments.map((comment) => (
-                      <div key={comment.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-medium text-white">
-                            {comment.author.split(' ').map((n: string) => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-900">{comment.author}</span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(comment.timestamp).toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700">{comment.text}</p>
-                        </div>
+                  {formData.comments.map(comment => (
+                    <div key={comment.id} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-900">{comment.author}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(comment.timestamp).toLocaleString('en-IN')}
+                        </span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-sm text-gray-500">
-                      No comments yet. Add the first comment above.
+                      <p className="text-sm text-gray-700">{comment.text}</p>
+                    </div>
+                  ))}
+                  
+                  {formData.comments.length === 0 && (
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      No comments yet. Add the first comment below.
                     </div>
                   )}
+                </div>
+                
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                  <div className="flex space-x-3">
+                    <div className="flex-1">
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Add a comment..."
+                      />
+                    </div>
+                    <button
+                      onClick={addComment}
+                      disabled={!newComment.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed self-end"
+                    >
+                      Add Comment
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
-
-        {/* Add Cost Details Modal */}
-        {showCostModal && selectedItem && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Add Cost Details</h3>
-                <button
-                  onClick={() => setShowCostModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-4">
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Item: {selectedItem.itemName}</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-gray-500">Item Code:</span> {selectedItem.itemCode}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">UOM:</span> {selectedItem.uomName}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Quantity:</span> {selectedItem.quantity}
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Type:</span> {selectedItem.itemType}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Basic Supply Rate
-                    </label>
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-500 mr-1">₹</span>
-                      <input
-                        type="number"
-                        value={selectedItem.basicSupplyRate}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Supply Rate
-                    </label>
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-500 mr-1">₹</span>
-                      <input
-                        type="number"
-                        value={selectedItem.supplyRate || selectedItem.basicSupplyRate}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Basic Installation Rate
-                    </label>
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-500 mr-1">₹</span>
-                      <input
-                        type="number"
-                        value={selectedItem.basicInstallationRate}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Installation Rate
-                    </label>
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-500 mr-1">₹</span>
-                      <input
-                        type="number"
-                        value={selectedItem.installationRate || selectedItem.basicInstallationRate}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Additional Specifications
-                  </label>
-                  <textarea
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter any additional specifications or notes for this item..."
-                  ></textarea>
-                </div>
-              </div>
-              <div className="flex justify-end p-4 border-t border-gray-200">
-                <button
-                  onClick={() => setShowCostModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mr-2"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveCostDetail}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  <Calculator className="h-4 w-4 mr-2 inline" />
-                  Apply Costs
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add Description Modal */}
-        {showAddDescriptionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Add {costCategory.charAt(0).toUpperCase() + costCategory.slice(1)} Cost</h3>
-                <button
-                  onClick={() => setShowAddDescriptionModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-4">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description *
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select Description</option>
-                      {costCategory === 'supervision' && descriptionOptions.supervision.map((option, index) => (
-                        <option key={index} value={option}>{option}</option>
-                      ))}
-                      {costCategory === 'finance' && descriptionOptions.finance.map((option, index) => (
-                        <option key={index} value={option}>{option}</option>
-                      ))}
-                      {costCategory === 'contingency' && descriptionOptions.contingency.map((option, index) => (
-                        <option key={index} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  {costCategory === 'supervision' ? (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          NOS *
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Monthly Expense (₹) *
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Months *
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Diversity (%) *
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Percentage (%) *
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-end p-4 border-t border-gray-200">
-                <button
-                  onClick={() => setShowAddDescriptionModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mr-2"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveDescription}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Add Cost
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Footer with navigation buttons */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200">
