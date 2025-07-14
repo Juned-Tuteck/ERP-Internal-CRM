@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search, Edit2, SquarePen } from 'lucide-react';
+import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Search, Edit } from 'lucide-react';
 
 interface CreateBOMProps {
   isOpen: boolean;
@@ -19,13 +19,6 @@ interface BOMItem {
   specifications?: string;
 }
 
-interface BOMTemplate {
-  id: string;
-  name: string;
-  workType: string;
-  items: BOMItem[];
-}
-
 const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const editMode = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
@@ -38,11 +31,13 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     status: 'DRAFT',
   });
   const [items, setItems] = useState<BOMItem[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [csvFile, setCsvFile] = useState<File | null>(null);
   const [showSpecModal, setShowSpecModal] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [specification, setSpecification] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [filteredItems, setFilteredItems] = useState<BOMItem[]>([]);
 
   // Mock data for dropdowns
   const leads = [
@@ -52,38 +47,34 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     { id: '4', name: 'Residential Complex Electrical', workType: 'Electrical' },
     { id: '5', name: 'Shopping Mall Plumbing System', workType: 'Plumbing' },
   ];
-  
-  const templates: BOMTemplate[] = [
+
+  const templates: BOMItem[] = [
     {
       id: '1',
-      name: 'Basement Ventilation System - Standard',
-      workType: 'Basement Ventilation',
-      items: [
-        { id: '101', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500, quantity: 4, price: 50000 },
-        { id: '102', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', rate: 850, quantity: 120, price: 102000 },
-        { id: '103', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', rate: 3200, quantity: 6, price: 19200 },
-        { id: '104', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', rate: 1800, quantity: 8, price: 14400 },
-      ]
+      itemCode: 'FAN-001',
+      itemName: 'Industrial Exhaust Fan',
+      uomName: 'Nos',
+      rate: 12500,
+      quantity: 4,
+      price: 50000,
     },
     {
       id: '2',
-      name: 'HVAC System - Commercial Office',
-      workType: 'HVAC Systems',
-      items: [
-        { id: '201', itemCode: 'AC-001', itemName: 'Central AC Unit', uomName: 'Nos', rate: 85000, quantity: 2, price: 170000 },
-        { id: '202', itemCode: 'DUCT-002', itemName: 'Insulated Duct', uomName: 'Meter', rate: 1200, quantity: 80, price: 96000 },
-        { id: '203', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500, quantity: 6, price: 27000 },
-      ]
+      itemCode: 'DUCT-001',
+      itemName: 'Galvanized Steel Duct',
+      uomName: 'Meter',
+      rate: 850,
+      quantity: 120,
+      price: 102000,
     },
     {
       id: '3',
-      name: 'Fire Safety System - Residential',
-      workType: 'Fire Safety',
-      items: [
-        { id: '301', itemCode: 'ALARM-001', itemName: 'Fire Alarm Control Panel', uomName: 'Nos', rate: 35000, quantity: 1, price: 35000 },
-        { id: '302', itemCode: 'SENSOR-002', itemName: 'Smoke Detector', uomName: 'Nos', rate: 1200, quantity: 24, price: 28800 },
-        { id: '303', itemCode: 'SPRINKLER-001', itemName: 'Automatic Sprinkler', uomName: 'Nos', rate: 800, quantity: 36, price: 28800 },
-      ]
+      itemCode: 'DAMPER-001',
+      itemName: 'Fire Damper',
+      uomName: 'Nos',
+      rate: 3200,
+      quantity: 6,
+      price: 19200,
     },
   ];
 
@@ -91,18 +82,37 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     if (initialData) {
       setFormData(initialData);
       setItems(initialData.items || []);
-      setSelectedTemplate(initialData.selectedTemplate || initialData.templateId || '');
       setCurrentStep(1);
     }
   }, [initialData]);
+
+  const masterItems: BOMItem[] = [
+    { id: '1', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500, quantity: 0, price: 0 },
+    { id: '2', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', rate: 850, quantity: 0, price: 0 },
+    { id: '3', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', rate: 3200, quantity: 0, price: 0 },
+    { id: '4', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', rate: 1800, quantity: 0, price: 0 },
+    { id: '5', itemCode: 'CABLE-001', itemName: 'Electrical Cable', uomName: 'Meter', rate: 120, quantity: 0, price: 0 },
+    { id: '6', itemCode: 'PANEL-001', itemName: 'Control Panel', uomName: 'Nos', rate: 25000, quantity: 0, price: 0 },
+    { id: '7', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500, quantity: 0, price: 0 },
+    { id: '8', itemCode: 'PIPE-001', itemName: 'PVC Pipe', uomName: 'Meter', rate: 350, quantity: 0, price: 0 },
+  ];
+
+  useEffect(() => {
+    setFilteredItems(
+      masterItems.filter(item =>
+        item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.itemCode.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+  }, [searchQuery]);
 
   const statuses = ['DRAFT', 'Submitted for Approval'];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
     // If lead is selected, update lead name and work type
@@ -118,39 +128,37 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     }
   };
 
-  const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const templateId = e.target.value;
-    setSelectedTemplate(templateId);
-    
-    if (templateId) {
-      const template = templates.find(t => t.id === templateId);
-      if (template) {
-        // Clone items from template
-        setItems(template.items.map(item => ({...item, id: Date.now() + Math.random().toString()})));
-      }
-    } else {
-      setItems([]);
+  const handleAddItem = () => {
+    if (selectedItem && quantity > 0) {
+      const newItem: BOMItem = {
+        id: Date.now().toString(),
+        itemCode: selectedItem.itemCode,
+        itemName: selectedItem.itemName,
+        uomName: selectedItem.uomName,
+        rate: selectedItem.rate,
+        quantity: quantity,
+        price: selectedItem.rate * quantity,
+        specifications: '',
+      };
+
+      setItems(prev => [...prev, newItem]);
+      setSelectedItem(null);
+      setQuantity(1);
+      setSearchQuery('');
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setCsvFile(e.target.files[0]);
-    }
-  };
-
-  const handleUploadItems = () => {
-    // In a real application, this would parse the CSV file
-    // For this demo, we'll just simulate a successful upload
-    if (csvFile) {
-      // Mock data after CSV upload
-      setItems([
-        { id: '401', itemCode: 'PIPE-001', itemName: 'PVC Pipe', uomName: 'Meter', rate: 350, quantity: 150, price: 52500 },
-        { id: '402', itemCode: 'VALVE-001', itemName: 'Ball Valve', uomName: 'Nos', rate: 1200, quantity: 12, price: 14400 },
-        { id: '403', itemCode: 'FITTING-001', itemName: 'PVC Elbow', uomName: 'Nos', rate: 120, quantity: 40, price: 4800 },
-      ]);
-      
-      setCsvFile(null);
+  const handleUpdateItem = () => {
+    if (selectedItem && quantity > 0) {
+      setItems(prev => prev.map(item =>
+        item.id === selectedItem.id ? {
+          ...item,
+          quantity: quantity,
+          price: selectedItem.rate * quantity,
+        } : item
+      ));
+      setSelectedItem(null);
+      setQuantity(1);
     }
   };
 
@@ -215,8 +223,6 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       status: 'DRAFT',
     });
     setItems([]);
-    setSelectedTemplate('');
-    setCsvFile(null);
   };
 
   if (!isOpen) return null;
@@ -250,8 +256,23 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       status: 'DRAFT',
     });
     setItems([]);
-    setSelectedTemplate('');
-    setCsvFile(null);
+  };
+
+  useEffect(() => {
+    if (templates.length > 0) {
+      const defaultTemplate = templates[0];
+      setItems([defaultTemplate]);
+    }
+  }, []);
+
+  const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const templateId = e.target.value;
+    const selectedTemplate = templates.find(template => template.id === templateId);
+    if (selectedTemplate) {
+      setItems([selectedTemplate]);
+    } else {
+      setItems([]);
+    }
   };
 
   return (
@@ -348,75 +369,146 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
           {/* Step 2: BOM Details */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-md mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Lead Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Lead Name:</span> {formData.leadName}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Work Type:</span> {formData.workType}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Date:</span> {new Date(formData.date).toLocaleDateString('en-IN')}
-                  </div>
-                </div>
+              {/* Template Selection */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Select Template</h4>
+                <select
+                  onChange={handleTemplateSelect}
+                  defaultValue={templates.length > 0 ? templates[0].id : ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select Template</option>
+                  {templates.map(template => (
+                    <option key={template.id} value={template.id}>{template.itemName}</option>
+                  ))}
+                </select>
               </div>
 
+              {/* Add Items Section */}
               <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">BOM Items</h4>
-                
-                <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Add Items</h4>
+                <div className="flex space-x-4 mb-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Load from Saved Template
-                    </label>
-                    <select
-                      value={selectedTemplate}
-                      onChange={handleTemplateSelect}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select Template</option>
-                      {templates.map(template => (
-                        <option key={template.id} value={template.id}>{template.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="md:w-64">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Upload Custom Template
-                    </label>
-                    <div className="flex space-x-2">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-gray-400" />
+                      </div>
                       <input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="csv-upload-bom"
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Search items by name or code"
                       />
-                      <label
-                        htmlFor="csv-upload-bom"
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
-                      >
-                        Choose File
-                      </label>
+                    </div>
+                  </div>
+                  <div className="w-24">
+                    <input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Number(e.target.value))}
+                      min="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Qty"
+                      disabled={!selectedItem}
+                    />
+                  </div>
+                  <button
+                    onClick={editingItemId ? handleUpdateItem : handleAddItem}
+                    disabled={!selectedItem}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    {editingItemId ? 'Update' : 'Add'}
+                  </button>
+                </div>
+
+                {/* Search Results */}
+                {searchQuery && !selectedItem && (
+                  <div className="border border-gray-200 rounded-md mb-4 max-h-40 overflow-y-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredItems.map(item => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-2 whitespace-nowrap">
+                              <button
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setSearchQuery('');
+                                }}
+                                className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                              >
+                                Select
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredItems.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-2 text-sm text-gray-500 text-center">No items found</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Selected Item */}
+                {selectedItem && (
+                  <div className="border border-gray-200 rounded-md p-4 mb-4 bg-blue-50">
+                    <div className="flex justify-between items-center mb-2">
+                      <h5 className="text-sm font-medium text-gray-900">Selected Item</h5>
                       <button
-                        onClick={handleUploadItems}
-                        disabled={!csvFile}
-                        className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setSelectedItem(null);
+                          setEditingItemId(null);
+                          setQuantity(1);
+                          setSpecification('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
                       >
-                        <Upload className="h-4 w-4 mr-1" />
-                        Upload
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
-                    {csvFile && (
-                      <p className="text-xs text-gray-500 mt-1 truncate">
-                        {csvFile.name}
-                      </p>
-                    )}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-500">Item Code:</span> {selectedItem.itemCode}
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Item Name:</span> {selectedItem.itemName}
+                      </div>
+                      <div>
+                        <span className="text-gray-500">UOM:</span> {selectedItem.uomName}
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Rate:</span> ₹{selectedItem.rate.toLocaleString('en-IN')}
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Total:</span> ₹{(selectedItem.rate * quantity).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setShowSpecModal(true)}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Add Specification
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Items Table */}
                 <div className="border border-gray-200 rounded-md overflow-hidden">
@@ -436,16 +528,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
                       {items.map(item => (
                         <tr key={item.id} className="hover:bg-gray-50">
                           <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                            <div>
-                              {item.itemName}
-                              {item.specifications && (
-                                <p className="text-xs text-gray-500 mt-1 truncate max-w-xs">
-                                  Spec: {item.specifications}
-                                </p>
-                              )}
-                            </div>
-                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
                           <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
                           <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
                           <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
@@ -478,7 +561,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
                                 className="text-blue-600 hover:text-blue-900 pl-5"
                                 title="Edit Specification"
                               >
-                                <SquarePen className="h-4 w-4" />
+                                <Edit className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleRemoveItem(item.id)}
