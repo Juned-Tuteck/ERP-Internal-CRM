@@ -35,6 +35,12 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     supervisionCosts: [],
     financeCosts: [],
     contingencyCosts: [],
+   projectSummary: {
+     contractValue: 0,
+     materialCost: 0,
+     labourCost: 0,
+     totalOwnCost: 0
+   },
     // Step 3: Summary
     supplyData: {
       ownAmount: 0,
@@ -122,6 +128,12 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       supervisionCosts: [],
       financeCosts: [],
       contingencyCosts: [],
+     projectSummary: {
+       contractValue: 0,
+       materialCost: 0,
+       labourCost: 0,
+       totalOwnCost: 0
+     },
       supplyData: {
         ownAmount: 0,
         overheadsPercentage: 10,

@@ -313,8 +313,10 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Supply Rate</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Amount</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Install Rate</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Amount</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -327,8 +329,10 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.supplyRate.toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.supplyOwnAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(item.rate * 0.3).toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.installationRate.toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.installationOwnAmount.toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
@@ -345,7 +349,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr>
-                  <td colSpan={5} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
+                  <td colSpan={7} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
                   <td className="px-3 py-2 text-sm font-medium text-gray-900">
                     ₹{formData.items.reduce((sum: number, item: any) => sum + item.supplyOwnAmount, 0).toLocaleString('en-IN')}
                   </td>

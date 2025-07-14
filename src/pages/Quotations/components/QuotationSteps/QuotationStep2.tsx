@@ -393,6 +393,57 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
           <span className="text-md text-gray-900">₹{totalOverheadsCost.toLocaleString('en-IN')}</span>
         </div>
       </div>
+     
+     {/* Project Summary Card */}
+     <div className="border border-gray-200 rounded-lg p-4 mt-6">
+       <h4 className="text-md font-medium text-gray-900 mb-4">Project Summary</h4>
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-1">
+             Contract Value
+           </label>
+           <input
+             type="number"
+             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+             placeholder="Enter contract value"
+           />
+         </div>
+         
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-1">
+             Material Cost
+           </label>
+           <input
+             type="number"
+             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+             placeholder="Enter material cost"
+           />
+         </div>
+         
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-1">
+             Labour Cost
+           </label>
+           <input
+             type="number"
+             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+             placeholder="Enter labour cost"
+           />
+         </div>
+         
+         <div>
+           <label className="block text-sm font-medium text-gray-700 mb-1">
+             Total Own Cost
+           </label>
+           <input
+             type="number"
+             className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+             placeholder="0.00"
+             readOnly
+           />
+         </div>
+       </div>
+     </div>
 
       {/* Add Cost Modal */}
       {showAddModal && (
