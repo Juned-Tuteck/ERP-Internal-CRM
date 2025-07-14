@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search, Edit2, SquarePen } from 'lucide-react';
 
 interface CreateBOMProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (bomData: any) => void;
+  initialData?: any;
 }
 
 interface BOMItem {
@@ -25,9 +26,10 @@ interface BOMTemplate {
   items: BOMItem[];
 }
 
-const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit }) => {
+const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
+  const editMode = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(initialData || {
     leadId: '',
     leadName: '',
     workType: '',
@@ -84,6 +86,15 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit }) => {
       ]
     },
   ];
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+      setItems(initialData.items || []);
+      setSelectedTemplate(initialData.selectedTemplate || initialData.templateId || '');
+      setCurrentStep(1);
+    }
+  }, [initialData]);
 
   const statuses = ['DRAFT', 'Submitted for Approval'];
 
@@ -188,7 +199,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit }) => {
       items,
       totalItems: items.length,
       totalValue: items.reduce((sum, item) => sum + item.price, 0),
-      createdDate: new Date().toISOString(),
+      createdDate: initialData?.createdDate || new Date().toISOString(),
     };
     
     onSubmit(bomData);
@@ -210,13 +221,69 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit }) => {
 
   if (!isOpen) return null;
 
+  // Breadcrumbs for steps
+  const steps = [
+    { label: 'BOM Header Details', step: 1 },
+    { label: 'BOM Items & Details', step: 2 }
+  ];
+
+  const handleStepClick = (step: number) => {
+    if (editMode) setCurrentStep(step);
+  };
+
+  const handleSave = () => {
+    const bomData = {
+      ...formData,
+      items,
+      totalItems: items.length,
+      totalValue: items.reduce((sum, item) => sum + item.price, 0),
+      createdDate: initialData?.createdDate || new Date().toISOString(),
+    };
+    onSubmit(bomData);
+    setCurrentStep(1);
+    setFormData({
+      leadId: '',
+      leadName: '',
+      workType: '',
+      date: new Date().toISOString().split('T')[0],
+      note: '',
+      status: 'DRAFT',
+    });
+    setItems([]);
+    setSelectedTemplate('');
+    setCsvFile(null);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Create Bill of Materials</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {editMode ? 'Edit Bill of Materials' : 'Create Bill of Materials'}
+            </h3>
             <p className="text-sm text-gray-500">Step {currentStep} of 2</p>
+            {/* Step Breadcrumbs */}
+            <nav className="mt-2 flex space-x-4" aria-label="Steps">
+              {steps.map((s, idx) => (
+                <div key={s.step} className="flex items-center">
+                  <span
+                    className={`text-sm font-medium ${currentStep === s.step
+                      ? 'text-blue-600'
+                      : currentStep > s.step
+                      ? 'text-green-600'
+                      : 'text-gray-400'
+                    } ${editMode ? 'cursor-pointer underline' : ''}`}
+                    onClick={() => handleStepClick(s.step)}
+                  >
+                    {s.label}
+                  </span>
+                  {idx < steps.length - 1 && (
+                    <ChevronRight className="h-4 w-4 mx-2 text-gray-300" />
+                  )}
+                </div>
+              ))}
+            </nav>
           </div>
           <button
             onClick={onClose}
@@ -386,10 +453,32 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit }) => {
                           <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleAddSpecification(item.id)}
+                                onClick={() => {
+                                  // Increase quantity by 1 and update price accordingly
+                                  setItems(prev =>
+                                    prev.map(i =>
+                                      i.id === item.id
+                                        ? {
+                                            ...i,
+                                            quantity: i.quantity + 1,
+                                            price: (i.quantity + 1) * i.rate,
+                                          }
+                                        : i
+                                    )
+                                  );
+                                }}
                                 className="text-green-600 hover:text-green-900"
+                                title="Increase Quantity"
                               >
                                 <Plus className="h-4 w-4" />
+                              </button>
+                              {/* Edit icon beside + */}
+                              <button
+                                onClick={() => handleAddSpecification(item.id)}
+                                className="text-blue-600 hover:text-blue-900 pl-5"
+                                title="Edit Specification"
+                              >
+                                <SquarePen className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleRemoveItem(item.id)}
@@ -517,8 +606,17 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit }) => {
             >
               Cancel
             </button>
-            
-            {currentStep < 2 ? (
+            {editMode ? (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={currentStep === 2 && items.length === 0}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </button>
+            ) : currentStep < 2 ? (
               <button
                 type="button"
                 onClick={handleNext}
