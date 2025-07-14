@@ -11,6 +11,16 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
   const [showCostModal, setShowCostModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   
+  // Mock data for quotation items if none are provided
+  const mockItems = [
+    { id: 1, itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', supplyRate: 12500, installationRate: 2500, quantity: 4, supplyPrice: 50000, installationPrice: 10000 },
+    { id: 2, itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', supplyRate: 850, installationRate: 350, quantity: 120, supplyPrice: 102000, installationPrice: 42000 },
+    { id: 3, itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', supplyRate: 3200, installationRate: 800, quantity: 6, supplyPrice: 19200, installationPrice: 4800 },
+  ];
+  
+  // Use formData.items if available, otherwise use mock data
+  const displayItems = formData.items && formData.items.length > 0 ? formData.items : mockItems;
+  
   const handleGSTRateChange = (category: 'highSideSupply' | 'lowSideSupply' | 'installation', value: string) => {
     setFormData({
       ...formData,
@@ -22,15 +32,15 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
   };
 
   // Calculate high side and low side supply amounts (example: 40% high side, 60% low side)
-  const totalSupplyAmount = formData.supplyData.sellingAmount;
+  const totalSupplyAmount = formData.supplyData?.sellingAmount || 0;
   const highSideSupplyAmount = totalSupplyAmount * 0.4;
   const lowSideSupplyAmount = totalSupplyAmount * 0.6;
-  const installationAmount = formData.labourData.sellingAmount;
+  const installationAmount = formData.labourData?.sellingAmount || 0;
 
   // Calculate GST amounts
-  const highSideGSTAmount = (formData.gstRates.highSideSupply / 100) * highSideSupplyAmount;
-  const lowSideGSTAmount = (formData.gstRates.lowSideSupply / 100) * lowSideSupplyAmount;
-  const installationGSTAmount = (formData.gstRates.installation / 100) * installationAmount;
+  const highSideGSTAmount = ((formData.gstRates?.highSideSupply || 18) / 100) * highSideSupplyAmount;
+  const lowSideGSTAmount = ((formData.gstRates?.lowSideSupply || 18) / 100) * lowSideSupplyAmount;
+  const installationGSTAmount = ((formData.gstRates?.installation || 18) / 100) * installationAmount;
   
   // Calculate totals with GST
   const highSideTotalWithGST = highSideSupplyAmount + highSideGSTAmount;
@@ -153,12 +163,16 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {formData.items.map((item: any) => {
+              {displayItems.map((item: any) => {
                 // Calculate selling rates based on MF (markup factor)
-                const supplySellingRate = item.supplyRate * (formData.supplyData.mf || 1);
-                const installSellingRate = item.installationRate * (formData.labourData.mf || 1);
-                const supplySellingPrice = supplySellingRate * item.quantity;
-                const installSellingPrice = installSellingRate * item.quantity;
+                const supplyRate = item.supplyRate || item.rate || 0;
+                const installationRate = item.installationRate || (item.rate * 0.3) || 0;
+                const quantity = item.quantity || 0;
+                
+                const supplySellingRate = supplyRate * (formData.supplyData.mf || 1);
+                const installSellingRate = installationRate * (formData.labourData.mf || 1);
+                const supplySellingPrice = supplySellingRate * quantity;
+                const installSellingPrice = installSellingRate * quantity;
                 
                 return (
                   <tr key={item.id} className="hover:bg-gray-50">
@@ -186,9 +200,9 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
             <tfoot className="bg-gray-50">
               <tr>
                 <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Subtotal:</td>
-                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{formData.supplyData.sellingAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{(formData.supplyData?.sellingAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                 <td></td>
-                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{formData.labourData.sellingAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{(formData.labourData?.sellingAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                 <td></td>
               </tr>
             </tfoot>
