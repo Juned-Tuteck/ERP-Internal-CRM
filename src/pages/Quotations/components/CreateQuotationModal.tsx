@@ -8,7 +8,13 @@ interface CreateQuotationModalProps {
   initialData?: any;
 }
 
-interface QuotationItem {
+type CostItem = {
+  id: string;
+  description: string;
+  amount: number;
+};
+
+type QuotationItem = {
   id: string;
   itemCode: string;
   itemName: string;
@@ -19,30 +25,34 @@ interface QuotationItem {
   supplyPrice: number;
   installationPrice: number;
   specifications?: string;
-  supplyCosts?: {
-    discount: number;
-    wastage: number;
-    transportation: number;
-    contingency: number;
-    miscellaneous: number;
-    outstation: number;
-    officeOverhead: number;
-    poVariance: number;
-  };
-  installationCosts?: {
-    wastage: number;
-    transportation: number;
-    contingency: number;
-    miscellaneous: number;
-    outstation: number;
-    officeOverhead: number;
-    poVariance: number;
-  };
-}
+  supplyCosts: Record<string, number>;
+  installationCosts: Record<string, number>;
+};
+
+type FormData = {
+  leadId: string;
+  leadName: string;
+  businessName: string;
+  workType: string;
+  quotationDate: string;
+  expiryDate: string;
+  bomId: string;
+  bomName: string;
+  items: QuotationItem[];
+  note: string;
+  projectManagementCosts: CostItem[];
+  supervisionCosts: CostItem[];
+  financeCosts: CostItem[];
+  contingencyCosts: CostItem[];
+  supplyMargin: number;
+  installationMargin: number;
+  gstRate: number;
+  comments: { id: string; text: string; author: string; timestamp: string }[];
+};
 
 const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(initialData || {
+  const [formData, setFormData] = useState<FormData>(initialData as FormData || {
     // Step 1: Costing Sheet
     leadId: '',
     leadName: '',
@@ -228,17 +238,26 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
     setShowCostModal(true);
   };
 
-  const addCostItem = (category: string, item: any) => {
-    setFormData(prev => ({
+  const addCostItem = (category: keyof FormData, item: CostItem) => {
+    setFormData((prev: FormData) => ({
       ...prev,
-      [category]: [...prev[category as keyof typeof prev], item]
+      [category]: [...(prev[category] as CostItem[]), item]
     }));
   };
 
-  const removeCostItem = (category: string, index: number) => {
-    setFormData(prev => ({
+  const handleAddCostClick = (category: keyof FormData) => {
+    const newItem: CostItem = {
+      id: Date.now().toString(),
+      description: '',
+      amount: 0
+    };
+    addCostItem(category, newItem);
+  };
+
+  const removeCostItem = (category: keyof FormData, index: number) => {
+    setFormData((prev: FormData) => ({
       ...prev,
-      [category]: (prev[category as keyof typeof prev] as any[]).filter((_, i) => i !== index)
+      [category]: (prev[category] as CostItem[]).filter((_, i) => i !== index)
     }));
   };
 
@@ -299,25 +318,25 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
   const calculateTotalCosts = () => {
     let totalSupplyOwnCost = 0;
     let totalInstallationOwnCost = 0;
-    
-    formData.items.forEach(item => {
+
+    formData.items.forEach((item: QuotationItem) => {
       const { supplyOwnCost, installationOwnCost } = calculateItemCosts(item);
       totalSupplyOwnCost += supplyOwnCost;
       totalInstallationOwnCost += installationOwnCost;
     });
-    
+
     return { totalSupplyOwnCost, totalInstallationOwnCost };
   };
 
   const calculateSellingAmounts = () => {
     const { totalSupplyOwnCost, totalInstallationOwnCost } = calculateTotalCosts();
-    
+
     const supplySellingAmount = totalSupplyOwnCost * (1 + formData.supplyMargin / 100);
     const installationSellingAmount = totalInstallationOwnCost * (1 + formData.installationMargin / 100);
     const totalSellingAmount = supplySellingAmount + installationSellingAmount;
     const gstAmount = totalSellingAmount * (formData.gstRate / 100);
     const grandTotal = totalSellingAmount + gstAmount;
-    
+
     return {
       supplySellingAmount,
       installationSellingAmount,
@@ -1019,15 +1038,15 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {formData.supervisionCosts.map((cost, index) => (
+                    {formData.projectManagementCosts.map((cost, index) => (
                       <tr key={cost.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                           <select
                             value={cost.description}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.projectManagementCosts];
                               updatedCosts[index].description = e.target.value;
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, projectManagementCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           >
@@ -1042,10 +1061,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="1"
                             value={cost.nos}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.projectManagementCosts];
                               updatedCosts[index].nos = parseInt(e.target.value) || 1;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, projectManagementCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1056,10 +1075,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="0"
                             value={cost.monthlyExpense}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.projectManagementCosts];
                               updatedCosts[index].monthlyExpense = parseInt(e.target.value) || 0;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, projectManagementCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1070,10 +1089,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="1"
                             value={cost.months}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.projectManagementCosts];
                               updatedCosts[index].months = parseInt(e.target.value) || 1;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, projectManagementCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1085,10 +1104,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             max="100"
                             value={cost.diversity}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.projectManagementCosts];
                               updatedCosts[index].diversity = parseInt(e.target.value) || 0;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, projectManagementCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1098,7 +1117,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => removeCostItem('supervisionCosts', index)}
+                            onClick={() => removeCostItem('projectManagementCosts', index)}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1106,20 +1125,20 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                       </tr>
                     ))}
-                    {formData.supervisionCosts.length === 0 && (
+                    {formData.projectManagementCosts.length === 0 && (
                       <tr>
                         <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                          No supervision costs added yet.
+                          No project management costs added yet.
                         </td>
                       </tr>
                     )}
                   </tbody>
-                  {formData.supervisionCosts.length > 0 && (
+                  {formData.projectManagementCosts.length > 0 && (
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Project Management Cost:</td>
                         <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                          ₹{formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                          ₹{formData.projectManagementCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
                         </td>
                         <td></td>
                       </tr>
@@ -1311,19 +1330,19 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {formData.supervisionCosts.map((cost, index) => (
+                    {formData.financeCosts.map((cost, index) => (
                       <tr key={cost.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                           <select
                             value={cost.description}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.financeCosts];
                               updatedCosts[index].description = e.target.value;
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           >
-                            {supervisionDescriptions.map(desc => (
+                            {financeDescriptions.map(desc => (
                               <option key={desc} value={desc}>{desc}</option>
                             ))}
                           </select>
@@ -1334,10 +1353,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="1"
                             value={cost.nos}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.financeCosts];
                               updatedCosts[index].nos = parseInt(e.target.value) || 1;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1348,10 +1367,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="0"
                             value={cost.monthlyExpense}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.financeCosts];
                               updatedCosts[index].monthlyExpense = parseInt(e.target.value) || 0;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1362,10 +1381,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="1"
                             value={cost.months}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.financeCosts];
                               updatedCosts[index].months = parseInt(e.target.value) || 1;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1377,10 +1396,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             max="100"
                             value={cost.diversity}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.financeCosts];
                               updatedCosts[index].diversity = parseInt(e.target.value) || 0;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1390,7 +1409,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => removeCostItem('supervisionCosts', index)}
+                            onClick={() => removeCostItem('financeCosts', index)}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1398,20 +1417,20 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                       </tr>
                     ))}
-                    {formData.supervisionCosts.length === 0 && (
+                    {formData.financeCosts.length === 0 && (
                       <tr>
                         <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                          No supervision costs added yet.
+                          No finance costs added yet.
                         </td>
                       </tr>
                     )}
                   </tbody>
-                  {formData.supervisionCosts.length > 0 && (
+                  {formData.financeCosts.length > 0 && (
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Finance Cost:</td>
                         <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                          ₹{formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                          ₹{formData.financeCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
                         </td>
                         <td></td>
                       </tr>
@@ -1457,19 +1476,19 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {formData.supervisionCosts.map((cost, index) => (
+                    {formData.contingencyCosts.map((cost, index) => (
                       <tr key={cost.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                           <select
                             value={cost.description}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.contingencyCosts];
                               updatedCosts[index].description = e.target.value;
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           >
-                            {supervisionDescriptions.map(desc => (
+                            {contingencyDescriptions.map(desc => (
                               <option key={desc} value={desc}>{desc}</option>
                             ))}
                           </select>
@@ -1480,10 +1499,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="1"
                             value={cost.nos}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.contingencyCosts];
                               updatedCosts[index].nos = parseInt(e.target.value) || 1;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1494,10 +1513,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="0"
                             value={cost.monthlyExpense}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.contingencyCosts];
                               updatedCosts[index].monthlyExpense = parseInt(e.target.value) || 0;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1508,10 +1527,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             min="1"
                             value={cost.months}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.contingencyCosts];
                               updatedCosts[index].months = parseInt(e.target.value) || 1;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1523,10 +1542,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                             max="100"
                             value={cost.diversity}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.supervisionCosts];
+                              const updatedCosts = [...formData.contingencyCosts];
                               updatedCosts[index].diversity = parseInt(e.target.value) || 0;
                               updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
-                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1536,7 +1555,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => removeCostItem('supervisionCosts', index)}
+                            onClick={() => removeCostItem('contingencyCosts', index)}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1544,20 +1563,20 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                       </tr>
                     ))}
-                    {formData.supervisionCosts.length === 0 && (
+                    {formData.contingencyCosts.length === 0 && (
                       <tr>
                         <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                          No supervision costs added yet.
+                          No contingency costs added yet.
                         </td>
                       </tr>
                     )}
                   </tbody>
-                  {formData.supervisionCosts.length > 0 && (
+                  {formData.contingencyCosts.length > 0 && (
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Contingency Cost:</td>
                         <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                          ₹{formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                          ₹{formData.contingencyCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
                         </td>
                         <td></td>
                       </tr>
@@ -1566,16 +1585,51 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                 </table>
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex justify-between font-medium">
-                  <span className="text-md text-gray-900">Total Overheads Cost:</span>
-                  <span className="text-md text-gray-900">
-                    ₹{(
-                      formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0) +
-                      formData.financeCosts.reduce((sum, cost) => sum + cost.amount, 0) +
-                      formData.contingencyCosts.reduce((sum, cost) => sum + cost.amount, 0)
-                    ).toLocaleString('en-IN')}
-                  </span>
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-md font-medium text-gray-900 mb-3">Summary</h4>
+                  <div className="grid grid-cols-4 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contract Value</label>
+                      <input
+                        type="number"
+                        name="contractValue"
+                        value={formData.contractValue || 0}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Material Cost</label>
+                      <input
+                        type="number"
+                        name="materialCost"
+                        value={formData.materialCost || 0}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Labour Cost</label>
+                      <input
+                        type="number"
+                        name="labourCost"
+                        value={formData.labourCost || 0}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Own Cost</label>
+                      <input
+                        type="number"
+                        name="totalOwnCost"
+                        value={formData.totalOwnCost || 0}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
