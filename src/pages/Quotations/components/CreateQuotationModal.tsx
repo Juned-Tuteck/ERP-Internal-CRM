@@ -5,13 +5,7 @@ import QuotationStep2 from './QuotationSteps/QuotationStep2';
 import QuotationStep3 from './QuotationSteps/QuotationStep3';
 import QuotationStep4 from './QuotationSteps/QuotationStep4';
 import QuotationStep5 from './QuotationSteps/QuotationStep5';
-
-// Mock data for leads
-const leads = [
-  { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: 'BOM-2024-001' },
-  { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: 'BOM-2024-002' },
-  { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: 'BOM-2024-003' },
-];
+import { leads } from './QuotationSteps/QuotationStep1';
 
 interface CreateQuotationModalProps {
   isOpen: boolean;
@@ -99,7 +93,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       // Find the lead ID based on the lead name if it's not provided
       let leadId = initialData.leadId;
       if (!leadId && initialData.leadName) {
-        const lead = leads.find(l => l.name === initialData.leadName);
+        const lead = leads?.find(l => l.name === initialData.leadName);
         if (lead) {
           leadId = lead.id;
         }
@@ -156,7 +150,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       // Find the lead ID based on the lead name if it's not provided
       let leadId = initialData.leadId;
       if (!leadId && initialData.leadName) {
-        const lead = leads.find(l => l.name === initialData.leadName);
+        const lead = leads?.find(l => l.name === initialData.leadName);
         if (lead) {
           leadId = lead.id;
         }
@@ -224,7 +218,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   
   // Calculate total items cost for Step 2
   const totalItemsCost = (formData.items || []).reduce(
-    (sum: number, item: any) => sum + (item.supplyOwnAmount || 0) + (item.installationOwnAmount || 0), 
+    (sum: number, item: any) => sum + (item.supplyOwnAmount || item.price || 0) + (item.installationOwnAmount || (item.price * 0.3) || 0), 
     0
   );
 

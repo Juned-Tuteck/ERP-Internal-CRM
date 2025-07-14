@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, Search, X } from 'lucide-react';
 
-// Mock data for leads and BOMs
-const leads = [
+// Mock data for leads
+export const leads = [
   { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: 'BOM-2024-001' },
   { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: 'BOM-2024-002' },
   { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: 'BOM-2024-003' },
 ];
 
-const boms = [
+// Mock data for BOMs
+export const boms = [
   { 
     id: 'BOM-2024-001', 
     items: [
@@ -65,7 +66,6 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
   // Effect to auto-select lead when in edit mode
   useEffect(() => {
     if (isEditMode && formData.leadName && !formData.leadId) {
-      // Find the lead ID based on the lead name
       const lead = leads.find(l => l.name === formData.leadName);
       if (lead) {
         setFormData(prev => ({
@@ -75,7 +75,44 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
         }));
       }
     }
-  }, [isEditMode, formData.leadName]);
+    
+    // If we have a bomId but no items, load the items from the BOM
+    if (formData.bomId && (!formData.items || formData.items.length === 0)) {
+      const selectedBom = boms.find(bom => bom.id === formData.bomId);
+      if (selectedBom) {
+        const updatedItems = selectedBom.items.map(item => ({
+          ...item,
+          supplyRate: item.rate,
+          installationRate: item.rate * 0.3, // Example: installation rate is 30% of supply rate
+          supplyOwnAmount: item.price,
+          installationOwnAmount: item.price * 0.3,
+          // Add cost details with default values
+          costDetails: {
+            supplyDiscount: 0,
+            supplyWastagePercentage: 2,
+            supplyTransportationPercentage: 3,
+            supplyContingencyPercentage: 2,
+            supplyMiscellaneousPercentage: 1,
+            supplyOutstationPercentage: 0,
+            supplyOfficeOverheadPercentage: 3,
+            supplyPOVariancePercentage: 1,
+            installationWastagePercentage: 2,
+            installationTransportationPercentage: 3,
+            installationContingencyPercentage: 2,
+            installationMiscellaneousPercentage: 1,
+            installationOutstationPercentage: 0,
+            installationOfficeOverheadPercentage: 3,
+            installationPOVariancePercentage: 1,
+          }
+        }));
+        
+        setFormData(prev => ({
+          ...prev,
+          items: updatedItems
+        }));
+      }
+    }
+  }, [isEditMode, formData.leadName, formData.bomId]);
 
   const handleLeadChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const leadId = e.target.value;
@@ -144,9 +181,9 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
   const calculateCosts = () => {
     if (!selectedItem) return;
 
-    // Get the base amounts
-    const supplyBaseAmount = selectedItem.supplyOwnAmount;
-    const installationBaseAmount = selectedItem.installationOwnAmount;
+    // Get the base amounts with fallbacks
+    const supplyBaseAmount = selectedItem.supplyOwnAmount || selectedItem.price || 0;
+    const installationBaseAmount = selectedItem.installationOwnAmount || (selectedItem.price * 0.3) || 0;
 
     // Calculate all the supply costs
     const supplyDiscount = (itemCosts.supplyDiscount / 100) * supplyBaseAmount;
@@ -321,7 +358,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
       </div>
 
       {/* Item Table */}
-      {formData.items.length > 0 && (
+      {formData.items && formData.items.length > 0 && (
         <div className="border border-gray-200 rounded-lg p-4">
           <h4 className="text-sm font-medium text-gray-700 mb-3">BOM Items</h4>
           <div className="overflow-x-auto">
@@ -352,12 +389,12 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.supplyRate.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.supplyOwnAmount.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(item.rate * 0.3).toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(item.rate * 0.3).toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.installationRate.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.installationOwnAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(item.supplyRate || item.rate).toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(item.supplyOwnAmount || item.price).toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{((item.rate || 0) * 0.3).toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{((item.rate || 0) * 0.3).toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(item.installationRate || (item.rate * 0.3)).toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(item.installationOwnAmount || (item.price * 0.3)).toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => openCostModal(item)}
@@ -374,11 +411,11 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                 <tr>
                   <td colSpan={9} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
                   <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                    ₹{formData.items.reduce((sum: number, item: any) => sum + item.supplyOwnAmount, 0).toLocaleString('en-IN')}
+                    ₹{formData.items.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || item.price || 0), 0).toLocaleString('en-IN')}
                   </td>
                   <td></td>
                   <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                    ₹{formData.items.reduce((sum: number, item: any) => sum + item.installationOwnAmount, 0).toLocaleString('en-IN')}
+                    ₹{formData.items.reduce((sum: number, item: any) => sum + (item.installationOwnAmount || (item.price * 0.3) || 0), 0).toLocaleString('en-IN')}
                   </td>
                   <td></td>
                 </tr>
@@ -425,7 +462,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <label className="text-sm text-gray-600">Supply Base Amount:</label>
-                      <span className="text-sm font-medium">₹{selectedItem.supplyOwnAmount.toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-medium">₹{(selectedItem.supplyOwnAmount || selectedItem.price || 0).toLocaleString('en-IN')}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
@@ -599,7 +636,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <label className="text-sm text-gray-600">Installation Base Amount:</label>
-                      <span className="text-sm font-medium">₹{selectedItem.installationOwnAmount.toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-medium">₹{(selectedItem.installationOwnAmount || (selectedItem.price * 0.3) || 0).toLocaleString('en-IN')}</span>
                     </div>
                     
                     <div className="flex justify-between items-center">
