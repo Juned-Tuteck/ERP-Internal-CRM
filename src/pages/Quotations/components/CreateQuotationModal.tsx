@@ -55,6 +55,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
     items: [] as QuotationItem[],
     note: '',
     // Step 2: POC
+    projectManagementCosts: [],
     supervisionCosts: [],
     financeCosts: [],
     contingencyCosts: [],
@@ -370,6 +371,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
       bomName: '',
       items: [],
       note: '',
+      projectManagementCosts: [],
       supervisionCosts: [],
       financeCosts: [],
       contingencyCosts: [],
@@ -981,9 +983,149 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
           {/* Step 2: POC */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
-                <p className="text-sm text-gray-600">Overhead costs associated with this project.</p>
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-md font-medium text-gray-900">Project Management & Site Establishment Cost</h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addCostItem('projectManagementCosts', {
+                        id: Date.now().toString(),
+                        description: supervisionDescriptions[0],
+                        nos: 1,
+                        monthlyExpense: 0,
+                        months: 1,
+                        diversity: 100,
+                        amount: 0
+                      });
+                    }}
+                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Cost
+                  </button>
+                </div>
+                
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {formData.supervisionCosts.map((cost, index) => (
+                      <tr key={cost.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <select
+                            value={cost.description}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].description = e.target.value;
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          >
+                            {supervisionDescriptions.map(desc => (
+                              <option key={desc} value={desc}>{desc}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={cost.nos}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].nos = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            value={cost.monthlyExpense}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].monthlyExpense = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={cost.months}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].months = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={cost.diversity}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].diversity = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₹{cost.amount.toLocaleString('en-IN')}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => removeCostItem('supervisionCosts', index)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {formData.supervisionCosts.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
+                          No supervision costs added yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  {formData.supervisionCosts.length > 0 && (
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
+                        <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                          ₹{formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
               </div>
               
               {/* Supervision Costs */}
@@ -1135,15 +1277,18 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
               {/* Finance Costs */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-md font-medium text-gray-900">Finance Costs</h4>
+                  <h4 className="text-md font-medium text-gray-900">Finance Cost</h4>
                   <button
                     type="button"
                     onClick={() => {
                       addCostItem('financeCosts', {
                         id: Date.now().toString(),
-                        description: financeDescriptions[0],
-                        percentage: 1,
-                        amount: calculateSellingAmounts().totalSellingAmount * 0.01
+                        description: supervisionDescriptions[0],
+                        nos: 1,
+                        monthlyExpense: 0,
+                        months: 1,
+                        diversity: 100,
+                        amount: 0
                       });
                     }}
                     className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
@@ -1157,25 +1302,28 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {formData.financeCosts.map((cost, index) => (
+                    {formData.supervisionCosts.map((cost, index) => (
                       <tr key={cost.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                           <select
                             value={cost.description}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.financeCosts];
+                              const updatedCosts = [...formData.supervisionCosts];
                               updatedCosts[index].description = e.target.value;
-                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           >
-                            {financeDescriptions.map(desc => (
+                            {supervisionDescriptions.map(desc => (
                               <option key={desc} value={desc}>{desc}</option>
                             ))}
                           </select>
@@ -1183,15 +1331,56 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                           <input
                             type="number"
+                            min="1"
+                            value={cost.nos}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].nos = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            value={cost.monthlyExpense}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].monthlyExpense = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={cost.months}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].months = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
                             min="0"
                             max="100"
-                            step="0.1"
-                            value={cost.percentage}
+                            value={cost.diversity}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.financeCosts];
-                              updatedCosts[index].percentage = parseFloat(e.target.value) || 0;
-                              updatedCosts[index].amount = calculateSellingAmounts().totalSellingAmount * (updatedCosts[index].percentage / 100);
-                              setFormData(prev => ({ ...prev, financeCosts: updatedCosts }));
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].diversity = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1201,7 +1390,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => removeCostItem('financeCosts', index)}
+                            onClick={() => removeCostItem('supervisionCosts', index)}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1209,20 +1398,20 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                       </tr>
                     ))}
-                    {formData.financeCosts.length === 0 && (
+                    {formData.supervisionCosts.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-4 text-sm text-gray-500 text-center">
-                          No finance costs added yet.
+                        <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
+                          No supervision costs added yet.
                         </td>
                       </tr>
                     )}
                   </tbody>
-                  {formData.financeCosts.length > 0 && (
+                  {formData.supervisionCosts.length > 0 && (
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Finance Cost:</td>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
                         <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                          ₹{formData.financeCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                          ₹{formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
                         </td>
                         <td></td>
                       </tr>
@@ -1240,9 +1429,12 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                     onClick={() => {
                       addCostItem('contingencyCosts', {
                         id: Date.now().toString(),
-                        description: contingencyDescriptions[0],
-                        percentage: 3,
-                        amount: calculateSellingAmounts().totalSellingAmount * 0.03
+                        description: supervisionDescriptions[0],
+                        nos: 1,
+                        monthlyExpense: 0,
+                        months: 1,
+                        diversity: 100,
+                        amount: 0
                       });
                     }}
                     className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
@@ -1256,25 +1448,28 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {formData.contingencyCosts.map((cost, index) => (
+                    {formData.supervisionCosts.map((cost, index) => (
                       <tr key={cost.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                           <select
                             value={cost.description}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.contingencyCosts];
+                              const updatedCosts = [...formData.supervisionCosts];
                               updatedCosts[index].description = e.target.value;
-                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           >
-                            {contingencyDescriptions.map(desc => (
+                            {supervisionDescriptions.map(desc => (
                               <option key={desc} value={desc}>{desc}</option>
                             ))}
                           </select>
@@ -1282,15 +1477,56 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                           <input
                             type="number"
+                            min="1"
+                            value={cost.nos}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].nos = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="0"
+                            value={cost.monthlyExpense}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].monthlyExpense = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            min="1"
+                            value={cost.months}
+                            onChange={(e) => {
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].months = parseInt(e.target.value) || 1;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
+                            }}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
                             min="0"
                             max="100"
-                            step="0.1"
-                            value={cost.percentage}
+                            value={cost.diversity}
                             onChange={(e) => {
-                              const updatedCosts = [...formData.contingencyCosts];
-                              updatedCosts[index].percentage = parseFloat(e.target.value) || 0;
-                              updatedCosts[index].amount = calculateSellingAmounts().totalSellingAmount * (updatedCosts[index].percentage / 100);
-                              setFormData(prev => ({ ...prev, contingencyCosts: updatedCosts }));
+                              const updatedCosts = [...formData.supervisionCosts];
+                              updatedCosts[index].diversity = parseInt(e.target.value) || 0;
+                              updatedCosts[index].amount = updatedCosts[index].nos * updatedCosts[index].monthlyExpense * updatedCosts[index].months * (updatedCosts[index].diversity / 100);
+                              setFormData(prev => ({ ...prev, supervisionCosts: updatedCosts }));
                             }}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                           />
@@ -1300,7 +1536,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => removeCostItem('contingencyCosts', index)}
+                            onClick={() => removeCostItem('supervisionCosts', index)}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1308,20 +1544,20 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({ isOpen, onC
                         </td>
                       </tr>
                     ))}
-                    {formData.contingencyCosts.length === 0 && (
+                    {formData.supervisionCosts.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-4 text-sm text-gray-500 text-center">
-                          No contingency costs added yet.
+                        <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
+                          No supervision costs added yet.
                         </td>
                       </tr>
                     )}
                   </tbody>
-                  {formData.contingencyCosts.length > 0 && (
+                  {formData.supervisionCosts.length > 0 && (
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Contingency:</td>
+                        <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
                         <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                          ₹{formData.contingencyCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
+                          ₹{formData.supervisionCosts.reduce((sum, cost) => sum + cost.amount, 0).toLocaleString('en-IN')}
                         </td>
                         <td></td>
                       </tr>
