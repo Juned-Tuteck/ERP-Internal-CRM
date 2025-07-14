@@ -89,15 +89,11 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const [formData, setFormData] = useState(() => {
     const defaultData = getDefaultFormData();
     if (initialData) {
-      // Find the lead and BOM data based on the initialData
-      const selectedLead = leads.find(lead => lead.name === initialData.leadName);
-      const bomId = selectedLead?.bomId || '';
-      
       return {
         ...defaultData,
         ...initialData,
-        leadId: selectedLead?.id || '',
-        bomId: bomId,
+        leadId: initialData.leadId || '',
+        bomId: initialData.bomId || '',
         items: initialData.items || [],
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
@@ -140,16 +136,11 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   useEffect(() => {
     if (initialData) {
       const defaultData = getDefaultFormData();
-      
-      // Find the lead and BOM data based on the initialData
-      const selectedLead = leads.find(lead => lead.name === initialData.leadName);
-      const bomId = selectedLead?.bomId || '';
-      
       setFormData({
         ...defaultData,
         ...initialData,
-        leadId: selectedLead?.id || '',
-        bomId: bomId,
+        leadId: initialData.leadId || '',
+        bomId: initialData.bomId || '',
         items: initialData.items || [],
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
