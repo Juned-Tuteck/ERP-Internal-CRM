@@ -1,4 +1,6 @@
 import React from 'react';
+import { useState } from 'react';
+import { Eye, X, Calculator } from 'lucide-react';
 
 interface QuotationStep4Props {
   formData: any;
@@ -6,6 +8,9 @@ interface QuotationStep4Props {
 }
 
 const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }) => {
+  const [showCostModal, setShowCostModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  
   const handleGSTRateChange = (category: 'highSideSupply' | 'lowSideSupply' | 'installation', value: string) => {
     setFormData({
       ...formData,
@@ -36,6 +41,92 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
   const totalGSTAmount = highSideGSTAmount + lowSideGSTAmount + installationGSTAmount;
   const grandTotalWithGST = highSideTotalWithGST + lowSideTotalWithGST + installationTotalWithGST;
 
+  const openCostModal = (item: any) => {
+    setSelectedItem(item);
+    setShowCostModal(true);
+  };
+
+  const calculateCosts = () => {
+    if (!selectedItem) return null;
+
+    // Get the base amounts
+    const supplyBaseAmount = selectedItem.supplyOwnAmount;
+    const installationBaseAmount = selectedItem.installationOwnAmount;
+
+    // Get the cost details from the item or use default values
+    const costDetails = selectedItem.costDetails || {
+      supplyDiscount: 0,
+      supplyWastagePercentage: 2,
+      supplyTransportationPercentage: 3,
+      supplyContingencyPercentage: 2,
+      supplyMiscellaneousPercentage: 1,
+      supplyOutstationPercentage: 0,
+      supplyOfficeOverheadPercentage: 3,
+      supplyPOVariancePercentage: 1,
+      installationWastagePercentage: 2,
+      installationTransportationPercentage: 3,
+      installationContingencyPercentage: 2,
+      installationMiscellaneousPercentage: 1,
+      installationOutstationPercentage: 0,
+      installationOfficeOverheadPercentage: 3,
+      installationPOVariancePercentage: 1,
+    };
+
+    // Calculate all the supply costs
+    const supplyDiscount = (costDetails.supplyDiscount / 100) * supplyBaseAmount;
+    const supplyWastage = (costDetails.supplyWastagePercentage / 100) * supplyBaseAmount;
+    const supplyTransportation = (costDetails.supplyTransportationPercentage / 100) * supplyBaseAmount;
+    const supplyContingency = (costDetails.supplyContingencyPercentage / 100) * supplyBaseAmount;
+    const supplyMiscellaneous = (costDetails.supplyMiscellaneousPercentage / 100) * supplyBaseAmount;
+    const supplyOutstation = (costDetails.supplyOutstationPercentage / 100) * supplyBaseAmount;
+    const supplyOfficeOverhead = (costDetails.supplyOfficeOverheadPercentage / 100) * supplyBaseAmount;
+    const supplyPOVariance = (costDetails.supplyPOVariancePercentage / 100) * supplyBaseAmount;
+
+    // Calculate all the installation costs
+    const installationWastage = (costDetails.installationWastagePercentage / 100) * installationBaseAmount;
+    const installationTransportation = (costDetails.installationTransportationPercentage / 100) * installationBaseAmount;
+    const installationContingency = (costDetails.installationContingencyPercentage / 100) * installationBaseAmount;
+    const installationMiscellaneous = (costDetails.installationMiscellaneousPercentage / 100) * installationBaseAmount;
+    const installationOutstation = (costDetails.installationOutstationPercentage / 100) * installationBaseAmount;
+    const installationOfficeOverhead = (costDetails.installationOfficeOverheadPercentage / 100) * installationBaseAmount;
+    const installationPOVariance = (costDetails.installationPOVariancePercentage / 100) * installationBaseAmount;
+
+    // Calculate totals
+    const totalSupplyCost = supplyWastage + supplyTransportation + supplyContingency + 
+                           supplyMiscellaneous + supplyOutstation + supplyOfficeOverhead + supplyPOVariance;
+    
+    const totalInstallationCost = installationWastage + installationTransportation + installationContingency + 
+                                 installationMiscellaneous + installationOutstation + installationOfficeOverhead + installationPOVariance;
+
+    const finalSupplyAmount = supplyBaseAmount - supplyDiscount + totalSupplyCost;
+    const finalInstallationAmount = installationBaseAmount + totalInstallationCost;
+
+    return {
+      supplyDiscount,
+      supplyWastage,
+      supplyTransportation,
+      supplyContingency,
+      supplyMiscellaneous,
+      supplyOutstation,
+      supplyOfficeOverhead,
+      supplyPOVariance,
+      totalSupplyCost,
+      finalSupplyAmount,
+      installationWastage,
+      installationTransportation,
+      installationContingency,
+      installationMiscellaneous,
+      installationOutstation,
+      installationOfficeOverhead,
+      installationPOVariance,
+      totalInstallationCost,
+      finalInstallationAmount,
+      costDetails
+    };
+  };
+
+  const costs = selectedItem ? calculateCosts() : null;
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-4 rounded-lg mb-4">
@@ -58,6 +149,7 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Price</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Price</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -78,6 +170,15 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
                     <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{supplySellingPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{installSellingRate.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{installSellingPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => openCostModal(item)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="View Cost Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -88,6 +189,7 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
                 <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{formData.supplyData.sellingAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                 <td></td>
                 <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{formData.labourData.sellingAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td></td>
               </tr>
             </tfoot>
           </table>
@@ -169,6 +271,260 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
           </tfoot>
         </table>
       </div>
+      
+      {/* Cost Details Modal */}
+      {showCostModal && selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Cost Details: {selectedItem.itemName}</h3>
+              <button
+                onClick={() => setShowCostModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Supply Cost Section */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-md font-medium text-gray-900 mb-3">Supply Cost Details</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Base Amount:</label>
+                      <span className="text-sm font-medium">₹{selectedItem.supplyOwnAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Discount (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyDiscount || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyDiscount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Wastage (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyWastagePercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyWastage.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Transportation (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyTransportationPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyTransportation.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Contingency (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyContingencyPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyContingency.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Miscellaneous (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyMiscellaneousPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyMiscellaneous.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Outstation (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyOutstationPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyOutstation.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply Office Overhead (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyOfficeOverheadPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyOfficeOverhead.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Supply PO-variance (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.supplyPOVariancePercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.supplyPOVariance.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-medium text-gray-700">Total Supply Cost:</label>
+                        <span className="text-sm font-medium">₹{costs?.totalSupplyCost.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <label className="text-sm font-medium text-gray-700">Final Supply Amount:</label>
+                        <span className="text-sm font-medium text-green-600">₹{costs?.finalSupplyAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Installation Cost Section */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-md font-medium text-gray-900 mb-3">Installation Cost Details</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation Base Amount:</label>
+                      <span className="text-sm font-medium">₹{selectedItem.installationOwnAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation Wastage (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.installationWastagePercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.installationWastage.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation Transportation (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.installationTransportationPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.installationTransportation.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation Contingency (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.installationContingencyPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.installationContingency.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation Miscellaneous (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.installationMiscellaneousPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.installationMiscellaneous.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation Outstation (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.installationOutstationPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.installationOutstation.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation Office Overhead (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.installationOfficeOverheadPercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.installationOfficeOverhead.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm text-gray-600">Installation PO-variance (%):</label>
+                      <div className="flex items-center">
+                        <span className="text-sm">
+                          {costs?.costDetails.installationPOVariancePercentage || 0}%
+                        </span>
+                        <span className="ml-2 text-sm">
+                          ₹{costs?.installationPOVariance.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-medium text-gray-700">Total Installation Cost:</label>
+                        <span className="text-sm font-medium">₹{costs?.totalInstallationCost.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <label className="text-sm font-medium text-gray-700">Final Installation Amount:</label>
+                        <span className="text-sm font-medium text-green-600">₹{costs?.finalInstallationAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowCostModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
