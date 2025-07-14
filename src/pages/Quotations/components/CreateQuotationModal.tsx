@@ -31,6 +31,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     items: [],
     note: '',
     // Step 2: POC
+    projectCosts: [],
     supervisionCosts: [],
     financeCosts: [],
     contingencyCosts: [],

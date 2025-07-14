@@ -8,7 +8,7 @@ interface QuotationStep2Props {
 
 const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }) => {
   const [showAddModal, setShowAddModal] = useState(false);
-  const [costCategory, setCostCategory] = useState<'supervision' | 'finance' | 'contingency'>('supervision');
+  const [costCategory, setCostCategory] = useState<'project' | 'supervision' | 'finance' | 'contingency'>('project');
   const [costItem, setCostItem] = useState({
     description: '',
     nosPercentage: '',
@@ -19,6 +19,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
   });
 
   // Mock data for dropdowns
+  const projectDescriptions = ['Site Setup', 'Project Management', 'Quality Control', 'HSE Management'];
   const supervisionDescriptions = ['Project Manager', 'Site Engineer', 'Safety Officer', 'Quality Control Engineer'];
   const financeDescriptions = ['Bank Guarantee', 'Insurance', 'Letter of Credit', 'Processing Fee'];
   const contingencyDescriptions = ['Project Contingency', 'Weather Contingency', 'Material Price Fluctuation', 'Labor Shortage'];
@@ -53,7 +54,12 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
       ...costItem
     };
 
-    if (costCategory === 'supervision') {
+    if (costCategory === 'project') {
+      setFormData({
+        ...formData,
+        projectCosts: [...formData.projectCosts, newCost]
+      });
+    } else if (costCategory === 'supervision') {
       setFormData({
         ...formData,
         supervisionCosts: [...formData.supervisionCosts, newCost]
@@ -82,8 +88,13 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
     setShowAddModal(false);
   };
 
-  const handleRemoveCost = (category: 'supervision' | 'finance' | 'contingency', id: string) => {
-    if (category === 'supervision') {
+  const handleRemoveCost = (category: 'project' | 'supervision' | 'finance' | 'contingency', id: string) => {
+    if (category === 'project') {
+      setFormData({
+        ...formData,
+        projectCosts: formData.projectCosts.filter((cost: any) => cost.id !== id)
+      });
+    } else if (category === 'supervision') {
       setFormData({
         ...formData,
         supervisionCosts: formData.supervisionCosts.filter((cost: any) => cost.id !== id)
@@ -101,23 +112,83 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
     }
   };
 
-  const openAddModal = (category: 'supervision' | 'finance' | 'contingency') => {
+  const openAddModal = (category: 'project' | 'supervision' | 'finance' | 'contingency') => {
     setCostCategory(category);
     setShowAddModal(true);
   };
 
   // Calculate totals
+  const totalProjectCost = formData.projectCosts?.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0) || 0;
   const totalSupervisionCost = formData.supervisionCosts.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0);
   const totalFinanceCost = formData.financeCosts.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0);
   const totalContingencyCost = formData.contingencyCosts.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0);
-  const totalOverheadsCost = totalSupervisionCost + totalFinanceCost + totalContingencyCost;
+  const totalOverheadsCost = totalProjectCost + totalSupervisionCost + totalFinanceCost + totalContingencyCost;
 
   return (
     <div className="space-y-6">
-      {/* Project Management & Site Establishment Cost Header */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-4">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
-        <p className="text-sm text-gray-600">Overhead costs associated with this project.</p>
+      {/* Project Management & Site Establishment Cost */}
+      <div className="border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-md font-medium text-gray-900">Project Management & Site Establishment Cost</h4>
+          <button
+            type="button"
+            onClick={() => openAddModal('project')}
+            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add
+          </button>
+        </div>
+        
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {formData.projectCosts?.map((cost: any) => (
+              <tr key={cost.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{cost.description}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.nosPercentage}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(cost.monthlyExpense).toLocaleString('en-IN')}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.months}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.diversity}%</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(cost.amount).toLocaleString('en-IN')}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                  <button
+                    onClick={() => handleRemoveCost('project', cost.id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {!formData.projectCosts || formData.projectCosts.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
+                  No project management costs added yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+          {formData.projectCosts && formData.projectCosts.length > 0 && (
+            <tfoot className="bg-gray-50">
+              <tr>
+                <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Project Management Cost:</td>
+                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{totalProjectCost.toLocaleString('en-IN')}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
       </div>
 
       {/* Supervision Costs */}
@@ -353,6 +424,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select Description</option>
+                    {costCategory === 'project' && projectDescriptions.map(desc => (
+                      <option key={desc} value={desc}>{desc}</option>
+                    ))}
                     {costCategory === 'supervision' && supervisionDescriptions.map(desc => (
                       <option key={desc} value={desc}>{desc}</option>
                     ))}
@@ -376,9 +450,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                     onChange={handleInputChange}
                     required
                     min="0"
-                    step={costCategory === 'supervision' ? "1" : "0.1"}
+                    step={costCategory === 'supervision' || costCategory === 'project' ? "1" : "0.1"}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={costCategory === 'supervision' ? "Enter number" : "Enter percentage"}
+                    placeholder={costCategory === 'supervision' || costCategory === 'project' ? "Enter number" : "Enter percentage"}
                   />
                 </div>
 
