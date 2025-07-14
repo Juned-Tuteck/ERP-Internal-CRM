@@ -226,6 +226,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ selectedProject, onSelectProj
                   <div className="text-xs text-gray-500">
                     <div className="flex items-center mb-1">
                       <Calendar className="h-3 w-3 mr-1" />
+                      Created At: {new Date(project.estStartDate).toLocaleDateString('en-IN')}
+                    </div>
+                    <div className="flex items-center mb-1">
+                      <Calendar className="h-3 w-3 mr-1" />
                       Start: {new Date(project.estStartDate).toLocaleDateString('en-IN')}
                     </div>
                     <div className="flex items-center">
@@ -245,7 +249,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ selectedProject, onSelectProj
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex space-x-2">
-                    <button 
+                    {/* <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectProject(project);
@@ -253,7 +257,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ selectedProject, onSelectProj
                       className="text-blue-600 hover:text-blue-900"
                     >
                       <Eye className="h-4 w-4" />
-                    </button>
+                    </button> */}
                     
                     {project.status === 'pending_approval' && (
                       <>
