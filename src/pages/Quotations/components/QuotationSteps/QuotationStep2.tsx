@@ -114,6 +114,12 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
 
   return (
     <div className="space-y-6">
+      {/* Project Management & Site Establishment Cost Header */}
+      <div className="bg-gray-50 p-4 rounded-lg mb-4">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
+        <p className="text-sm text-gray-600">Overhead costs associated with this project.</p>
+      </div>
+
       {/* Supervision Costs */}
       <div className="border border-gray-200 rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
@@ -197,7 +203,10 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
             </tr>
@@ -207,6 +216,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
               <tr key={cost.id} className="hover:bg-gray-50">
                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{cost.description}</td>
                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.nosPercentage}%</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(cost.monthlyExpense).toLocaleString('en-IN')}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.months}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.diversity}%</td>
                 <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(cost.amount).toLocaleString('en-IN')}</td>
                 <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                   <button
@@ -220,7 +232,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
             ))}
             {formData.financeCosts.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-4 text-sm text-gray-500 text-center">
+                <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
                   No finance costs added yet.
                 </td>
               </tr>
@@ -229,7 +241,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
           {formData.financeCosts.length > 0 && (
             <tfoot className="bg-gray-50">
               <tr>
-                <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Finance Cost:</td>
+                <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Finance Cost:</td>
                 <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{totalFinanceCost.toLocaleString('en-IN')}</td>
                 <td></td>
               </tr>
@@ -256,7 +268,10 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
             </tr>
@@ -266,6 +281,9 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
               <tr key={cost.id} className="hover:bg-gray-50">
                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{cost.description}</td>
                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.nosPercentage}%</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(cost.monthlyExpense).toLocaleString('en-IN')}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.months}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.diversity}%</td>
                 <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(cost.amount).toLocaleString('en-IN')}</td>
                 <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                   <button
@@ -279,7 +297,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
             ))}
             {formData.contingencyCosts.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-4 text-sm text-gray-500 text-center">
+                <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
                   No contingency costs added yet.
                 </td>
               </tr>
@@ -288,7 +306,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
           {formData.contingencyCosts.length > 0 && (
             <tfoot className="bg-gray-50">
               <tr>
-                <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Contingency Cost:</td>
+                <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Contingency Cost:</td>
                 <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{totalContingencyCost.toLocaleString('en-IN')}</td>
                 <td></td>
               </tr>
@@ -347,112 +365,81 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                   </select>
                 </div>
 
-                {costCategory === 'supervision' ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        NOS *
-                      </label>
-                      <input
-                        type="number"
-                        name="nosPercentage"
-                        value={costItem.nosPercentage}
-                        onChange={handleInputChange}
-                        required
-                        min="0"
-                        step="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter number"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    NOS / % *
+                  </label>
+                  <input
+                    type="number"
+                    name="nosPercentage"
+                    value={costItem.nosPercentage}
+                    onChange={handleInputChange}
+                    required
+                    min="0"
+                    step={costCategory === 'supervision' ? "1" : "0.1"}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={costCategory === 'supervision' ? "Enter number" : "Enter percentage"}
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Monthly Expense (₹) *
-                      </label>
-                      <input
-                        type="number"
-                        name="monthlyExpense"
-                        value={costItem.monthlyExpense}
-                        onChange={handleInputChange}
-                        required
-                        min="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter amount"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Monthly Expense (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    name="monthlyExpense"
+                    value={costItem.monthlyExpense}
+                    onChange={handleInputChange}
+                    required
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter amount"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Months *
-                      </label>
-                      <input
-                        type="number"
-                        name="months"
-                        value={costItem.months}
-                        onChange={handleInputChange}
-                        required
-                        min="0"
-                        step="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter months"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Months *
+                  </label>
+                  <input
+                    type="number"
+                    name="months"
+                    value={costItem.months}
+                    onChange={handleInputChange}
+                    required
+                    min="0"
+                    step="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter months"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Diversity (%) *
-                      </label>
-                      <input
-                        type="number"
-                        name="diversity"
-                        value={costItem.diversity}
-                        onChange={handleInputChange}
-                        required
-                        min="0"
-                        max="100"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter percentage"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Percentage (%) *
-                      </label>
-                      <input
-                        type="number"
-                        name="nosPercentage"
-                        value={costItem.nosPercentage}
-                        onChange={handleInputChange}
-                        required
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter percentage"
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Diversity (%) *
+                  </label>
+                  <input
+                    type="number"
+                    name="diversity"
+                    value={costItem.diversity}
+                    onChange={handleInputChange}
+                    required
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter percentage"
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Amount (₹) *
-                      </label>
-                      <input
-                        type="number"
-                        name="amount"
-                        value={costItem.amount}
-                        onChange={(e) => setCostItem({...costItem, amount: parseFloat(e.target.value) || 0})}
-                        required
-                        min="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter amount"
-                      />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Calculated Amount
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                    ₹{costItem.amount.toLocaleString('en-IN')}
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -465,7 +452,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
               </button>
               <button
                 onClick={handleAddCost}
-                disabled={!costItem.description || (costCategory === 'supervision' && (!costItem.nosPercentage || !costItem.monthlyExpense || !costItem.months || !costItem.diversity)) || (costCategory !== 'supervision' && (!costItem.nosPercentage || !costItem.amount))}
+                disabled={!costItem.description || !costItem.nosPercentage || !costItem.monthlyExpense || !costItem.months || !costItem.diversity}
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 Add Cost
