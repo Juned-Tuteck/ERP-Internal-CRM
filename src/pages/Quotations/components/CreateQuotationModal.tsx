@@ -89,9 +89,15 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const [formData, setFormData] = useState(() => {
     const defaultData = getDefaultFormData();
     if (initialData) {
+      // Find the lead and BOM data based on the initialData
+      const selectedLead = leads.find(lead => lead.name === initialData.leadName);
+      const bomId = selectedLead?.bomId || '';
+      
       return {
         ...defaultData,
         ...initialData,
+        leadId: selectedLead?.id || '',
+        bomId: bomId,
         items: initialData.items || [],
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
@@ -134,9 +140,16 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   useEffect(() => {
     if (initialData) {
       const defaultData = getDefaultFormData();
+      
+      // Find the lead and BOM data based on the initialData
+      const selectedLead = leads.find(lead => lead.name === initialData.leadName);
+      const bomId = selectedLead?.bomId || '';
+      
       setFormData({
         ...defaultData,
         ...initialData,
+        leadId: selectedLead?.id || '',
+        bomId: bomId,
         items: initialData.items || [],
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
@@ -226,15 +239,16 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleBreadcrumbClick(step.id)}
-                  disabled={!isEditMode}
+                  style={isEditMode ? { cursor: 'pointer' } : { cursor: 'default' }}
                   className={`flex items-center space-x-2 focus:outline-none ${
                     currentStep === step.id ? 'text-blue-600' : 
-                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                    currentStep > step.id ? 'text-green-600' : isEditMode ? 'text-blue-400' : 'text-gray-400'
                   }`}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                    currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    currentStep > step.id ? 'bg-green-100 text-green-600' : 
+                    isEditMode ? 'bg-blue-50 text-blue-400' : 'bg-gray-100 text-gray-400'
                   }`}>
                     {step.id}
                   </div>
@@ -257,6 +271,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
             <QuotationStep1 
               formData={formData} 
               setFormData={setFormData} 
+              isEditMode={isEditMode}
             />
           )}
 

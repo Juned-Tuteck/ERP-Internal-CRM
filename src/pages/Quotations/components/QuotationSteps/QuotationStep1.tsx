@@ -4,9 +4,10 @@ import { Calculator, Search, X } from 'lucide-react';
 interface QuotationStep1Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isEditMode?: boolean;
 }
 
-const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }) => {
+const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, isEditMode = false }) => {
   const [showCostModal, setShowCostModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [itemCosts, setItemCosts] = useState<any>({
@@ -70,6 +71,33 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
       const bomId = selectedLead.bomId;
       const selectedBom = boms.find(bom => bom.id === bomId);
       
+      // If we're in edit mode, preserve existing items but update lead info
+      const updatedItems = isEditMode ? formData.items : (selectedBom ? selectedBom.items.map(item => ({
+        ...item,
+        supplyRate: item.rate,
+        installationRate: item.rate * 0.3, // Example: installation rate is 30% of supply rate
+        supplyOwnAmount: item.price,
+        installationOwnAmount: item.price * 0.3,
+        // Add cost details with default values
+        costDetails: {
+          supplyDiscount: 0,
+          supplyWastagePercentage: 2,
+          supplyTransportationPercentage: 3,
+          supplyContingencyPercentage: 2,
+          supplyMiscellaneousPercentage: 1,
+          supplyOutstationPercentage: 0,
+          supplyOfficeOverheadPercentage: 3,
+          supplyPOVariancePercentage: 1,
+          installationWastagePercentage: 2,
+          installationTransportationPercentage: 3,
+          installationContingencyPercentage: 2,
+          installationMiscellaneousPercentage: 1,
+          installationOutstationPercentage: 0,
+          installationOfficeOverheadPercentage: 3,
+          installationPOVariancePercentage: 1,
+        }
+      })) : []);
+      
       // Update form data with lead and BOM details
       setFormData({
         ...formData,
@@ -77,31 +105,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
         leadName: selectedLead.name,
         businessName: selectedLead.businessName,
         bomId: bomId,
-        items: selectedBom ? selectedBom.items.map(item => ({
-          ...item,
-          supplyRate: item.rate,
-          installationRate: item.rate * 0.3, // Example: installation rate is 30% of supply rate
-          supplyOwnAmount: item.price,
-          installationOwnAmount: item.price * 0.3,
-          // Add cost details with default values
-          costDetails: {
-            supplyDiscount: 0,
-            supplyWastagePercentage: 2,
-            supplyTransportationPercentage: 3,
-            supplyContingencyPercentage: 2,
-            supplyMiscellaneousPercentage: 1,
-            supplyOutstationPercentage: 0,
-            supplyOfficeOverheadPercentage: 3,
-            supplyPOVariancePercentage: 1,
-            installationWastagePercentage: 2,
-            installationTransportationPercentage: 3,
-            installationContingencyPercentage: 2,
-            installationMiscellaneousPercentage: 1,
-            installationOutstationPercentage: 0,
-            installationOfficeOverheadPercentage: 3,
-            installationPOVariancePercentage: 1,
-          }
-        })) : []
+        items: updatedItems
       });
     }
   };
