@@ -160,203 +160,194 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({ formData, setFormData }
         <p className="text-sm text-gray-600">Apply margins to calculate the final selling price.</p>
       </div>
       
-      {/* Supply Section */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h4 className="text-md font-medium text-gray-900 mb-3">Supply</h4>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Own Amount:</label>
-            <span className="text-sm font-medium">₹{formData.supplyData.ownAmount.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Overheads (%):</label>
-            <div className="flex items-center">
-              <input
-                type="number"
-                value={formData.supplyData.overheadsPercentage}
-                onChange={(e) => handleInputChange('supply', 'overheadsPercentage', e.target.value)}
-                min="0"
-                max="100"
-                step="0.1"
-                className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
-              />
-              <span className="ml-2 text-sm">
-                ₹{formData.supplyData.overheadsAmount.toLocaleString('en-IN')}
-              </span>
+      {/* Summary Section */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Supply Section */}
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="text-md font-medium text-gray-900 mb-3">Supply</h4>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Own Amount:</label>
+              <span className="text-sm font-medium">₹{formData.supplyData.ownAmount.toLocaleString('en-IN')}</span>
             </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">Sub Total:</label>
-            <span className="text-sm font-medium">₹{formData.supplyData.subtotal1.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Margin (%):</label>
-            <div className="flex items-center">
-              <input
-                type="number"
-                value={formData.supplyData.marginPercentage}
-                onChange={(e) => handleInputChange('supply', 'marginPercentage', e.target.value)}
-                min="0"
-                max="100"
-                step="0.1"
-                className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
-              />
-              <span className="ml-2 text-sm">
-                ₹{formData.supplyData.marginAmount.toLocaleString('en-IN')}
-              </span>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Overheads (%):</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  value={formData.supplyData.overheadsPercentage}
+                  onChange={(e) => handleInputChange('supply', 'overheadsPercentage', e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
+                />
+                <span className="ml-2 text-sm">₹{formData.supplyData.overheadsAmount.toLocaleString('en-IN')}</span>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">Sub Total:</label>
-            <span className="text-sm font-medium">₹{formData.supplyData.subtotal2.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
-            <label className="text-sm font-medium text-gray-700">Selling Amount:</label>
-            <span className="text-sm font-medium text-green-600">₹{formData.supplyData.sellingAmount.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">MF:</label>
-            <span className="text-sm font-medium">{formData.supplyData.mf.toFixed(2)}</span>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">Sub Total:</label>
+              <span className="text-sm font-medium">₹{formData.supplyData.subtotal1.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Margin (%):</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  value={formData.supplyData.marginPercentage}
+                  onChange={(e) => handleInputChange('supply', 'marginPercentage', e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
+                />
+                <span className="ml-2 text-sm">₹{formData.supplyData.marginAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">Sub Total:</label>
+              <span className="text-sm font-medium">₹{formData.supplyData.subtotal2.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
+              <label className="text-sm font-medium text-gray-700">Selling Amount:</label>
+              <span className="text-sm font-medium text-green-600">₹{formData.supplyData.sellingAmount.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">MF:</label>
+              <span className="text-sm font-medium">{formData.supplyData.mf.toFixed(2)}</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Labour Section */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h4 className="text-md font-medium text-gray-900 mb-3">Labour</h4>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Own Amount:</label>
-            <span className="text-sm font-medium">₹{formData.labourData.ownAmount.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Overheads (%):</label>
-            <div className="flex items-center">
-              <input
-                type="number"
-                value={formData.labourData.overheadsPercentage}
-                onChange={(e) => handleInputChange('labour', 'overheadsPercentage', e.target.value)}
-                min="0"
-                max="100"
-                step="0.1"
-                className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
-              />
-              <span className="ml-2 text-sm">
-                ₹{formData.labourData.overheadsAmount.toLocaleString('en-IN')}
-              </span>
+
+        {/* Labour Section */}
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="text-md font-medium text-gray-900 mb-3">Labour</h4>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Own Amount:</label>
+              <span className="text-sm font-medium">₹{formData.labourData.ownAmount.toLocaleString('en-IN')}</span>
             </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">Sub Total:</label>
-            <span className="text-sm font-medium">₹{formData.labourData.subtotal1.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Margin (%):</label>
-            <div className="flex items-center">
-              <input
-                type="number"
-                value={formData.labourData.marginPercentage}
-                onChange={(e) => handleInputChange('labour', 'marginPercentage', e.target.value)}
-                min="0"
-                max="100"
-                step="0.1"
-                className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
-              />
-              <span className="ml-2 text-sm">
-                ₹{formData.labourData.marginAmount.toLocaleString('en-IN')}
-              </span>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Overheads (%):</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  value={formData.labourData.overheadsPercentage}
+                  onChange={(e) => handleInputChange('labour', 'overheadsPercentage', e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
+                />
+                <span className="ml-2 text-sm">₹{formData.labourData.overheadsAmount.toLocaleString('en-IN')}</span>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">Sub Total:</label>
-            <span className="text-sm font-medium">₹{formData.labourData.subtotal2.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
-            <label className="text-sm font-medium text-gray-700">Selling Amount:</label>
-            <span className="text-sm font-medium text-green-600">₹{formData.labourData.sellingAmount.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">MF:</label>
-            <span className="text-sm font-medium">{formData.labourData.mf.toFixed(2)}</span>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">Sub Total:</label>
+              <span className="text-sm font-medium">₹{formData.labourData.subtotal1.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Margin (%):</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  value={formData.labourData.marginPercentage}
+                  onChange={(e) => handleInputChange('labour', 'marginPercentage', e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
+                />
+                <span className="ml-2 text-sm">₹{formData.labourData.marginAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">Sub Total:</label>
+              <span className="text-sm font-medium">₹{formData.labourData.subtotal2.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
+              <label className="text-sm font-medium text-gray-700">Selling Amount:</label>
+              <span className="text-sm font-medium text-green-600">₹{formData.labourData.sellingAmount.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">MF:</label>
+              <span className="text-sm font-medium">{formData.labourData.mf.toFixed(2)}</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* SITC Section */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h4 className="text-md font-medium text-gray-900 mb-3">SITC (Supply, Installation, Testing, and Commissioning)</h4>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Own Amount:</label>
-            <span className="text-sm font-medium">₹{formData.sitcData.ownAmount.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Overheads (%):</label>
-            <div className="flex items-center">
-              <input
-                type="number"
-                value={formData.sitcData.overheadsPercentage}
-                onChange={(e) => handleInputChange('sitc', 'overheadsPercentage', e.target.value)}
-                min="0"
-                max="100"
-                step="0.1"
-                className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
-              />
-              <span className="ml-2 text-sm">
-                ₹{formData.sitcData.overheadsAmount.toLocaleString('en-IN')}
-              </span>
+
+        {/* SITC Section */}
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="text-md font-medium text-gray-900 mb-3">SITC (Supply, Installation, Testing, and Commissioning)</h4>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Own Amount:</label>
+              <span className="text-sm font-medium">₹{formData.sitcData.ownAmount.toLocaleString('en-IN')}</span>
             </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">Sub Total:</label>
-            <span className="text-sm font-medium">₹{formData.sitcData.subtotal1.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm text-gray-600">Margin (%):</label>
-            <div className="flex items-center">
-              <input
-                type="number"
-                value={formData.sitcData.marginPercentage}
-                onChange={(e) => handleInputChange('sitc', 'marginPercentage', e.target.value)}
-                min="0"
-                max="100"
-                step="0.1"
-                className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
-              />
-              <span className="ml-2 text-sm">
-                ₹{formData.sitcData.marginAmount.toLocaleString('en-IN')}
-              </span>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Overheads (%):</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  value={formData.sitcData.overheadsPercentage}
+                  onChange={(e) => handleInputChange('sitc', 'overheadsPercentage', e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
+                />
+                <span className="ml-2 text-sm">₹{formData.sitcData.overheadsAmount.toLocaleString('en-IN')}</span>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">Sub Total:</label>
-            <span className="text-sm font-medium">₹{formData.sitcData.subtotal2.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
-            <label className="text-sm font-medium text-gray-700">Selling Amount:</label>
-            <span className="text-sm font-medium text-green-600">₹{formData.sitcData.sellingAmount.toLocaleString('en-IN')}</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">MF:</label>
-            <span className="text-sm font-medium">{formData.sitcData.mf.toFixed(2)}</span>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">Sub Total:</label>
+              <span className="text-sm font-medium">₹{formData.sitcData.subtotal1.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm text-gray-600">Margin (%):</label>
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  value={formData.sitcData.marginPercentage}
+                  onChange={(e) => handleInputChange('sitc', 'marginPercentage', e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded-md text-right"
+                />
+                <span className="ml-2 text-sm">₹{formData.sitcData.marginAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">Sub Total:</label>
+              <span className="text-sm font-medium">₹{formData.sitcData.subtotal2.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
+              <label className="text-sm font-medium text-gray-700">Selling Amount:</label>
+              <span className="text-sm font-medium text-green-600">₹{formData.sitcData.sellingAmount.toLocaleString('en-IN')}</span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-gray-700">MF:</label>
+              <span className="text-sm font-medium">{formData.sitcData.mf.toFixed(2)}</span>
+            </div>
           </div>
         </div>
       </div>

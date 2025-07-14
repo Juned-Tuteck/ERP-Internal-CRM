@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Search } from 'lucide-react';
+import { Calculator, Search, X } from 'lucide-react';
 
 interface QuotationStep1Props {
   formData: any;
