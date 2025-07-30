@@ -78,6 +78,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     },
   ];
 
+  // Ensure hooks are called unconditionally and consistently
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
@@ -85,6 +86,15 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       setCurrentStep(1);
     }
   }, [initialData]);
+
+  useEffect(() => {
+    setFilteredItems(
+      masterItems.filter(item =>
+        item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.itemCode.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+  }, [searchQuery]);
 
   const masterItems: BOMItem[] = [
     { id: '1', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500, quantity: 0, price: 0 },
@@ -98,13 +108,11 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
   ];
 
   useEffect(() => {
-    setFilteredItems(
-      masterItems.filter(item =>
-        item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.itemCode.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    );
-  }, [searchQuery]);
+    if (templates.length > 0) {
+      const defaultTemplate = templates[0];
+      setItems([defaultTemplate]);
+    }
+  }, []);
 
   const statuses = ['DRAFT', 'Submitted for Approval'];
 
@@ -257,13 +265,6 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     });
     setItems([]);
   };
-
-  useEffect(() => {
-    if (templates.length > 0) {
-      const defaultTemplate = templates[0];
-      setItems([defaultTemplate]);
-    }
-  }, []);
 
   const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const templateId = e.target.value;
