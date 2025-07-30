@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Upload, Plus, Trash2, Copy, Camera } from 'lucide-react';
+import { X, Save, ChevronLeft, ChevronRight, Upload, Plus, Trash2, Copy, Edit } from 'lucide-react';
+import axios from 'axios';
 
 interface AddCustomerModalProps {
   isOpen: boolean;
@@ -13,7 +14,8 @@ interface ContactPerson {
   name: string;
   phone: string;
   email: string;
-  photo?: string;
+  designation?: string;
+  isEditing?: boolean;
 }
 
 interface Branch {
@@ -28,6 +30,7 @@ interface Branch {
   city: string;
   pincode: string;
   contactPersons: ContactPerson[];
+  isEditing?: boolean;
 }
 
 const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
@@ -67,6 +70,56 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   const [initialFiles, setInitialFiles] = useState<any[]>(initialData?.uploadedFiles || []);
   const [activeFileTab, setActiveFileTab] = useState<number>(0);
 
+  const [fieldChanges, setFieldChanges] = useState<Record<string, any>>({});
+  const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
+  const [createdBranches, setCreatedBranches] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const keymap = {
+  "businessName": "business_name",
+  "contactNo": "contact_number",
+  "email": "email",
+  "country": "country",
+  "currency": "currency",
+  "state": "state",
+  "district": "district",
+  "city": "city",
+  "customerType": "customer_type",
+  "customerPotential": "customer_potential",
+  "pincode": "pincode",
+  "active": "active",
+  "panNumber": "pan_number",
+  "tanNumber": "tan_number",
+  "gstNumber": "gst_number",
+  "bankName": "bank_name",
+  "bankAccountNumber": "bank_account_number",
+  "branchName": "branch_name",
+  "ifscCode": "ifsc_code",
+  "approvalStatus": "approval_status",
+  "approvedBy": "approved_by"
+}
+
+  const branchKeymap = {
+    "id": "id",
+    "branchName": "branch_name",
+    "contactNumber": "contact_number",
+    "email": "email_id",
+    "country": "country",
+    "currency": "currency",
+    "state": "state",
+    "district": "district",
+    "city": "city",
+    "pincode": "pincode"
+  }
+
+  const branchContactKeymap = {
+    "id": "id",
+    "name": "name",
+    "phone": "phone",
+    "email": "email",
+  }
+
+  useEffect(() => {console.log('changed fields', fieldChanges);})
+
   const steps = [
     { id: 1, name: 'General Information', description: 'Business and bank details' },
     { id: 2, name: 'Branch Information', description: 'Branch locations and contacts' },
@@ -94,9 +147,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      // Ensure all branches start with isEditing: false in edit mode
+      const updatedInitialData = {
+        ...initialData,
+        branches: (initialData.branches || []).map((branch: Branch) => ({
+          ...branch,
+          isEditing: false
+        }))
+      };
+      setFormData(updatedInitialData);
       setInitialFiles(initialData.uploadedFiles || []);
       setUploadedFiles([]); // Reset uploaded files for edit mode
+      // Store original contact persons for comparison
+      setOriginalContactPersons(initialData.contactPersons || []);
+      // Store original branches for comparison
+      setOriginalBranches(initialData.branches || []);
     }
   }, [initialData]);
 
@@ -106,6 +171,19 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+
+    if (initialData && initialData[name] !== value) {
+      setFieldChanges((prev) => ({
+        ...prev,
+        [name]: value
+      }));
+    } else {
+      setFieldChanges((prev) => {
+        const updatedChanges = { ...prev };
+        delete updatedChanges[name];
+        return updatedChanges;
+      });
+    }
   };
 
   const handleToggle = (name: string) => {
@@ -116,19 +194,123 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   };
 
   // Contact Person Management
-  const addContactPerson = () => {
-    const newContactPerson: ContactPerson = {
-      id: Date.now().toString(),
-      name: '',
-      phone: '',
-      email: '',
-      photo: ''
-    };
-    setFormData((prev: typeof formData) => ({
-      ...prev,
-      contactPersons: [...prev.contactPersons, newContactPerson]
+  const [newContactPersons, setNewContactPersons] = useState<ContactPerson[]>([]);
+  const [originalContactPersons, setOriginalContactPersons] = useState<ContactPerson[]>([]);
+
+  // Branch Management
+  const [originalBranches, setOriginalBranches] = useState<Branch[]>([]);
+
+  const editContactPerson = (id: string) => {
+    setFormData((prevFormData: typeof formData) => ({
+      ...prevFormData,
+      contactPersons: prevFormData.contactPersons.map((person: ContactPerson) =>
+        person.id === id ? { ...person, isEditing: true } : { ...person, isEditing: false }
+      ),
     }));
   };
+
+  const saveContactPerson = async (id: string) => {
+    if (!isEditMode) {
+      // In non-edit mode, just toggle isEditing
+      setFormData((prevFormData: typeof formData) => ({
+        ...prevFormData,
+        contactPersons: prevFormData.contactPersons.map((person: ContactPerson) =>
+          person.id === id ? { ...person, isEditing: false } : person
+        ),
+      }));
+      return;
+    }
+
+    try {
+      const contactPerson = formData.contactPersons.find((cp: ContactPerson) => cp.id === id);
+      if (!contactPerson) return;
+
+      // Check if this is a new contact person (has temp ID from Date.now())
+      const isNewContact = !originalContactPersons.some(originalCP => originalCP.id === id);
+
+      if (isNewContact) {
+        // POST request for new contact person
+        const payload = {
+          name: contactPerson.name,
+          phone: contactPerson.phone,
+          email: contactPerson.email,
+          designation: contactPerson.designation || '',
+          customer_id: formData.id
+        };
+
+        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/customer-contact`, payload, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.status !== 200 && response.status !== 201) {
+          throw new Error('Failed to create contact person');
+        }
+
+        console.log('Contact person created successfully:', response.data);
+      } else {
+        // PUT request for existing contact person
+        const originalContact = originalContactPersons.find(cp => cp.id === id);
+        const changedFields: Record<string, any> = {};
+
+        // Compare fields and build changed fields object
+        if (originalContact) {
+          if (contactPerson.name !== originalContact.name) changedFields.name = contactPerson.name;
+          if (contactPerson.phone !== originalContact.phone) changedFields.phone = contactPerson.phone;
+          if (contactPerson.email !== originalContact.email) changedFields.email = contactPerson.email;
+          if (contactPerson.designation !== originalContact.designation) changedFields.designation = contactPerson.designation || '';
+        }
+
+        // Only make API call if there are changes
+        if (Object.keys(changedFields).length > 0) {
+          const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/customer-contact/${id}`, changedFields, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.status !== 200) {
+            throw new Error('Failed to update contact person');
+          }
+
+          console.log('Contact person updated successfully:', response.data);
+        }
+      }
+
+      // Update UI state
+      setFormData((prevFormData: typeof formData) => ({
+        ...prevFormData,
+        contactPersons: prevFormData.contactPersons.map((person: ContactPerson) =>
+          person.id === id ? { ...person, isEditing: false } : person
+        ),
+      }));
+
+    } catch (error) {
+      console.error('Error saving contact person:', error);
+      // You might want to show a toast notification or error message here
+    }
+  };
+
+  const addContactPerson = () => {
+    const newPerson = {
+      id: Date.now().toString(),
+      name: "",
+      phone: "",
+      email: "",
+      designation: "",
+      isEditing: true,
+    };
+    setFormData((prevFormData: typeof formData) => ({
+      ...prevFormData,
+      contactPersons: prevFormData.contactPersons.map((person: ContactPerson) => ({
+        ...person,
+        isEditing: false
+      })).concat(newPerson),
+    }));
+  };
+
+  useEffect(() => {console.log('New contact persons:', newContactPersons);});
 
   const updateContactPerson = (id: string, field: string, value: string) => {
     setFormData((prev: typeof formData) => ({
@@ -139,11 +321,50 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     }));
   };
 
-  const removeContactPerson = (id: string) => {
-    setFormData((prev: typeof formData) => ({
-      ...prev,
-      contactPersons: prev.contactPersons.filter((cp: ContactPerson) => cp.id !== id)
-    }));
+  const removeContactPerson = async (id: string) => {
+    if (!isEditMode) {
+      // In non-edit mode, just remove from state
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        contactPersons: prev.contactPersons.filter((cp: ContactPerson) => cp.id !== id)
+      }));
+      return;
+    }
+
+    try {
+      // Check if this is an existing contact person (not a new one with temp ID)
+      const isExistingContact = originalContactPersons.some(originalCP => originalCP.id === id);
+
+      if (isExistingContact) {
+        // DELETE request for existing contact person
+        const response = await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/customer-contact/${id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.status !== 200 && response.status !== 204) {
+          throw new Error('Failed to delete contact person');
+        }
+
+        console.log('Contact person deleted successfully:', id);
+      }
+
+      // Remove from UI state (both for existing and new contact persons)
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        contactPersons: prev.contactPersons.filter((cp: ContactPerson) => cp.id !== id)
+      }));
+
+    } catch (error) {
+      console.error('Error removing contact person:', error);
+      // You might want to show a toast notification or error message here
+      // For now, we'll still remove from UI even if API call fails
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        contactPersons: prev.contactPersons.filter((cp: ContactPerson) => cp.id !== id)
+      }));
+    }
   };
 
   // Branch Management
@@ -159,11 +380,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       district: '',
       city: '',
       pincode: '',
-      contactPersons: []
+      contactPersons: [],
+      isEditing: true
     };
     setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: [...prev.branches, newBranch]
+      branches: [
+        ...prev.branches.map((branch: Branch) => ({ ...branch, isEditing: false })),
+        newBranch
+      ]
     }));
   };
 
@@ -196,11 +421,149 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     }));
   };
 
-  const removeBranch = (id: string) => {
+  const removeBranch = async (id: string) => {
+    if (!isEditMode) {
+      // In non-edit mode, just remove from state
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.filter((branch: Branch) => branch.id !== id)
+      }));
+      return;
+    }
+
+    try {
+      // Check if this is an existing branch (not a new one with temp ID)
+      console.log('Removing branch:', originalBranches);
+      const isExistingBranch = originalBranches.some(originalBranch => originalBranch.id === id);
+
+      if (isExistingBranch) {
+        // DELETE request for existing branch
+        const response = await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/customer-branch/${id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.status !== 200 && response.status !== 204) {
+          throw new Error('Failed to delete branch');
+        }
+
+        console.log('Branch deleted successfully:', id);
+      }
+
+      // Remove from UI state (both for existing and new branches)
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.filter((branch: Branch) => branch.id !== id)
+      }));
+
+    } catch (error) {
+      console.error('Error removing branch:', error);
+      // You might want to show a toast notification or error message here
+      // For now, we'll still remove from UI even if API call fails
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.filter((branch: Branch) => branch.id !== id)
+      }));
+    }
+  };
+
+  const editBranch = (id: string) => {
     setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.filter((branch: Branch) => branch.id !== id)
+      branches: prev.branches.map((branch: Branch) => 
+        branch.id === id ? { ...branch, isEditing: true } : { ...branch, isEditing: false }
+      )
     }));
+  };
+
+  const saveBranch = async (id: string) => {
+    if (!isEditMode) {
+      // In non-edit mode, just toggle isEditing
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.map((branch: Branch) => 
+          branch.id === id ? { ...branch, isEditing: false } : branch
+        )
+      }));
+      return;
+    }
+
+    try {
+      const branch = formData.branches.find((b: Branch) => b.id === id);
+      if (!branch) return;
+
+      // Check if this is a new branch (has temp ID from Date.now())
+      const isNewBranch = !originalBranches.some(originalBranch => originalBranch.id === id);
+
+      if (isNewBranch) {
+        // POST request for new branch - use branch key map
+        const payload: Record<string, any> = {
+          customer_id: formData.id
+        };
+
+        // Map UI fields to backend fields using branchKeymap
+        Object.keys(branchKeymap).forEach(uiKey => {
+          if (uiKey !== 'id' && branch[uiKey as keyof Branch] !== undefined) {
+            const backendKey = branchKeymap[uiKey as keyof typeof branchKeymap];
+            payload[backendKey] = branch[uiKey as keyof Branch];
+          }
+        });
+
+        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/customer-branch`, payload, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.status !== 200 && response.status !== 201) {
+          throw new Error('Failed to create branch');
+        }
+
+        console.log('Branch created successfully:', response.data);
+      } else {
+        // PUT request for existing branch
+        const originalBranch = originalBranches.find(b => b.id === id);
+        const changedFields: Record<string, any> = {};
+
+        // Compare fields and build changed fields object using branchKeymap
+        if (originalBranch) {
+          Object.keys(branchKeymap).forEach(uiKey => {
+            if (uiKey !== 'id' && branch[uiKey as keyof Branch] !== originalBranch[uiKey as keyof Branch]) {
+              const backendKey = branchKeymap[uiKey as keyof typeof branchKeymap];
+              changedFields[backendKey] = branch[uiKey as keyof Branch];
+            }
+          });
+        }
+
+        // Only make API call if there are changes
+        if (Object.keys(changedFields).length > 0) {
+          const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/customer-branch/${id}`, changedFields, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.status !== 200) {
+            throw new Error('Failed to update branch');
+          }
+
+          console.log('Branch updated successfully:', response.data);
+        }
+      }
+
+      // Update UI state
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.map((branch: Branch) => 
+          branch.id === id ? { ...branch, isEditing: false } : branch
+        )
+      }));
+
+    } catch (error) {
+      console.error('Error saving branch:', error);
+      // You might want to show a toast notification or error message here
+    }
   };
 
   const addBranchContactPerson = (branchId: string) => {
@@ -209,17 +572,142 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
       name: '',
       phone: '',
       email: '',
-      photo: ''
+      designation: '',
+      isEditing: true
     };
     setFormData((prev: typeof formData) => ({
       ...prev,
       branches: prev.branches.map((branch: Branch) => 
         branch.id === branchId ? {
           ...branch,
-          contactPersons: [...branch.contactPersons, newContactPerson]
+          contactPersons: [
+            ...branch.contactPersons.map((person: ContactPerson) => ({
+              ...person,
+              isEditing: false
+            })),
+            newContactPerson
+          ]
         } : branch
       )
     }));
+  };
+
+  const editBranchContactPerson = (branchId: string, contactId: string) => {
+    setFormData((prev: typeof formData) => ({
+      ...prev,
+      branches: prev.branches.map((branch: Branch) => 
+        branch.id === branchId ? {
+          ...branch,
+          contactPersons: branch.contactPersons.map((person: ContactPerson) => 
+            person.id === contactId ? { ...person, isEditing: true } : { ...person, isEditing: false }
+          )
+        } : branch
+      )
+    }));
+  };
+
+  const saveBranchContactPerson = async (branchId: string, contactId: string) => {
+    if (!isEditMode) {
+      // In non-edit mode, just toggle isEditing
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.map((branch: Branch) => 
+          branch.id === branchId ? {
+            ...branch,
+            contactPersons: branch.contactPersons.map((person: ContactPerson) => 
+              person.id === contactId ? { ...person, isEditing: false } : person
+            )
+          } : branch
+        )
+      }));
+      return;
+    }
+
+    try {
+      const branch = formData.branches.find((b: Branch) => b.id === branchId);
+      if (!branch) return;
+
+      const contactPerson = branch.contactPersons.find((cp: ContactPerson) => cp.id === contactId);
+      if (!contactPerson) return;
+
+      // Check if this is a new contact person (has temp ID from Date.now())
+      // Compare with original branches to see if this contact person existed
+      const originalBranch = originalBranches.find(ob => ob.id === branchId);
+      const isNewContact = !originalBranch?.contactPersons?.some(originalCP => originalCP.id === contactId);
+
+      if (isNewContact) {
+        // POST request for new branch contact person
+        const payload: Record<string, any> = {
+          customer_branch_id: branchId
+        };
+
+        // Map UI fields to backend fields using branchContactKeymap
+        Object.keys(branchContactKeymap).forEach(uiKey => {
+          if (uiKey !== 'id' && contactPerson[uiKey as keyof ContactPerson] !== undefined) {
+            const backendKey = branchContactKeymap[uiKey as keyof typeof branchContactKeymap];
+            payload[backendKey] = contactPerson[uiKey as keyof ContactPerson];
+          }
+        });
+
+        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact`, payload, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.status !== 200 && response.status !== 201) {
+          throw new Error('Failed to create branch contact person');
+        }
+
+        console.log('Branch contact person created successfully:', response.data);
+      } else {
+        // PUT request for existing branch contact person
+        const originalContact = originalBranch?.contactPersons?.find(cp => cp.id === contactId);
+        const changedFields: Record<string, any> = {};
+
+        // Compare fields and build changed fields object using branchContactKeymap
+        if (originalContact) {
+          Object.keys(branchContactKeymap).forEach(uiKey => {
+            if (uiKey !== 'id' && contactPerson[uiKey as keyof ContactPerson] !== originalContact[uiKey as keyof ContactPerson]) {
+              const backendKey = branchContactKeymap[uiKey as keyof typeof branchContactKeymap];
+              changedFields[backendKey] = contactPerson[uiKey as keyof ContactPerson];
+            }
+          });
+        }
+
+        // Only make API call if there are changes
+        if (Object.keys(changedFields).length > 0) {
+          const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact/${contactId}`, changedFields, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.status !== 200) {
+            throw new Error('Failed to update branch contact person');
+          }
+
+          console.log('Branch contact person updated successfully:', response.data);
+        }
+      }
+
+      // Update UI state
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.map((branch: Branch) => 
+          branch.id === branchId ? {
+            ...branch,
+            contactPersons: branch.contactPersons.map((person: ContactPerson) => 
+              person.id === contactId ? { ...person, isEditing: false } : person
+            )
+          } : branch
+        )
+      }));
+
+    } catch (error) {
+      console.error('Error saving branch contact person:', error);
+      // You might want to show a toast notification or error message here
+    }
   };
 
   const updateBranchContactPerson = (branchId: string, contactId: string, field: string, value: string) => {
@@ -236,16 +724,66 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
     }));
   };
 
-  const removeBranchContactPerson = (branchId: string, contactId: string) => {
-    setFormData((prev: typeof formData) => ({
-      ...prev,
-      branches: prev.branches.map((branch: Branch) => 
-        branch.id === branchId ? {
-          ...branch,
-          contactPersons: branch.contactPersons.filter((cp: ContactPerson) => cp.id !== contactId)
-        } : branch
-      )
-    }));
+  const removeBranchContactPerson = async (branchId: string, contactId: string) => {
+    if (!isEditMode) {
+      // In non-edit mode, just remove from state
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.map((branch: Branch) => 
+          branch.id === branchId ? {
+            ...branch,
+            contactPersons: branch.contactPersons.filter((cp: ContactPerson) => cp.id !== contactId)
+          } : branch
+        )
+      }));
+      return;
+    }
+
+    try {
+      // Check if this is an existing branch contact person (not a new one with temp ID)
+      const originalBranch = originalBranches.find(ob => ob.id === branchId);
+      const isExistingContact = originalBranch?.contactPersons?.some(originalCP => originalCP.id === contactId);
+
+      if (isExistingContact) {
+        // DELETE request for existing branch contact person
+        const response = await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact/${contactId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.status !== 200 && response.status !== 204) {
+          throw new Error('Failed to delete branch contact person');
+        }
+
+        console.log('Branch contact person deleted successfully:', contactId);
+      }
+
+      // Remove from UI state (both for existing and new branch contact persons)
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.map((branch: Branch) => 
+          branch.id === branchId ? {
+            ...branch,
+            contactPersons: branch.contactPersons.filter((cp: ContactPerson) => cp.id !== contactId)
+          } : branch
+        )
+      }));
+
+    } catch (error) {
+      console.error('Error removing branch contact person:', error);
+      // You might want to show a toast notification or error message here
+      // For now, we'll still remove from UI even if API call fails
+      setFormData((prev: typeof formData) => ({
+        ...prev,
+        branches: prev.branches.map((branch: Branch) => 
+          branch.id === branchId ? {
+            ...branch,
+            contactPersons: branch.contactPersons.filter((cp: ContactPerson) => cp.id !== contactId)
+          } : branch
+        )
+      }));
+    }
   };
 
   // File Management
@@ -269,9 +807,174 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
 
   const isEditMode = Boolean(initialData);
 
-  const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
+  const handleNext = async () => {
+    // If we're in register mode (not edit mode) and on step 1
+    if (!isEditMode && currentStep === 1) {
+      setIsLoading(true);
+      try {
+        // Step 1: Create customer with all fields except contact persons
+        const customerPayload: Record<string, any> = {};
+        
+        // Map UI fields to backend fields using keymap (excluding contact persons)
+        Object.keys(keymap).forEach(uiKey => {
+          if (formData[uiKey as keyof typeof formData] !== undefined) {
+            const backendKey = keymap[uiKey as keyof typeof keymap];
+            customerPayload[backendKey] = formData[uiKey as keyof typeof formData];
+          }
+        });
+
+        // Call POST API for customer
+        const customerResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/customer`, customerPayload, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (customerResponse.status !== 200 && customerResponse.status !== 201) {
+          throw new Error('Failed to create customer');
+        }
+
+        console.log('Customer created successfully:', customerResponse.data);
+        
+        // Store the customer ID from the response
+        const customerId = customerResponse.data.data.customer_id;
+        setCreatedCustomerId(customerId);
+        
+        // Update formData with the customer ID
+        setFormData((prev: typeof formData) => ({ ...prev, id: customerId }));
+
+        // Step 2: Create contact persons in bulk if any exist
+        if (formData.contactPersons.length > 0) {
+          const contactPersonsPayload = formData.contactPersons.map((contact: any) => ({
+            name: contact.name,
+            phone: contact.phone,
+            email: contact.email,
+            designation: contact.designation || '',
+            customer_id: customerId
+          }));
+          console.log('Creating contact persons:', contactPersonsPayload);
+
+          const contactResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/customer-contact/bulk`, contactPersonsPayload, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (contactResponse.status !== 200 && contactResponse.status !== 201) {
+            throw new Error('Failed to create contact persons');
+          }
+
+          console.log('Contact persons created successfully:', contactResponse.data);
+        }
+
+        // Move to next step
+        setCurrentStep(currentStep + 1);
+
+      } catch (error) {
+        console.error('Error in step 1 API calls:', error);
+        // You might want to show a toast notification or error message here
+        // For now, we'll prevent moving to the next step
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (!isEditMode && currentStep === 2) {
+      // Step 2: Create branches and branch contact persons
+      setIsLoading(true);
+      try {
+        // Step 1: Create branches in bulk if any exist
+        if (formData.branches.length > 0) {
+          const branchesPayload = formData.branches.map((branch: Branch) => {
+            const payload: Record<string, any> = {
+              customer_id: formData.id
+            };
+
+            // Map UI fields to backend fields using branchKeymap (excluding contact persons)
+            Object.keys(branchKeymap).forEach(uiKey => {
+              if (uiKey !== 'id' && branch[uiKey as keyof Branch] !== undefined) {
+                const backendKey = branchKeymap[uiKey as keyof typeof branchKeymap];
+                payload[backendKey] = branch[uiKey as keyof Branch];
+              }
+            });
+
+            return payload;
+          });
+
+          console.log('Creating branches:', branchesPayload);
+
+          const branchResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/customer-branch/bulk`, branchesPayload, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (branchResponse.status !== 200 && branchResponse.status !== 201) {
+            throw new Error('Failed to create branches');
+          }
+
+          console.log('Branches created successfully:', branchResponse.data);
+          
+          // Store the created branches
+          const createdBranchesData = branchResponse.data.data || branchResponse.data;
+          setCreatedBranches(createdBranchesData);
+
+          // Step 2: Create branch contact persons in bulk if any exist
+          const allBranchContactPersons: any[] = [];
+          
+          formData.branches.forEach((branch: Branch, branchIndex: number) => {
+            if (branch.contactPersons && branch.contactPersons.length > 0) {
+              // Get the corresponding created branch ID
+              const createdBranchId = createdBranchesData[branchIndex]?.id || createdBranchesData[branchIndex]?.customer_branch_id;
+              
+              branch.contactPersons.forEach((contact: ContactPerson) => {
+                const contactPayload: Record<string, any> = {
+                  customer_branch_id: createdBranchId
+                };
+
+                // Map UI fields to backend fields using branchContactKeymap
+                Object.keys(branchContactKeymap).forEach(uiKey => {
+                  if (uiKey !== 'id' && contact[uiKey as keyof ContactPerson] !== undefined) {
+                    const backendKey = branchContactKeymap[uiKey as keyof typeof branchContactKeymap];
+                    contactPayload[backendKey] = contact[uiKey as keyof ContactPerson];
+                  }
+                });
+
+                allBranchContactPersons.push(contactPayload);
+              });
+            }
+          });
+
+          if (allBranchContactPersons.length > 0) {
+            console.log('Creating branch contact persons:', allBranchContactPersons);
+
+            const branchContactResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact/bulk`, allBranchContactPersons, {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (branchContactResponse.status !== 200 && branchContactResponse.status !== 201) {
+              throw new Error('Failed to create branch contact persons');
+            }
+
+            console.log('Branch contact persons created successfully:', branchContactResponse.data);
+          }
+        }
+
+        // Move to next step
+        setCurrentStep(currentStep + 1);
+
+      } catch (error) {
+        console.error('Error in step 2 API calls:', error);
+        // You might want to show a toast notification or error message here
+        // For now, we'll prevent moving to the next step
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // For edit mode or other steps, just move to next step
+      if (currentStep < 3) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -285,6 +988,34 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
   const handleBreadcrumbClick = (stepId: number) => {
     setCurrentStep(stepId);
   };
+
+  
+  const handleEditSubmit = async () => {
+    try {
+      const backendPayload = (Object.keys(fieldChanges) as Array<keyof typeof keymap>).reduce((acc: Record<string, any>, key) => {
+        const backendKey = keymap[key];
+        if (backendKey) {
+          acc[backendKey] = fieldChanges[key];
+        }
+        return acc;
+      }, {});
+
+      const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/customer/${formData.id}`, backendPayload, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status !== 200) {
+        throw new Error('Failed to update customer');
+      }
+
+      console.log('Customer updated successfully:', response.data);
+      onClose();
+    } catch (error) {
+      console.error('Error updating customer:', error);
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,7 +1076,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
             <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {onClose(); setNewContactPersons([]);}}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -706,24 +1437,44 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                     <button
                       type="button"
                       onClick={addContactPerson}
-                      className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                      disabled={formData.contactPersons.some((person: ContactPerson) => person.isEditing)}
+                      className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Contact Person
                     </button>
                   </div>
                   
-                  {formData.contactPersons.map((person, index) => (
+                  {formData.contactPersons.map((person: ContactPerson, index: number) => (
                     <div key={person.id} className="border border-gray-200 rounded-lg p-4 mb-4">
                       <div className="flex items-center justify-between mb-3">
                         <h5 className="text-sm font-medium text-gray-900">Contact Person {index + 1}</h5>
-                        <button
-                          type="button"
-                          onClick={() => removeContactPerson(person.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => removeContactPerson(person.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                          {person.isEditing ? (
+                            <button
+                              type="button"
+                              onClick={() => saveContactPerson(person.id)}
+                              className="text-green-600 hover:text-green-800"
+                            >
+                              <Save className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => editContactPerson(person.id)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
@@ -734,7 +1485,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                             type="text"
                             value={person.name}
                             onChange={(e) => updateContactPerson(person.id, 'name', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={!person.isEditing}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!person.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                             placeholder="Contact person name"
                           />
                         </div>
@@ -746,7 +1498,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                             type="tel"
                             value={person.phone}
                             onChange={(e) => updateContactPerson(person.id, 'phone', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={!person.isEditing}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!person.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                             placeholder="+91 98765 43210"
                           />
                         </div>
@@ -758,21 +1511,23 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                             type="email"
                             value={person.email}
                             onChange={(e) => updateContactPerson(person.id, 'email', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={!person.isEditing}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!person.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                             placeholder="contact@company.com"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Photo
+                            Designation
                           </label>
-                          <button
-                            type="button"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-center"
-                          >
-                            <Camera className="h-4 w-4 mr-2" />
-                            Upload Photo
-                          </button>
+                          <input
+                            type="text"
+                            value={person.designation}
+                            onChange={(e) => updateContactPerson(person.id, 'designation', e.target.value)}
+                            disabled={!person.isEditing}
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!person.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                            placeholder="Manager, CEO, etc."
+                          />
                         </div>
                       </div>
                     </div>
@@ -789,26 +1544,46 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                   <button
                     type="button"
                     onClick={addBranch}
-                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    disabled={formData.branches.some((branch: Branch) => branch.isEditing)}
+                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Branch
                   </button>
                 </div>
 
-                {formData.branches.map((branch, index) => (
+                {formData.branches.map((branch: Branch, index: number) => (
                   <div key={branch.id} className="border border-gray-200 rounded-lg p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h5 className="text-lg font-medium text-gray-900">Branch {index + 1}</h5>
                       <div className="flex space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => copyFromCustomerDetails(branch.id)}
-                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy from Customer Details
-                        </button>
+                        {!isEditMode && (
+                          <button
+                            type="button"
+                            onClick={() => copyFromCustomerDetails(branch.id)}
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy from Customer Details
+                          </button>
+                        )}
+                        {branch.isEditing ? (
+                          <button
+                            type="button"
+                            onClick={() => saveBranch(branch.id)}
+                            className="text-green-600 hover:text-green-800"
+                          >
+                            <Save className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => editBranch(branch.id)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => removeBranch(branch.id)}
@@ -828,8 +1603,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                           type="text"
                           value={branch.branchName}
                           onChange={(e) => updateBranch(branch.id, 'branchName', e.target.value)}
+                          disabled={!branch.isEditing}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                           placeholder="Branch name"
                         />
                       </div>
@@ -842,8 +1618,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                           type="tel"
                           value={branch.contactNumber}
                           onChange={(e) => updateBranch(branch.id, 'contactNumber', e.target.value)}
+                          disabled={!branch.isEditing}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                           placeholder="+91 98765 43210"
                         />
                       </div>
@@ -856,8 +1633,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                           type="email"
                           value={branch.email}
                           onChange={(e) => updateBranch(branch.id, 'email', e.target.value)}
+                          disabled={!branch.isEditing}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                           placeholder="branch@company.com"
                         />
                       </div>
@@ -869,8 +1647,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                         <select
                           value={branch.country}
                           onChange={(e) => updateBranch(branch.id, 'country', e.target.value)}
+                          disabled={!branch.isEditing}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                         >
                           {countries.map(country => (
                             <option key={country} value={country}>{country}</option>
@@ -885,8 +1664,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                         <select
                           value={branch.currency}
                           onChange={(e) => updateBranch(branch.id, 'currency', e.target.value)}
+                          disabled={!branch.isEditing}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                         >
                           {currencies.map(currency => (
                             <option key={currency} value={currency}>{currency}</option>
@@ -901,8 +1681,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                         <select
                           value={branch.state}
                           onChange={(e) => updateBranch(branch.id, 'state', e.target.value)}
+                          disabled={!branch.isEditing}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                         >
                           <option value="">Select State</option>
                           {states.map(state => (
@@ -919,8 +1700,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                           value={branch.district}
                           onChange={(e) => updateBranch(branch.id, 'district', e.target.value)}
                           required
-                          disabled={!branch.state}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                          disabled={!branch.state || !branch.isEditing}
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${(!branch.state || !branch.isEditing) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         >
                           <option value="">Select District</option>
                           {branch.state && districts[branch.state as keyof typeof districts]?.map(district => (
@@ -937,8 +1718,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                           value={branch.city}
                           onChange={(e) => updateBranch(branch.id, 'city', e.target.value)}
                           required
-                          disabled={!branch.district}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                          disabled={!branch.district || !branch.isEditing}
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${(!branch.district || !branch.isEditing) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         >
                           <option value="">Select City</option>
                           {branch.district && cities[branch.district as keyof typeof cities]?.map(city => (
@@ -955,8 +1736,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                           type="text"
                           value={branch.pincode}
                           onChange={(e) => updateBranch(branch.id, 'pincode', e.target.value)}
+                          disabled={!branch.isEditing}
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                           placeholder="400001"
                         />
                       </div>
@@ -969,45 +1751,68 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                         <button
                           type="button"
                           onClick={() => addBranchContactPerson(branch.id)}
-                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
+                          disabled={!branch.isEditing || branch.contactPersons.some((person: ContactPerson) => person.isEditing)}
+                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           Add Contact
                         </button>
                       </div>
 
-                      {branch.contactPersons.map((person, personIndex) => (
+                      {branch.contactPersons.map((person: ContactPerson, personIndex: number) => (
                         <div key={person.id} className="border border-gray-100 rounded p-3 mb-3">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-gray-700">Contact {personIndex + 1}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeBranchContactPerson(branch.id, person.id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
+                            <div className="flex space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => removeBranchContactPerson(branch.id, person.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                              {person.isEditing ? (
+                                <button
+                                  type="button"
+                                  onClick={() => saveBranchContactPerson(branch.id, person.id)}
+                                  className="text-green-600 hover:text-green-800"
+                                >
+                                  <Save className="h-3 w-3" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => editBranchContactPerson(branch.id, person.id)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <input
                               type="text"
                               value={person.name}
                               onChange={(e) => updateBranchContactPerson(branch.id, person.id, 'name', e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              disabled={!person.isEditing}
+                              className={`w-full px-2 py-1 border border-gray-300 rounded text-sm ${!person.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                               placeholder="Name"
                             />
                             <input
                               type="tel"
                               value={person.phone}
                               onChange={(e) => updateBranchContactPerson(branch.id, person.id, 'phone', e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              disabled={!person.isEditing}
+                              className={`w-full px-2 py-1 border border-gray-300 rounded text-sm ${!person.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                               placeholder="Phone"
                             />
                             <input
                               type="email"
                               value={person.email}
                               onChange={(e) => updateBranchContactPerson(branch.id, person.id, 'email', e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              disabled={!person.isEditing}
+                              className={`w-full px-2 py-1 border border-gray-300 rounded text-sm ${!person.isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                               placeholder="Email"
                             />
                           </div>
@@ -1138,7 +1943,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
             {isEditMode ? (
               <button
                 type="submit"
-                onClick={handleSubmit}
+                onClick={handleEditSubmit}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
@@ -1149,15 +1954,16 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onClose, on
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  disabled={isLoading}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  {isLoading ? 'Processing...' : 'Next'}
+                  {!isLoading && <ChevronRight className="h-4 w-4 ml-2" />}
                 </button>
               ) : (
                 <button
-                  type="submit"
-                  onClick={handleSubmit}
+                  type="button"
+                  onClick={onClose}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
                 >
                   <Save className="h-4 w-4 mr-2" />

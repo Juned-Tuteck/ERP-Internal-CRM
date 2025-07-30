@@ -32,7 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Customers', href: '/customers', icon: Building2 },
     { name: 'Vendors', href: '/vendors', icon: Truck },
-    { name: 'Associates', href: '/associates', icon: HardHat },
+    // { name: 'Associates', href: '/associates', icon: HardHat },
     { name: 'Leads', href: '/leads', icon: UserPlus },
     { name: 'BOM', href: '/bom', icon: NotebookPen },
     { name: 'Quotations', href: '/quotations', icon: ScrollText },

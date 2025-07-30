@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import CustomerList from './components/CustomerList';
 import CustomerDetails from './components/CustomerDetails';
 import AddCustomerModal from './components/AddCustomerModal';
@@ -10,6 +11,7 @@ const Customers: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
+  const [customerInitialData, setCustomerInitialData] = useState(null);
   const { addNotification } = useCRM();
 
   const handleAddCustomer = (customerData: any) => {
@@ -102,7 +104,7 @@ const Customers: React.FC = () => {
             />
           </div>
           <div className="lg:col-span-2">
-            <CustomerDetails customer={selectedCustomer} />
+            <CustomerDetails customer={selectedCustomer} setCustomerInitialData={setCustomerInitialData} />
           </div>
         </div>
       ) : (

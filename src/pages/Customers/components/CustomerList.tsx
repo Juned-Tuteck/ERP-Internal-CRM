@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Building2, MapPin, DollarSign, Calendar } from 'lucide-react';
+import axios from 'axios';
 
 interface Customer {
   id: string;
@@ -19,63 +20,32 @@ interface CustomerListProps {
 }
 
 const CustomerList: React.FC<CustomerListProps> = ({ selectedCustomer, onSelectCustomer }) => {
-  const customers: Customer[] = [
-    {
-      id: '1',
-      name: 'TechCorp Solutions Pvt Ltd',
-      industry: 'Technology',
-      location: 'Mumbai, Maharashtra',
-      revenue: '₹45,00,000',
-      joinDate: '2023-06-15',
-      status: 'active',
-      avatar: 'TC',
-      dealCount: 8,
-    },
-    {
-      id: '2',
-      name: 'Innovate India Limited',
-      industry: 'Software Development',
-      location: 'Bangalore, Karnataka',
-      revenue: '₹32,50,000',
-      joinDate: '2023-08-22',
-      status: 'active',
-      avatar: 'II',
-      dealCount: 5,
-    },
-    {
-      id: '3',
-      name: 'Digital Solutions Enterprise',
-      industry: 'Digital Marketing',
-      location: 'Delhi, Delhi',
-      revenue: '₹28,75,000',
-      joinDate: '2023-04-10',
-      status: 'active',
-      avatar: 'DS',
-      dealCount: 12,
-    },
-    {
-      id: '4',
-      name: 'Manufacturing Industries Co',
-      industry: 'Manufacturing',
-      location: 'Pune, Maharashtra',
-      revenue: '₹67,80,000',
-      joinDate: '2023-02-05',
-      status: 'active',
-      avatar: 'MI',
-      dealCount: 15,
-    },
-    {
-      id: '5',
-      name: 'FinTech Innovations Pvt Ltd',
-      industry: 'Financial Services',
-      location: 'Gurgaon, Haryana',
-      revenue: '₹55,25,000',
-      joinDate: '2023-09-18',
-      status: 'pending',
-      avatar: 'FI',
-      dealCount: 3,
-    },
-  ];
+  const [apiCustomerList, setApiCustomerList] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer/`);
+        setApiCustomerList(response.data.data);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  const customers = apiCustomerList.map((customer) => ({
+    id: customer.customer_id,
+    name: customer.business_name,
+    industry: customer.customer_type,
+    location: `${customer.city}, ${customer.state}`,
+    revenue: `${customer.currency} ${customer.customer_potential}`,
+    joinDate: new Date(customer.created_at).toISOString(),
+    status: customer.approval_status.toLowerCase(),
+    avatar: customer.business_name.split(' ').map((word: string) => word[0]).join(''),
+    dealCount: customer.is_active ? 1 : 0, 
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -1,28 +1,56 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Building2, MapPin, DollarSign, Calendar, Users, Phone, Mail, Globe, FileText, CreditCard, SquarePen, Trash2, Power } from 'lucide-react';
+import axios from 'axios';
 import AddCustomerModal from './AddCustomerModal';
 
 interface CustomerDetailsProps {
   customer: any;
+  setCustomerInitialData: (data: any) => void;
 }
 
-const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
-  if (!customer) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-        <div className="text-gray-400">
-          <Building2 className="h-12 w-12 mx-auto mb-4" />
-          <h3 className="text-lg font-medium">Select a customer</h3>
-          <p className="text-sm">Choose a customer from the list to view their details</p>
-        </div>
-      </div>
-    );
-  }
-
+const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer , setCustomerInitialData }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [mappedApiData, setMappedApiData] = useState<any>({
+    ...customer,
+    panNumber: 'ABCDE1234F',
+    gstNumber: '27ABCDE1234F1Z5',
+    bankName: 'State Bank of India',
+    bankAccountNumber: '1234567890123456',
+    ifscCode: 'SBIN0001234',
+    contactPersons: [
+      { name: 'Amit Sharma', phone: '+91 98765 43211', email: 'amit@company.in', designation: 'CEO' },
+      { name: 'Priya Patel', phone: '+91 98765 43212', email: 'priya@company.in', designation: 'CTO' }
+    ],
+    branches: [
+      {
+        branchName: 'Mumbai Head Office',
+        contactNumber: '+91 98765 43210',
+        email: 'mumbai@company.in',
+        address: 'Andheri East, Mumbai, Maharashtra - 400069',
+        contactPersons: [
+          { name: 'Rajesh Kumar', phone: '+91 98765 43213', email: 'rajesh@company.in' }
+        ]
+      },
+      {
+        branchName: 'Pune Branch',
+        contactNumber: '+91 98765 43214',
+        email: 'pune@company.in',
+        address: 'Hinjewadi, Pune, Maharashtra - 411057',
+        contactPersons: [
+          { name: 'Sneha Gupta', phone: '+91 98765 43215', email: 'sneha@company.in' }
+        ]
+      }
+    ],
+    uploadedFiles: [
+      { name: 'Business_Registration.pdf', size: '2.4 MB', uploadDate: '2024-01-15' },
+      { name: 'GST_Certificate.pdf', size: '1.8 MB', uploadDate: '2024-01-15' },
+      { name: 'PAN_Card.jpg', size: '0.5 MB', uploadDate: '2024-01-15' }
+    ]
+  });
+
 
   const transformToFormData = (customer: any) => {
     return {
@@ -51,7 +79,67 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
     };
   };
 
+  useEffect(() => {
+    if (customer?.id) {
+      console.log('Fetching customer details for ID:', customer);
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer/${customer.id}`)
+        .then((response) => {
+          console.log('Fetched customer details:', response.data.data);
+          const apiData = response.data.data
+          const mappedEnhancedCustomer = {
+            businessName: apiData.business_name || '',
+            contactNo: apiData.contact_number || '',
+            email: apiData.email || '',
+            country: apiData.country || '',
+            currency: apiData.currency || '',
+            state: apiData.state || '',
+            district: apiData.district || '',
+            city: apiData.city || '',
+            customerType: apiData.customer_type || '',
+            customerPotential: apiData.customer_potential || '',
+            pincode: apiData.pincode || '',
+            active: apiData.active || '',
+            panNumber: apiData.pan_number || '',
+            tanNumber: apiData.tan_number || '',
+            gstNumber: apiData.gst_number || '',
+            bankName: apiData.bank_name || '',
+            bankAccountNumber: apiData.bank_account_number || '',
+            branchName: apiData.branch_name || '',
+            ifscCode: apiData.ifsc_code || '',
+            contactPersons: apiData.contactpersons?.map((person: any) => ({
+              id: person.contactId,
+              name: person.name,
+              phone: person.phone,
+              email: person.email,
+              designation: person.designation
+            })) || [],
+            branches: apiData.branches?.map((branch: any) => ({
+              id: branch.branchId,
+              branchName: branch.branchName,
+              contactNumber: branch.contactNumber,
+              email: branch.emailId,
+              address: `${branch.city}, ${branch.district}, ${branch.state} - ${branch.pincode}`,
+              contactPersons: branch.contactPersons?.map((person: any) => ({
+                id: person.contactId,
+                name: person.name,
+                phone: person.phone,
+                email: person.email
+              })) || []
+            })) || [],
+            uploadedFiles: apiData.uploadedfiles || customer.uploadedFiles
+          };
+          console.log('Mapped enhanced customer:', mappedEnhancedCustomer);
+          setMappedApiData(mappedEnhancedCustomer);
+          setCustomerInitialData({...customer, ...mappedEnhancedCustomer})
 
+        })
+        .catch((error) => {
+          console.error('Error fetching customer details:', error);
+        });
+    }
+  }, [customer?.id]);
+
+  useEffect(() => {console.log('API Data:', mappedApiData)});
 
   // Mock enhanced customer data
   const enhancedCustomer = {
@@ -111,6 +199,18 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
     { id: 'branches', name: 'Branch Information', icon: MapPin },
     { id: 'documents', name: 'Documents', icon: FileText },
   ];
+
+  if (!customer) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <div className="text-gray-400">
+          <Building2 className="h-12 w-12 mx-auto mb-4" />
+          <h3 className="text-lg font-medium">Select a customer</h3>
+          <p className="text-sm">Choose a customer from the list to view their details</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -255,7 +355,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">PAN Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedCustomer.panNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">{mappedApiData.panNumber}</p>
                   </div>
                 </div>
                 
@@ -263,7 +363,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">GST Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedCustomer.gstNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">{mappedApiData.gstNumber}</p>
                   </div>
                 </div>
                 
@@ -271,7 +371,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
                   <Building2 className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Bank Name</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedCustomer.bankName}</p>
+                    <p className="text-sm font-medium text-gray-900">{mappedApiData.bankName}</p>
                   </div>
                 </div>
                 
@@ -279,7 +379,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Account Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedCustomer.bankAccountNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">{mappedApiData.bankAccountNumber}</p>
                   </div>
                 </div>
                 
@@ -287,7 +387,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
                   <Building2 className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">IFSC Code</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedCustomer.ifscCode}</p>
+                    <p className="text-sm font-medium text-gray-900">{mappedApiData.ifscCode}</p>
                   </div>
                 </div>
               </div>
@@ -297,7 +397,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Persons</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {enhancedCustomer.contactPersons.map((person: any, index: number) => (
+                {mappedApiData.contactPersons.map((person: any, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
@@ -354,7 +454,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Branch Information</h3>
             
-            {enhancedCustomer.branches.map((branch: any, index: number) => (
+            {mappedApiData.branches.map((branch: any, index: number) => (
               <div key={index} className="border border-gray-200 rounded-lg p-6 mb-4">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-medium text-gray-900">{branch.branchName}</h4>
@@ -421,7 +521,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Documents</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {enhancedCustomer.uploadedFiles.map((file: any, index: number) => (
+              {mappedApiData.uploadedFiles.map((file: any, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
                   <div className="flex items-center space-x-3 mb-3">
                     <FileText className="h-8 w-8 text-blue-600" />
@@ -462,10 +562,17 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
               </button>
               <button
                 className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                onClick={() => {
-                  // TODO: Replace with actual delete logic
-                  alert('Customer deleted!');
-                  setIsDeleteModalOpen(false);
+                onClick={async () => {
+                  try {
+                    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/customer/${customer.id}`);
+                    alert('Customer deleted successfully!');
+                    setIsDeleteModalOpen(false);
+                    // You might want to redirect or refresh the parent component here
+                    // For example: navigate back to customer list or call a callback function
+                  } catch (error) {
+                    console.error('Error deleting customer:', error);
+                    alert('Failed to delete customer. Please try again.');
+                  }
                 }}
               >
                 Delete
@@ -514,7 +621,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer }) => {
           console.log('Updated Customer:', updatedCustomerData);
           setIsEditModalOpen(false);
         }}
-        initialData={transformToFormData(enhancedCustomer)}
+        initialData={{...customer, ...mappedApiData}}
       />
     </div>
   );
