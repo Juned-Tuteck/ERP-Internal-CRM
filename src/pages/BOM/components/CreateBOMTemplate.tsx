@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search, Edit } from 'lucide-react';
+import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CreateBOMTemplateProps {
   isOpen: boolean;
@@ -25,6 +25,13 @@ interface BOMItem {
   specifications?: string;
 }
 
+interface Spec {
+  id: string;
+  name: string;
+  items: BOMItem[];
+  isExpanded: boolean;
+}
+
 const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   isOpen,
   onClose,
@@ -40,32 +47,28 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   });
   const [items, setItems] = useState<BOMItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [quantity, setQuantity] = useState<number>(1);
+  const [specs, setSpecs] = useState<Spec[]>([]);
   const [specification, setSpecification] = useState<string>('');
   const [showSpecModal, setShowSpecModal] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [showDeleteSpecModal, setShowDeleteSpecModal] = useState(false);
+  const [specToDelete, setSpecToDelete] = useState<string | null>(null);
 
   // Mock data for dropdowns
   const workTypes = ['Basement Ventilation', 'HVAC Systems', 'Fire Safety', 'Electrical', 'Plumbing'];
   
   // Mock data for master items
   const masterItems = [
-    { id: '1', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500 },
-    { id: '2', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', rate: 850 },
-    { id: '3', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', rate: 3200 },
-    { id: '4', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', rate: 1800 },
-    { id: '5', itemCode: 'CABLE-001', itemName: 'Electrical Cable', uomName: 'Meter', rate: 120 },
-    { id: '6', itemCode: 'PANEL-001', itemName: 'Control Panel', uomName: 'Nos', rate: 25000 },
-    { id: '7', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500 },
-    { id: '8', itemCode: 'PIPE-001', itemName: 'PVC Pipe', uomName: 'Meter', rate: 350 },
+    { id: '1', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', brand: 'Crompton', rate: 12500 },
+    { id: '2', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', brand: 'Tata Steel', rate: 850 },
+    { id: '3', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', brand: 'Honeywell', rate: 3200 },
+    { id: '4', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', brand: 'Siemens', rate: 1800 },
+    { id: '5', itemCode: 'CABLE-001', itemName: 'Electrical Cable', uomName: 'Meter', brand: 'Havells', rate: 120 },
+    { id: '6', itemCode: 'PANEL-001', itemName: 'Control Panel', uomName: 'Nos', brand: 'Schneider', rate: 25000 },
+    { id: '7', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', brand: '3M', rate: 4500 },
+    { id: '8', itemCode: 'PIPE-001', itemName: 'PVC Pipe', uomName: 'Meter', brand: 'Supreme', rate: 350 },
   ];
-
-  const filteredItems = masterItems.filter(item => 
-    item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    item.itemCode.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -75,88 +78,378 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
     }));
   };
 
-  const handleAddItem = () => {
-    if (selectedItem && quantity > 0) {
-      const newItem: BOMItem = {
-        id: Date.now().toString(),
-        itemCode: selectedItem.itemCode,
-        itemName: selectedItem.itemName,
-        uomName: selectedItem.uomName,
-        rate: selectedItem.rate,
-        quantity: quantity,
-        price: selectedItem.rate * quantity,
-        specifications: specification
-      };
-
-      setItems(prev => [...prev, newItem]);
-      setSelectedItem(null);
-      setQuantity(1);
-      setSpecification('');
-      setSearchQuery(''); // <-- clear search after adding
-    }
+  // Spec management functions
+  const addSpec = () => {
+    const newSpec: Spec = {
+      id: Date.now().toString(),
+      name: '',
+      items: [],
+      isExpanded: true
+    };
+    setSpecs(prev => [...prev, newSpec]);
   };
 
-  const handleEditItem = (item: BOMItem) => {
-    setSelectedItem({
-      id: item.id,
-      itemCode: item.itemCode,
-      itemName: item.itemName,
-      uomName: item.uomName,
-      rate: item.rate
-    });
-    setQuantity(item.quantity);
-    setSpecification(item.specifications || '');
-    setEditingItemId(item.id);
-  };
-
-  const handleUpdateItem = () => {
-    if (selectedItem && quantity > 0 && editingItemId) {
-      setItems(prev => prev.map(item => 
-        item.id === editingItemId ? {
-          ...item,
-          quantity: quantity,
-          price: selectedItem.rate * quantity,
-          specifications: specification
-        } : item
-      ));
-      setSelectedItem(null);
-      setQuantity(1);
-      setSpecification('');
-      setEditingItemId(null);
-    }
-  };
-
-  const handleRemoveItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handleAddSpecification = (id: string) => {
-    const item = items.find(item => item.id === id);
-    if (item) {
-      setSpecification(item.specifications || '');
-      setEditingItemId(id);
-      setShowSpecModal(true);
-    }
-  };
-
-  const handleIncreaseQuantity = (id: string) => {
-    setItems(prev => prev.map(item => 
-      item.id === id ? { ...item, quantity: item.quantity + 1, price: item.rate * (item.quantity + 1) } : item
+  const updateSpecName = (specId: string, name: string) => {
+    setSpecs(prev => prev.map(spec => 
+      spec.id === specId ? { ...spec, name } : spec
     ));
-  }
+  };
+
+  const toggleSpecExpansion = (specId: string) => {
+    setSpecs(prev => prev.map(spec => 
+      spec.id === specId ? { ...spec, isExpanded: !spec.isExpanded } : spec
+    ));
+  };
+
+  const addItemToSpec = (specId: string, masterItem: any) => {
+    const newItem: BOMItem = {
+      id: Date.now().toString(),
+      itemCode: masterItem.itemCode,
+      itemName: masterItem.itemName,
+      uomName: masterItem.uomName,
+      rate: masterItem.rate,
+      quantity: 1,
+      price: masterItem.rate,
+      specifications: ''
+    };
+
+    setSpecs(prev => prev.map(spec => 
+      spec.id === specId ? { 
+        ...spec, 
+        items: [...spec.items, newItem] 
+      } : spec
+    ));
+  };
+
+  const updateSpecItemQuantity = (specId: string, itemId: string, quantity: number) => {
+    if (quantity <= 0) return;
+    
+    setSpecs(prev => prev.map(spec => 
+      spec.id === specId ? {
+        ...spec,
+        items: spec.items.map(item => 
+          item.id === itemId ? {
+            ...item,
+            quantity,
+            price: item.rate * quantity
+          } : item
+        )
+      } : spec
+    ));
+  };
+
+  const removeItemFromSpec = (specId: string, itemId: string) => {
+    setSpecs(prev => prev.map(spec => 
+      spec.id === specId ? {
+        ...spec,
+        items: spec.items.filter(item => item.id !== itemId)
+      } : spec
+    ));
+  };
+
+  const deleteSpec = (specId: string) => {
+    setSpecs(prev => prev.filter(spec => spec.id !== specId));
+    setShowDeleteSpecModal(false);
+    setSpecToDelete(null);
+  };
+
+  const getAvailableItemsForSpec = (specId: string) => {
+    const spec = specs.find(s => s.id === specId);
+    if (!spec) return masterItems;
+    
+    const usedItemIds = spec.items.map(item => item.itemCode);
+    return masterItems.filter(item => !usedItemIds.includes(item.itemCode));
+  };
+
+  const getFilteredItems = (specId: string, searchQuery: string) => {
+    const availableItems = getAvailableItemsForSpec(specId);
+    return availableItems.filter(item => 
+      item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      item.itemCode.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
+  const canSaveTemplate = () => {
+    return specs.length > 0 && 
+           specs.every(spec => spec.name.trim() !== '' && spec.items.length > 0) &&
+           formData.workType && 
+           formData.name;
+  };
+
+  // Convert specs to items for backward compatibility
+  const getAllItems = () => {
+    return specs.flatMap(spec => spec.items);
+  };
+
+  const handleEditItem = (specId: string, item: BOMItem) => {
+    setEditingItemId(item.id);
+    setSpecification(item.specifications || '');
+    setShowSpecModal(true);
+  };
 
   const handleSaveSpecification = () => {
     if (editingItemId) {
-      setItems(prev => prev.map(item => 
-        item.id === editingItemId ? {
-          ...item,
-          specifications: specification
-        } : item
-      ));
+      setSpecs(prev => prev.map(spec => ({
+        ...spec,
+        items: spec.items.map(item => 
+          item.id === editingItemId ? {
+            ...item,
+            specifications: specification
+          } : item
+        )
+      })));
       setShowSpecModal(false);
       setEditingItemId(null);
       setSpecification('');
     }
+  };
+
+  // Component for individual spec item dropdown
+  const SpecItemDropdown: React.FC<{ specId: string }> = ({ specId }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [localSearchQuery, setLocalSearchQuery] = useState('');
+    
+    const filteredItems = getFilteredItems(specId, localSearchQuery);
+    
+    return (
+      <div className="relative">
+        <div className="relative">
+          <input
+            type="text"
+            value={localSearchQuery}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
+            onFocus={() => setIsOpen(true)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Search items by name or code"
+          />
+          <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+        </div>
+        
+        {isOpen && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredItems.map(item => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.brand}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <button
+                        onClick={() => {
+                          addItemToSpec(specId, item);
+                          setIsOpen(false);
+                          setLocalSearchQuery('');
+                        }}
+                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                      >
+                        Select
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredItems.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-2 text-sm text-gray-500 text-center">No items found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        {isOpen && (
+          <div 
+            className="fixed inset-0 z-0" 
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </div>
+    );
+  };
+
+  // Component for individual spec
+  const SpecSection: React.FC<{ spec: Spec }> = ({ spec }) => {
+    const hasItems = spec.items.length > 0;
+    const totalValue = spec.items.reduce((sum, item) => sum + item.price, 0);
+    
+    return (
+      <div className="border border-gray-200 rounded-lg mb-4">
+        {/* Spec Header */}
+        <div className="p-4 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => toggleSpecExpansion(spec.id)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                {spec.isExpanded ? (
+                  <ChevronUp className="h-5 w-5" />
+                ) : (
+                  <ChevronDown className="h-5 w-5" />
+                )}
+              </button>
+              <div>
+                <h4 className="text-md font-medium text-gray-900">
+                  {spec.name || 'Unnamed Spec'}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  {spec.items.length} item(s) • ₹{totalValue.toLocaleString('en-IN')}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => toggleSpecExpansion(spec.id)}
+                className="text-blue-600 hover:text-blue-900"
+                title="Edit Spec"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSpecToDelete(spec.id);
+                  setShowDeleteSpecModal(true);
+                }}
+                className="text-red-600 hover:text-red-900"
+                title="Delete Spec"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Spec Content */}
+        {spec.isExpanded && (
+          <div className="p-4">
+            <div className="space-y-4">
+              {/* Spec Name Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Spec Name *
+                </label>
+                <input
+                  type="text"
+                  value={spec.name}
+                  onChange={(e) => updateSpecName(spec.id, e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter spec name"
+                />
+                {!spec.name.trim() && (
+                  <p className="text-xs text-red-500 mt-1">Spec name is required</p>
+                )}
+              </div>
+              
+              {/* Add Item Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Add Item
+                </label>
+                <SpecItemDropdown specId={spec.id} />
+              </div>
+              
+              {/* Items Table */}
+              {hasItems && (
+                <div className="border border-gray-200 rounded-md overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₹)</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {spec.items.map(item => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                            <div>
+                              {item.itemName}
+                              {item.specifications && (
+                                <p className="text-xs text-gray-500 mt-1 truncate max-w-xs">
+                                  Spec: {item.specifications}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateSpecItemQuantity(spec.id, item.id, parseInt(e.target.value) || 1)}
+                              min="1"
+                              className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleEditItem(spec.id, item)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Edit Specifications"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => removeItemFromSpec(spec.id, item.id)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Remove Item"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td colSpan={5} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
+                        <td className="px-3 py-2 text-sm font-medium text-gray-900">
+                          ₹{totalValue.toLocaleString('en-IN')}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+              
+              {!hasItems && (
+                <div className="text-center py-4 text-gray-500 border border-gray-200 rounded-md">
+                  <p className="text-sm">No items added to this spec yet.</p>
+                  <p className="text-xs">Use the dropdown above to add items.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,35 +469,43 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         description: 'Automatically generated from CSV upload'
       });
       
-      setItems([
-        {
-          id: '101',
-          itemCode: 'FAN-001',
-          itemName: 'Industrial Exhaust Fan',
-          uomName: 'Nos',
-          rate: 12500,
-          quantity: 4,
-          price: 50000
-        },
-        {
-          id: '102',
-          itemCode: 'DUCT-001',
-          itemName: 'Galvanized Steel Duct',
-          uomName: 'Meter',
-          rate: 850,
-          quantity: 120,
-          price: 102000
-        },
-        {
-          id: '103',
-          itemCode: 'FILTER-001',
-          itemName: 'HEPA Filter',
-          uomName: 'Nos',
-          rate: 4500,
-          quantity: 8,
-          price: 36000
-        }
-      ]);
+      // Create a sample spec with items for CSV upload
+      const sampleSpec: Spec = {
+        id: Date.now().toString(),
+        name: 'Uploaded HVAC Items',
+        isExpanded: true,
+        items: [
+          {
+            id: '101',
+            itemCode: 'FAN-001',
+            itemName: 'Industrial Exhaust Fan',
+            uomName: 'Nos',
+            rate: 12500,
+            quantity: 4,
+            price: 50000
+          },
+          {
+            id: '102',
+            itemCode: 'DUCT-001',
+            itemName: 'Galvanized Steel Duct',
+            uomName: 'Meter',
+            rate: 850,
+            quantity: 120,
+            price: 102000
+          },
+          {
+            id: '103',
+            itemCode: 'FILTER-001',
+            itemName: 'HEPA Filter',
+            uomName: 'Nos',
+            rate: 4500,
+            quantity: 8,
+            price: 36000
+          }
+        ]
+      };
+      
+      setSpecs([sampleSpec]);
       
       setCurrentStep(2);
     }
@@ -232,7 +533,20 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         name: initialData.name || '',
         description: initialData.description || '',
       });
-      setItems(initialData.items || []);
+      
+      // Convert items to specs if editing existing template
+      if (initialData.items && initialData.items.length > 0) {
+        const defaultSpec: Spec = {
+          id: Date.now().toString(),
+          name: 'Default Spec',
+          isExpanded: true,
+          items: initialData.items
+        };
+        setSpecs([defaultSpec]);
+      } else {
+        setSpecs([]);
+      }
+      
       setCurrentStep(1);
       setMethod('manual');
     } else if (isOpen && !initialData) {
@@ -241,7 +555,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         name: '',
         description: '',
       });
-      setItems([]);
+      setSpecs([]);
       setCurrentStep(1);
       setMethod('manual');
     }
@@ -250,9 +564,10 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   const handleSubmit = () => {
     const templateData = {
       ...formData,
-      items,
-      totalItems: items.length,
-      totalValue: items.reduce((sum, item) => sum + item.price, 0),
+      specs,
+      items: getAllItems(), // For backward compatibility
+      totalItems: getAllItems().length,
+      totalValue: getAllItems().reduce((sum, item) => sum + item.price, 0),
       createdDate: isEditMode && initialData?.createdDate ? initialData.createdDate : new Date().toISOString(),
       status: isEditMode && initialData?.status ? initialData.status : 'active'
     };
@@ -265,7 +580,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         name: '',
         description: '',
       });
-      setItems([]);
+      setSpecs([]);
       setMethod('manual');
       setCsvFile(null);
     }
@@ -401,212 +716,68 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
               {/* Step 2: Add BOM Items */}
               {currentStep === 2 && (
                 <div className="space-y-6">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Add Items</h4>
-                    
-                    <div className="flex space-x-4 mb-4">
-                      <div className="flex-1">
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400" />
-                          </div>
-                          <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Search items by name or code"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="w-24">
-                        <input
-                          type="number"
-                          value={quantity}
-                          onChange={(e) => setQuantity(Number(e.target.value))}
-                          min="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Qty"
-                          disabled={!selectedItem}
-                        />
-                      </div>
-                      
-                      <button
-                        onClick={editingItemId ? handleUpdateItem : handleAddItem}
-                        disabled={!selectedItem}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                      >
-                        {editingItemId ? 'Update' : 'Add'}
-                      </button>
-                    </div>
-
-                    {/* Search Results */}
-                    {searchQuery && !selectedItem && (
-                      <div className="border border-gray-200 rounded-md mb-4 max-h-40 overflow-y-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredItems.map(item => (
-                              <tr key={item.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
-                                <td className="px-4 py-2 whitespace-nowrap">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedItem(item);
-                                      setSearchQuery('');
-                                    }}
-                                    className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                                  >
-                                    Select
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {filteredItems.length === 0 && (
-                              <tr>
-                                <td colSpan={5} className="px-4 py-2 text-sm text-gray-500 text-center">No items found</td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {/* Selected Item */}
-                    {selectedItem && (
-                      <div className="border border-gray-200 rounded-md p-4 mb-4 bg-blue-50">
-                        <div className="flex justify-between items-center mb-2">
-                          <h5 className="text-sm font-medium text-gray-900">Selected Item</h5>
-                          <button
-                            onClick={() => {
-                              setSelectedItem(null);
-                              setEditingItemId(null);
-                              setQuantity(1);
-                              setSpecification('');
-                            }}
-                            className="text-gray-400 hover:text-gray-600"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-gray-500">Item Code:</span> {selectedItem.itemCode}
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Item Name:</span> {selectedItem.itemName}
-                          </div>
-                          <div>
-                            <span className="text-gray-500">UOM:</span> {selectedItem.uomName}
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Rate:</span> ₹{selectedItem.rate.toLocaleString('en-IN')}
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Total:</span> ₹{(selectedItem.rate * quantity).toLocaleString('en-IN')}
-                          </div>
-                        </div>
-                        <div className="mt-2">
-                          <button
-                            onClick={() => setShowSpecModal(true)}
-                            className="text-sm text-blue-600 hover:text-blue-800"
-                          >
-                            Add Specification
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Items Table */}
-                    <div className="border border-gray-200 rounded-md overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₹)</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {items.map(item => (
-                            <tr key={item.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                                <div>
-                                  {item.itemName}
-                                  {item.specifications && (
-                                    <p className="text-xs text-gray-500 mt-1 truncate max-w-xs">
-                                      Spec: {item.specifications}
-                                    </p>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => handleIncreaseQuantity(item.id)}
-                                    className="text-green-600 hover:text-green-900 pr-5"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleEditItem(item)}
-                                    className="text-blue-600 hover:text-blue-900"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleRemoveItem(item.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                          {items.length === 0 && (
-                            <tr>
-                              <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                                No items added yet. Search and add items above.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                        {items.length > 0 && (
-                          <tfoot className="bg-gray-50">
-                            <tr>
-                              <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total:</td>
-                              <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                                ₹{items.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
-                              </td>
-                              <td></td>
-                            </tr>
-                          </tfoot>
-                        )}
-                      </table>
-                    </div>
+                  {/* Add Spec Button */}
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-medium text-gray-700">Build Specs</h4>
+                    <button
+                      type="button"
+                      onClick={addSpec}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Spec
+                    </button>
                   </div>
+                  
+                  {/* Specs List */}
+                  {specs.length > 0 ? (
+                    <div className="space-y-4">
+                      {specs.map(spec => (
+                        <SpecSection key={spec.id} spec={spec} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg">
+                      <Plus className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <p className="text-lg font-medium">No specs created yet</p>
+                      <p className="text-sm">Click "Add Spec" to create your first spec</p>
+                    </div>
+                  )}
+                  
+                  {/* Validation Messages */}
+                  {specs.length > 0 && (
+                    <div className="mt-4">
+                      {specs.some(spec => !spec.name.trim()) && (
+                        <p className="text-sm text-red-500 mb-2">⚠️ All specs must have a name</p>
+                      )}
+                      {specs.some(spec => spec.items.length === 0) && (
+                        <p className="text-sm text-red-500 mb-2">⚠️ All specs must contain at least one item</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Summary */}
+                  {specs.length > 0 && (
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Template Summary</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Total Specs:</span>
+                          <span className="ml-2 font-medium">{specs.length}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Total Items:</span>
+                          <span className="ml-2 font-medium">{getAllItems().length}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Total Value:</span>
+                          <span className="ml-2 font-medium text-green-600">
+                            ₹{getAllItems().reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -732,7 +903,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={items.length === 0}
+                    disabled={!canSaveTemplate()}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     <Save className="h-4 w-4 mr-2" />
@@ -753,7 +924,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      disabled={items.length === 0}
+                      disabled={!canSaveTemplate()}
                       className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       <Save className="h-4 w-4 mr-2" />
@@ -777,7 +948,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={items.length === 0}
+                  disabled={!canSaveTemplate()}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -789,6 +960,38 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         </div>
       </div>
     </div>
+    
+    {/* Delete Spec Confirmation Modal */}
+    {showDeleteSpecModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          <div className="p-6 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Delete Spec</h3>
+          </div>
+          
+          <div className="p-6">
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete this spec? This action cannot be undone.
+            </p>
+          </div>
+          
+          <div className="flex justify-end space-x-3 p-4 border-t border-gray-200">
+            <button
+              onClick={() => setShowDeleteSpecModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => specToDelete && deleteSpec(specToDelete)}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 };
 
