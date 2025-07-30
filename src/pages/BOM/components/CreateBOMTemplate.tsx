@@ -589,6 +589,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 min-h-[540px] sm:min-h-[600px] md:min-h-[650px] max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -960,7 +961,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         </div>
       </div>
     </div>
-    
+
     {/* Delete Spec Confirmation Modal */}
     {showDeleteSpecModal && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -992,6 +993,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         </div>
       </div>
     )}
+    </>
   );
 };
 
