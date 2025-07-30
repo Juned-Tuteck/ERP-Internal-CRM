@@ -179,6 +179,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
     }
   };
 
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   // Create lead API call
   const handleCreateLead = async () => {
     setIsLoading(true);
@@ -263,6 +269,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
       };
       setFormData(prev => ({
         ...prev,
+        followUpComments: [...prev.followUpComments, comment]
+      }));
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment. Please try again.');
+    }
+  };
+
+  const handleCommentSubmit = () => {
     if (currentStep === 3 && createdLeadId) {
       handleAddComment();
     } else {
@@ -381,8 +397,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                 <button
                   type="button"
                   disabled={!isEditMode}
-                  disabled={!newComment.trim() || isLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className={`flex items-center space-x-2 ${
                     currentStep === step.id ? 'text-blue-600' : 
                     currentStep > step.id ? 'text-green-600' : 'text-gray-400'
                   }`}
@@ -869,8 +884,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                     />
                     <button
                       type="button"
-                      onClick={addComment}
-                      disabled={!newComment.trim()}
+                      onClick={handleCommentSubmit}
+                      disabled={!newComment.trim() || isLoading}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       <MessageSquare className="h-4 w-4" />
