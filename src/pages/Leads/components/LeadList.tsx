@@ -1,5 +1,7 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { Phone, Mail, Star, TrendingUp, Calendar, AlertTriangle } from 'lucide-react';
+import axios from 'axios';
 
 interface Lead {
   id: string;
@@ -47,205 +49,53 @@ interface LeadListProps {
 }
 
 const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
-  const leads: Lead[] = [
-    {
-      id: '1',
-      businessName: 'TechCorp Solutions Pvt Ltd',
-      avatar: 'LD',
-      customerBranch: 'Mumbai HQ',
-      currency: 'INR',
-      contactPerson: 'Rajesh Kumar',
-      contactNo: '+91 98765 43210',
-      leadGeneratedDate: '2025-07-10',
-      referencedBy: 'LinkedIn',
-      projectName: 'Mumbai Metro Ventilation System',
-      projectValue: '2500000',
-      leadType: 'Government',
-      workType: 'Basement Ventilation',
-      leadCriticality: 'Critical',
-      leadSource: 'Government Tender',
-      leadStage: 'Quotation Submitted',
-      leadStagnation: '',
-      approximateResponseTime: '7',
-      eta: '2025-08-01',
-      leadDetails: 'Ventilation system for Mumbai Metro project.',
-      involvedAssociates: [
-        {
-          designation: 'Consultant',
-          associateId: '2',
-          associateName: 'Consultant B',
-          otherInfo: 'Lead Consultant'
-        },
-        {
-          designation: 'Consultant',
-          associateId: '2',
-          associateName: 'Consultant A',
-          otherInfo: 'Lead Consultant'
-        }
-      ],
-      uploadedFiles: [
-    { name: 'RFQ_Mumbai_Metro_Ventilation.pdf', size: '2.4 MB', type: 'PDF' },
-    { name: 'Technical_Drawings.dwg', size: '5.1 MB', type: 'DWG' },
-    { name: 'Site_Photos.zip', size: '8.7 MB', type: 'ZIP' }
-  ],
-      followUpComments: [
-        {
-          id: 1,
-          text: 'Initial call with client completed.',
-          timestamp: '2025-07-11T10:00:00Z',
-          author: 'Sales User'
-        }
-      ]
-    },
-    {
-      id: '2',
-      businessName: 'Innovate India Limited',
-      avatar: 'LD',
-      customerBranch: 'Pune Main',
-      currency: 'INR',
-      contactPerson: 'Priya Sharma',
-      contactNo: '+91 87654 32109',
-      leadGeneratedDate: '2025-07-12',
-      referencedBy: 'Referral',
-      projectName: 'Corporate Office HVAC Upgrade',
-      projectValue: '1575000',
-      leadType: 'Corporate',
-      workType: 'HVAC Systems',
-      leadCriticality: 'High',
-      leadSource: 'LinkedIn',
-      leadStage: 'Meeting',
-      leadStagnation: '',
-      approximateResponseTime: '5',
-      eta: '2025-08-15',
-      leadDetails: 'Upgrade HVAC for corporate office.',
-      involvedAssociates: [
-        {
-          designation: 'Engineer',
-          associateId: '3',
-          associateName: 'Engineer C',
-          otherInfo: ''
-        }
-      ],
-      uploadedFiles: [
-        { name: 'drawing.dwg', size: 1048576, type: 'application/acad' }
-      ],
-      followUpComments: [
-        {
-          id: 2,
-          text: 'Site visit scheduled.',
-          timestamp: '2025-07-13T09:30:00Z',
-          author: 'Sales User'
-        }
-      ]
-    },
-    {
-      id: '3',
-      businessName: 'Digital Solutions Enterprise',
-      avatar: 'LD',
-      customerBranch: 'Gurgaon HQ',
-      currency: 'INR',
-      contactPerson: 'Amit Singh',
-      contactNo: '+91 76543 21098',
-      leadGeneratedDate: '2025-07-09',
-      referencedBy: 'Trade Show',
-      projectName: 'Hospital Fire Safety System',
-      projectValue: '3550000',
-      leadType: 'Private',
-      workType: 'Fire Safety',
-      leadCriticality: 'Critical',
-      leadSource: 'Referral',
-      leadStage: 'Qualified',
-      leadStagnation: '',
-      approximateResponseTime: '10',
-      eta: '2025-09-10',
-      leadDetails: 'Fire safety system for hospital.',
-      involvedAssociates: [
-        {
-          designation: 'Architect',
-          associateId: '1',
-          associateName: 'Architect A',
-          otherInfo: 'External Consultant'
-        }
-      ],
-      uploadedFiles: [
-        { name: 'site-photo.jpg', size: 512000, type: 'image/jpeg' }
-      ],
-      followUpComments: [
-        {
-          id: 3,
-          text: 'Meeting with architect scheduled.',
-          timestamp: '2025-07-10T15:00:00Z',
-          author: 'Sales User'
-        }
-      ]
-    },
-    {
-      id: '4',
-      businessName: 'Manufacturing Industries Co',
-      avatar: 'LD',
-      customerBranch: 'Aurangabad Factory',
-      currency: 'INR',
-      contactPerson: 'Sneha Patel',
-      contactNo: '+91 65432 10987',
-      leadGeneratedDate: '2025-07-08',
-      referencedBy: 'Website',
-      projectName: 'Residential Complex Electrical',
-      projectValue: '1225000',
-      leadType: 'Private',
-      workType: 'Electrical',
-      leadCriticality: 'Medium',
-      leadSource: 'Website',
-      leadStage: 'New Lead',
-      leadStagnation: '',
-      approximateResponseTime: '14',
-      eta: '2025-08-20',
-      leadDetails: 'Electrical system for residential complex.',
-      involvedAssociates: [],
-      uploadedFiles: [],
-      followUpComments: []
-    },
-    {
-      id: '5',
-      businessName: 'FinTech Innovations Pvt Ltd',
-      avatar: 'LD',
-      customerBranch: 'Bangalore HQ',
-      currency: 'INR',
-      contactPerson: 'Vikram Gupta',
-      contactNo: '+91 54321 09876',
-      leadGeneratedDate: '2025-07-07',
-      referencedBy: 'Trade Show',
-      projectName: 'Shopping Mall Plumbing System',
-      projectValue: '1890000',
-      leadType: 'Corporate',
-      workType: 'Plumbing',
-      leadCriticality: 'High',
-      leadSource: 'Trade Show',
-      leadStage: 'Won',
-      leadStagnation: '',
-      approximateResponseTime: '3',
-      eta: '2025-08-05',
-      leadDetails: 'Plumbing system for new shopping mall.',
-      involvedAssociates: [
-        {
-          designation: 'Designer',
-          associateId: '4',
-          associateName: 'Designer D',
-          otherInfo: ''
-        }
-      ],
-      uploadedFiles: [
-        { name: 'plumbing-plan.pdf', size: 307200, type: 'application/pdf' }
-      ],
-      followUpComments: [
-        {
-          id: 4,
-          text: 'Project won and contract signed.',
-          timestamp: '2025-07-14T11:00:00Z',
-          author: 'Sales User'
-        }
-      ]
-    }
-  ];
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch leads from API
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/lead/`);
+        const apiLeads = response.data.data;
+        
+        // Map API response to UI Lead interface
+        const mappedLeads: Lead[] = apiLeads.map((apiLead: any) => ({
+          id: apiLead.lead_id?.toString() || '',
+          businessName: apiLead.business_name || '',
+          avatar: 'LD', // Default avatar
+          customerBranch: apiLead.customer_branch || null,
+          currency: 'INR', // Default currency
+          contactPerson: apiLead.contact_person || '',
+          contactNo: apiLead.contact_no || '',
+          leadGeneratedDate: apiLead.lead_date_generated_on || '',
+          referencedBy: apiLead.referenced_by || '',
+          projectName: apiLead.project_name || '',
+          projectValue: apiLead.project_value?.toString() || '0',
+          leadType: apiLead.lead_type || '',
+          workType: apiLead.work_type || null,
+          leadCriticality: apiLead.lead_criticality || '',
+          leadSource: apiLead.lead_source || '',
+          leadStage: apiLead.lead_stage || '',
+          leadStagnation: '',
+          approximateResponseTime: apiLead.approximate_response_time_day?.toString() || '0',
+          eta: apiLead.eta || '',
+          leadDetails: apiLead.lead_details || '',
+          involvedAssociates: [], // Will be populated when lead details are fetched
+          uploadedFiles: [],
+          followUpComments: []
+        }));
+        
+        setLeads(mappedLeads);
+      } catch (error) {
+        console.error('Error fetching leads:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
+  }, []);
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -298,10 +148,21 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">Active Leads</h3>
-        <p className="text-sm text-gray-500">{leads.length} leads in pipeline</p>
+        <p className="text-sm text-gray-500">
+          {loading ? 'Loading...' : `${leads.length} leads in pipeline`}
+        </p>
       </div>
       
       <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+        {loading ? (
+          <div className="p-4 text-center text-gray-500">
+            Loading leads...
+          </div>
+        ) : leads.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            No leads found
+          </div>
+        ) : (
         {leads.map((lead) => (
           <div
             key={lead.id}
@@ -376,6 +237,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
             </div>
           </div>
         ))}
+        )}
       </div>
     </div>
   );

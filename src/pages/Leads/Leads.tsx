@@ -13,12 +13,23 @@ const Leads: React.FC = () => {
   const { addNotification } = useCRM();
 
   const handleAddLead = (leadData: any) => {
-    console.log('Adding new lead:', leadData);
-    addNotification({
-      type: 'success',
-      message: `Lead ${leadData.projectName} created successfully!`,
-    });
-    setIsAddModalOpen(false);
+    if (leadData.success) {
+      console.log('Lead created successfully with ID:', leadData.leadId);
+      addNotification({
+        type: 'success',
+        message: 'Lead created successfully!',
+      });
+      setIsAddModalOpen(false);
+      // Optionally refresh the lead list here
+      window.location.reload(); // Simple refresh - you might want to implement a more elegant solution
+    } else {
+      console.log('Adding new lead:', leadData);
+      addNotification({
+        type: 'success',
+        message: `Lead ${leadData.projectName} created successfully!`,
+      });
+      setIsAddModalOpen(false);
+    }
   };
 
   const handleConvertLead = (leadId: string) => {

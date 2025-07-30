@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Upload, MessageSquare, Trash2 } from 'lucide-react';
+import axios from 'axios';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [newComment, setNewComment] = useState('');
   const [showAssociateForm, setShowAssociateForm] = useState(false);
+  const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [associateForm, setAssociateForm] = useState({
     designation: '',
     associateId: '',
@@ -169,31 +172,126 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
   };
 
   const handleNext = () => {
-    if (currentStep < 3) {
+    if (currentStep === 1) {
+      handleCreateLead();
+    } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
 
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+  // Create lead API call
+  const handleCreateLead = async () => {
+    setIsLoading(true);
+    try {
+      // Map UI fields to backend keys
+      const leadPayload = {
+        business_name: formData.businessName,
+        customer_id: null, // Will be mapped when customer integration is done
+        customer_branch_id: null, // Will be mapped when customer integration is done
+        contact_person: formData.contactPerson,
+        contact_no: formData.contactNo,
+        lead_date_generated_on: formData.leadGeneratedDate,
+        referenced_by: formData.referencedBy || null,
+        project_name: formData.projectName,
+        project_value: parseFloat(formData.projectValue) || 0,
+        lead_type: formData.leadType,
+        work_type: formData.workType || null,
+        lead_criticality: formData.leadCriticality,
+        lead_source: formData.leadSource,
+        lead_stage: formData.leadStage,
+        approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
+        eta: formData.eta || null,
+        lead_details: formData.leadDetails || null,
+        approval_status: 'PENDING',
+        approved_by: null,
+        created_by: 'current_user', // Replace with actual user ID
+        updated_by: 'current_user', // Replace with actual user ID
+        is_active: true,
+        is_deleted: false
+      };
+
+      const leadResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead`, leadPayload);
+      const leadData = leadResponse.data.data;
+      const leadId = leadData.lead_id;
+      
+      setCreatedLeadId(leadId);
+
+      // If there are associates, create lead-associate entries
+      if (formData.involvedAssociates && formData.involvedAssociates.length > 0) {
+        const associatePayload = formData.involvedAssociates.map((associate: any) => ({
+          lead_id: leadId,
+          associate_type: associate.designation,
+          associate_name: associate.associateName,
+          other_information: associate.otherInfo || null,
+          created_by: 'current_user', // Replace with actual user ID
+          updated_by: 'current_user', // Replace with actual user ID
+          is_active: true,
+          is_deleted: false
+        }));
+
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead-associate/bulk`, associatePayload);
+      }
+
+      // Move to next step
+      setCurrentStep(2);
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      alert('Failed to create lead. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add follow-up comment API call
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !createdLeadId) return;
+
+    try {
+      const commentPayload = {
+        lead_id: createdLeadId,
+        comment: newComment.trim()
+      };
+
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead-follow-up`, commentPayload);
+      
+      // Add comment to local state for UI update
+      const comment = {
+        id: Date.now(),
+        text: newComment,
+        timestamp: new Date().toISOString(),
+        author: 'Current User'
+      };
+      setFormData(prev => ({
+        ...prev,
+    if (currentStep === 3 && createdLeadId) {
+      handleAddComment();
+    } else {
+      // Fallback for local comment addition (when not connected to API)
+      if (newComment.trim()) {
+        const comment = {
+          id: Date.now(),
+          text: newComment,
+          timestamp: new Date().toISOString(),
+          author: 'Current User'
+        };
+        setFormData(prev => ({
+          ...prev,
+          followUpComments: [...prev.followUpComments, comment]
+        }));
+        setNewComment('');
+      }
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalData = {
-      ...formData,
-      uploadedFiles: uploadedFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type
-      }))
-    };
-    onSubmit(finalData);
+    
+    // Close modal and notify parent component
+    onSubmit({ success: true, leadId: createdLeadId });
     
     // Reset form
     setCurrentStep(1);
+    setCreatedLeadId(null);
     setFormData({
       businessName: '',
       customerBranch: '',
@@ -283,8 +381,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                 <button
                   type="button"
                   disabled={!isEditMode}
-                  onClick={() => isEditMode && setCurrentStep(step.id)}
-                  className={`flex items-center space-x-2 focus:outline-none ${
+                  disabled={!newComment.trim() || isLoading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     currentStep === step.id ? 'text-blue-600' : 
                     currentStep > step.id ? 'text-green-600' : 'text-gray-400'
                   }`}
@@ -837,9 +935,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
               <button
                 type="button"
                 onClick={handleNext}
+                disabled={isLoading}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
-                Next
+                {isLoading ? 'Creating...' : 'Next'}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </button>
             ) : (
@@ -849,7 +948,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Create Lead
+                Complete
               </button>
             )}
           </div>
