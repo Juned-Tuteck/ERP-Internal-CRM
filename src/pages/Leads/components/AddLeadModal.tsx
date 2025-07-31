@@ -50,34 +50,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
     otherInfo: ''
   });
 
+  // State for API data
+  const [customers, setCustomers] = useState<Array<{id: string, name: string}>>([]);
+  const [customerBranches, setCustomerBranches] = useState<Array<{id: string, branch_name: string}>>([]);
+  const [contactPersons, setContactPersons] = useState<Array<{id: string, name: string}>>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [selectedContactId, setSelectedContactId] = useState('');
+
   const steps = [
     { id: 1, name: 'General Information', description: 'Basic lead details' },
     { id: 2, name: 'Upload Files', description: 'Supporting documents' },
     { id: 3, name: 'Follow-up Leads', description: 'Communication log' }
   ];
-
-  // Mock data for dropdowns
-  const businesses = [
-    'TechCorp Solutions Pvt Ltd',
-    'Innovate India Limited',
-    'Digital Solutions Enterprise',
-    'Manufacturing Industries Co',
-    'FinTech Innovations Pvt Ltd'
-  ];
-
-  const branches = {
-    'TechCorp Solutions Pvt Ltd': ['Mumbai HQ', 'Delhi Branch', 'Bangalore Office'],
-    'Innovate India Limited': ['Pune Main', 'Chennai Branch', 'Hyderabad Office'],
-    'Digital Solutions Enterprise': ['Gurgaon HQ', 'Noida Branch'],
-    'Manufacturing Industries Co': ['Mumbai Plant', 'Aurangabad Factory'],
-    'FinTech Innovations Pvt Ltd': ['Bangalore HQ', 'Mumbai Office']
-  };
-
-  const contactPersons = {
-    'Mumbai HQ': ['Rajesh Kumar', 'Priya Sharma', 'Amit Singh'],
-    'Delhi Branch': ['Sneha Patel', 'Vikram Gupta', 'Kavita Reddy'],
-    'Bangalore Office': ['Arjun Mehta', 'Deepika Joshi', 'Rohit Sharma']
-  };
 
   const leadTypes = ['Government', 'Private', 'Corporate', 'SME', 'Startup'];
   const workTypes = ['Basement Ventilation', 'HVAC Systems', 'Fire Safety', 'Electrical', 'Plumbing'];
@@ -107,13 +92,67 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
       setFormData(initialData);
       setUploadedFiles(formData.uploadedFiles || []);
     }
-  }, [initialData]);
+    // Fetch customers when modal opens
+    if (isOpen) {
+      fetchCustomers();
+    }
+  }, [initialData, isOpen]);
+
+  // Fetch customers from API
+  const fetchCustomers = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer`);
+      const customerData = response.data.data;
+      setCustomers(customerData.map((customer: any) => ({
+        id: customer.customer_id,
+        name: customer.business_name
+      })));
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  };
+
+  // Fetch customer branches
+  const fetchCustomerBranches = async (customerId: string) => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer-branch?customer_id=${customerId}`);
+      const branchData = response.data.data;
+      setCustomerBranches(branchData);
+      // Reset dependent fields
+      setContactPersons([]);
+      setSelectedBranchId('');
+      setSelectedContactId('');
+    } catch (error) {
+      console.error('Error fetching customer branches:', error);
+      setCustomerBranches([]);
+    }
+  };
+
+  // Fetch branch contact persons
+  const fetchContactPersons = async (branchId: string) => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact?customer_branch_id=${branchId}`);
+      const contactData = response.data.data;
+      console.log('Contact Data:', contactData);
+      setContactPersons(contactData);
+      // Reset contact selection
+      setSelectedContactId('');
+    } catch (error) {
+      console.error('Error fetching contact persons:', error);
+      setContactPersons([]);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
-    // Reset dependent fields
+    // Handle customer selection
     if (name === 'businessName') {
+      const selectedCustomer = customers.find(customer => customer.name === value);
+      if (selectedCustomer) {
+        setSelectedCustomerId(selectedCustomer.id);
+        fetchCustomerBranches(selectedCustomer.id);
+      }
       setFormData(prev => ({
         ...prev,
         businessName: value,
@@ -122,13 +161,28 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
       }));
       return;
     }
+
+    // Handle branch selection
     if (name === 'customerBranch') {
+      const selectedBranch = customerBranches.find(branch => branch.branch_name === value);
+      if (selectedBranch) {
+        setSelectedBranchId(selectedBranch.id);
+        fetchContactPersons(selectedBranch.id);
+      }
       setFormData(prev => ({
         ...prev,
         customerBranch: value,
         contactPerson: ''
       }));
       return;
+    }
+
+    // Handle contact person selection
+    if (name === 'contactPerson') {
+      const selectedContact = contactPersons.find(contact => contact.name === value);
+      if (selectedContact) {
+        setSelectedContactId(selectedContact.id);
+      }
     }
 
     setFormData(prev => ({
@@ -192,9 +246,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
       // Map UI fields to backend keys
       const leadPayload = {
         business_name: formData.businessName,
-        customer_id: null, // Will be mapped when customer integration is done
-        customer_branch_id: null, // Will be mapped when customer integration is done
-        contact_person: formData.contactPerson,
+        customer_id: selectedCustomerId || null,
+        customer_branch_id: selectedBranchId || null,
+        contact_person: selectedContactId || null,
         contact_no: formData.contactNo,
         lead_date_generated_on: formData.leadGeneratedDate,
         referenced_by: formData.referencedBy || null,
@@ -207,13 +261,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
         lead_stage: formData.leadStage,
         approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
         eta: formData.eta || null,
-        lead_details: formData.leadDetails || null,
-        approval_status: 'PENDING',
-        approved_by: null,
-        created_by: 'current_user', // Replace with actual user ID
-        updated_by: 'current_user', // Replace with actual user ID
-        is_active: true,
-        is_deleted: false
+        lead_details: formData.leadDetails || null
       };
 
       const leadResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead`, leadPayload);
@@ -228,11 +276,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
           lead_id: leadId,
           associate_type: associate.designation,
           associate_name: associate.associateName,
-          other_information: associate.otherInfo || null,
-          created_by: 'current_user', // Replace with actual user ID
-          updated_by: 'current_user', // Replace with actual user ID
-          is_active: true,
-          is_deleted: false
+          other_information: associate.otherInfo || null
         }));
 
         await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead-associate/bulk`, associatePayload);
@@ -429,7 +473,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Business Name *
+                      Customer *
                     </label>
                     <select
                       name="businessName"
@@ -439,8 +483,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Business</option>
-                      {businesses.map(business => (
-                        <option key={business} value={business}>{business}</option>
+                      {customers.map(customer => (
+                        <option key={customer.id} value={customer.name}>{customer.name}</option>
                       ))}
                     </select>
                   </div>
@@ -458,8 +502,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     >
                       <option value="">Select Branch</option>
-                      {formData.businessName && branches[formData.businessName as keyof typeof branches]?.map(branch => (
-                        <option key={branch} value={branch}>{branch}</option>
+                      {customerBranches.map(branch => (
+                        <option key={branch.id} value={branch.branch_name}>{branch.branch_name}</option>
                       ))}
                     </select>
                   </div>
@@ -494,10 +538,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     >
                       <option value="">Select Contact Person</option>
-                      {formData.customerBranch &&
-                        (contactPersons[formData.customerBranch as keyof typeof contactPersons] || []).map(person => (
-                          <option key={person} value={person}>{person}</option>
-                        ))}
+                      {contactPersons.map(person => (
+                        <option key={person.id} value={person.name}>{person.name}</option>
+                      ))}
                     </select>
                   </div>
 

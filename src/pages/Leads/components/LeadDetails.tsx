@@ -25,9 +25,14 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [selectedOutcome, setSelectedOutcome] = useState<'Won' | 'Lost'>('Won');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Add state for edit modal
   const [showEditModal, setShowEditModal] = useState(false);
+
+  useEffect(() => {
+   console.log('Lead Details Component Mounted', lead);
+  });
 
   // Fetch detailed lead information when lead is selected
   useEffect(() => {
@@ -46,7 +51,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           avatar: lead.avatar || 'LD',
           customerBranch: apiLead.customer_branch || null,
           currency: 'INR',
-          contactPerson: apiLead.contact_person || lead.contactPerson,
+          contactPerson: lead.contactPersonName,
           contactNo: apiLead.contact_no || lead.contactNo,
           phone: apiLead.contact_no || lead.contactNo, // For compatibility
           leadGeneratedDate: apiLead.lead_date_generated_on || lead.leadGeneratedDate,
@@ -63,9 +68,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           leadDetails: apiLead.lead_details || null,
           approvalStatus: apiLead.approval_status?.toLowerCase() || 'pending',
           submittedDate: apiLead.created_at || lead.leadGeneratedDate,
-          involvedAssociates: [], // Will be populated from associates API if needed
+          involvedAssociates: lead.involvedAssociates || [],
           uploadedFiles: lead.uploadedFiles || [],
-          followUpComments: [] // Will be populated from follow-up API if needed
+          followUpComments: lead.followUpComments || [],
         };
         
         setLeadDetails(mappedLead);
@@ -167,22 +172,40 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     }
   };
 
-  const handleWinLossSubmit = () => {
-    if (selectedOutcome === 'Won') {
-      onConvert(displayLead.id);
+  const handleWinLossSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // Call PUT API to update lead status with lead ID in path params
+      const response = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/lead/${displayLead.id}`, {
+        reason: winLossReason,
+        lead_stage: selectedOutcome
+      });
+
+      console.log('Lead status updated successfully:', response.data);
+
+      // If marked as Won, trigger conversion
+      if (selectedOutcome === 'Won') {
+        onConvert(displayLead.id);
+      }
+
+      console.log(`Lead marked as ${selectedOutcome}:`, winLossReason);
+      
+      // Close modal and reset form
+      setShowWinLossModal(false);
+      setWinLossReason('');
+      
+      // Optionally refresh the lead details or trigger a re-fetch
+      // You might want to call a refresh function here
+      
+    } catch (error) {
+      console.error('Error updating lead status:', error);
+      // You might want to show an error message to the user here
+      alert('Failed to update lead status. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    console.log(`Lead marked as ${selectedOutcome}:`, winLossReason);
-    setShowWinLossModal(false);
-    setWinLossReason('');
   };
-
-
-
-  const mockFiles = [
-    { name: 'RFQ_Mumbai_Metro_Ventilation.pdf', size: '2.4 MB', type: 'PDF' },
-    { name: 'Technical_Drawings.dwg', size: '5.1 MB', type: 'DWG' },
-    { name: 'Site_Photos.zip', size: '8.7 MB', type: 'ZIP' }
-  ];
 
   return (
     <div className="space-y-6">
@@ -436,6 +459,54 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         </div>
       </div>
 
+      {/* Follow-up Comments */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Follow-up Comments</h3>
+        {displayLead.followUpComments && displayLead.followUpComments.length > 0 ? (
+          <div className="space-y-4">
+            {displayLead.followUpComments.map((comment: any, index: number) => (
+              <div key={comment.id || index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900 mb-2">{comment.text}</p>
+                    <div className="flex items-center space-x-4 text-xs text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {comment.timestamp 
+                            ? new Date(comment.timestamp).toLocaleString('en-IN', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              })
+                            : 'No timestamp'
+                          }
+                        </span>
+                      </div>
+                      {comment.author && (
+                        <div className="flex items-center space-x-1">
+                          {/* <Users className="h-3 w-3" />
+                          <span>By: {comment.author}</span> */}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm">No follow-up comments yet</p>
+            <p className="text-xs mt-1">Comments will appear here when added</p>
+          </div>
+        )}
+      </div>
+
       {/* Win/Loss Modal */}
       {showWinLossModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -507,14 +578,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </button>
               <button
                 onClick={handleWinLossSubmit}
-                disabled={!winLossReason.trim()}
+                disabled={!winLossReason.trim() || isSubmitting}
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
                   selectedOutcome === 'Won' 
                     ? 'bg-green-600 hover:bg-green-700' 
                     : 'bg-red-600 hover:bg-red-700'
                 } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
-                {selectedOutcome === 'Won' ? (
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {selectedOutcome === 'Won' ? 'Marking as Won...' : 'Marking as Lost...'}
+                  </>
+                ) : selectedOutcome === 'Won' ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Mark as Won
@@ -634,7 +710,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         <AddLeadModal
           isOpen={showEditModal}
           onClose={() => setShowEditModal(false)}
-          onSubmit={(updatedLead) => {
+          onSubmit={(_updatedLead) => {
             // Handle update logic here (e.g., call API or update state)
             setShowEditModal(false);
           }}
