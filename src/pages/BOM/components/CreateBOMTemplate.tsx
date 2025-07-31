@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload, Search, Edit, ChevronDown, ChevronUp } from 'lucide-react';
+import { createBOMTemplate, createBOMTemplateSpecs, createBOMTemplateDetails, getBOMTemplateItems } from '../../../utils/bomTemplateApi';
 
 interface CreateBOMTemplateProps {
   isOpen: boolean;
@@ -54,12 +55,32 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [showDeleteSpecModal, setShowDeleteSpecModal] = useState(false);
   const [specToDelete, setSpecToDelete] = useState<string | null>(null);
+  const [apiItems, setApiItems] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdTemplateId, setCreatedTemplateId] = useState<string | null>(null);
 
   // Mock data for dropdowns
   const workTypes = ['Basement Ventilation', 'HVAC Systems', 'Fire Safety', 'Electrical', 'Plumbing'];
   
-  // Mock data for master items
-  const masterItems = [
+  // Fetch items from API
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const items = await getBOMTemplateItems();
+        setApiItems(items);
+      } catch (error) {
+        console.error('Error fetching BOM template items:', error);
+        setApiItems([]);
+      }
+    };
+
+    if (isOpen) {
+      fetchItems();
+    }
+  }, [isOpen]);
+
+  // Use API items if available, fallback to mock data
+  const masterItems = apiItems.length > 0 ? apiItems : [
     { id: '1', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', brand: 'Crompton', rate: 12500 },
     { id: '2', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', brand: 'Tata Steel', rate: 850 },
     { id: '3', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', brand: 'Honeywell', rate: 3200 },
@@ -513,7 +534,28 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
 
   const handleNext = () => {
     if (currentStep === 1 && formData.workType && formData.name) {
-      setCurrentStep(2);
+      handleCreateTemplate();
+    }
+  };
+
+  // Create template API call
+  const handleCreateTemplate = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await createBOMTemplate(formData);
+      const templateId = response.data?.id;
+      
+      if (templateId) {
+        setCreatedTemplateId(templateId);
+        setCurrentStep(2);
+      } else {
+        throw new Error('Template ID not received from API');
+      }
+    } catch (error) {
+      console.error('Error creating BOM template:', error);
+      alert('Failed to create BOM template. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -562,19 +604,78 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   }, [isOpen, initialData]);
 
   const handleSubmit = () => {
-    const templateData = {
-      ...formData,
-      specs,
-      items: getAllItems(), // For backward compatibility
-      totalItems: getAllItems().length,
-      totalValue: getAllItems().reduce((sum, item) => sum + item.price, 0),
-      createdDate: isEditMode && initialData?.createdDate ? initialData.createdDate : new Date().toISOString(),
-      status: isEditMode && initialData?.status ? initialData.status : 'active'
-    };
-    onSubmit(templateData);
-    // Reset only if not editing
-    if (!isEditMode) {
+    if (isEditMode) {
+      // Handle edit mode
+      const templateData = {
+        ...formData,
+        specs,
+        items: getAllItems(),
+        totalItems: getAllItems().length,
+        totalValue: getAllItems().reduce((sum, item) => sum + item.price, 0),
+        createdDate: initialData?.createdDate || new Date().toISOString(),
+        status: initialData?.status || 'active'
+      };
+      onSubmit(templateData);
+    } else {
+      // Handle create mode with API calls
+      handleSaveTemplate();
+    }
+  };
+
+  // Save template with specs and details
+  const handleSaveTemplate = async () => {
+    if (!createdTemplateId) {
+      alert('Template not created yet. Please try again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Step 1: Create specs
+      const specsPayload = specs.map(spec => ({
+        name: spec.name,
+        bomTemplateId: createdTemplateId
+      }));
+
+      const specsResponse = await createBOMTemplateSpecs(specsPayload);
+      const createdSpecs = specsResponse.data || [];
+
+      // Step 2: Create details
+      const detailsPayload: any[] = [];
+      specs.forEach((spec, specIndex) => {
+        const specId = createdSpecs[specIndex]?.id;
+        if (specId) {
+          spec.items.forEach(item => {
+            detailsPayload.push({
+              bomTemplateId: createdTemplateId,
+              bomTemplateSpecId: specId,
+              itemId: item.id,
+              quantity: item.quantity
+            });
+          });
+        }
+      });
+
+      if (detailsPayload.length > 0) {
+        await createBOMTemplateDetails(detailsPayload);
+      }
+
+      // Success - close modal and reset
+      const templateData = {
+        ...formData,
+        specs,
+        items: getAllItems(),
+        totalItems: getAllItems().length,
+        totalValue: getAllItems().reduce((sum, item) => sum + item.price, 0),
+        createdDate: new Date().toISOString(),
+        status: 'active'
+      };
+      
+      onSubmit(templateData);
+      
+      // Reset form
       setCurrentStep(1);
+      setCreatedTemplateId(null);
       setFormData({
         workType: '',
         name: '',
@@ -583,6 +684,11 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
       setSpecs([]);
       setMethod('manual');
       setCsvFile(null);
+    } catch (error) {
+      console.error('Error saving BOM template specs/details:', error);
+      alert('Failed to save BOM template details. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -904,32 +1010,32 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={!canSaveTemplate()}
+                    disabled={!canSaveTemplate() || isSubmitting}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    Update Template
+                    {isSubmitting ? 'Updating...' : 'Update Template'}
                   </button>
                 ) : (
                   currentStep < 2 ? (
                     <button
                       type="button"
                       onClick={handleNext}
-                      disabled={!formData.workType || !formData.name}
+                      disabled={!formData.workType || !formData.name || isSubmitting}
                       className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
-                      Next
+                      {isSubmitting ? 'Creating...' : 'Next'}
                       <ChevronRight className="h-4 w-4 ml-2" />
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      disabled={!canSaveTemplate()}
+                      disabled={!canSaveTemplate() || isSubmitting}
                       className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       <Save className="h-4 w-4 mr-2" />
-                      Save Template
+                      {isSubmitting ? 'Saving...' : 'Save Template'}
                     </button>
                   )
                 )}
@@ -949,11 +1055,11 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={!canSaveTemplate()}
+                  disabled={!canSaveTemplate() || isSubmitting}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Save Template
+                  {isSubmitting ? 'Saving...' : 'Save Template'}
                 </button>
               )}
             </div>
