@@ -370,29 +370,36 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Supply Rate</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Supply Rate</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Amount</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Install Rate</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Install Rate</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Own Amount</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Amount</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Own Amount</th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {formData.items.map((item: any) => (
+                {formData.items.map((item: any, index: number) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const updatedItems = [...formData.items];
+                          updatedItems[index].quantity = parseFloat(e.target.value) || 0;
+                          updatedItems[index].supplyOwnAmount = updatedItems[index].quantity * (updatedItems[index].supplyRate || updatedItems[index].rate);
+                          updatedItems[index].installationOwnAmount = updatedItems[index].quantity * (updatedItems[index].installationRate || (updatedItems[index].rate * 0.3));
+                          setFormData({ ...formData, items: updatedItems });
+                        }}
+                        className="w-full px-2 py-1 border border-gray-300 rounded-md text-right"
+                      />
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(item.supplyRate || item.rate).toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(item.supplyOwnAmount || item.price).toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{((item.rate || 0) * 0.3).toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{((item.rate || 0) * 0.3).toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{(item.installationRate || (item.rate * 0.3)).toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{(item.installationOwnAmount || (item.price * 0.3)).toLocaleString('en-IN')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
@@ -407,20 +414,19 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50">
-                <tr>
-                  <td colSpan={9} className="px-3 py-2 text-sm font-medium text-right">Total:</td>
-                  <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                    ₹{formData.items.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || item.price || 0), 0).toLocaleString('en-IN')}
-                  </td>
-                  <td></td>
-                  <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                    ₹{formData.items.reduce((sum: number, item: any) => sum + (item.installationOwnAmount || (item.price * 0.3) || 0), 0).toLocaleString('en-IN')}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
             </table>
+          </div>
+
+          {/* Total Costs Section */}
+          <div className="mt-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-700">Total Supply Own Cost:</span>
+              <span className="text-sm font-medium text-gray-900">₹{formData.items.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || item.price || 0), 0).toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-sm font-medium text-gray-700">Total Installation Own Cost:</span>
+              <span className="text-sm font-medium text-gray-900">₹{formData.items.reduce((sum: number, item: any) => sum + (item.installationOwnAmount || (item.price * 0.3) || 0), 0).toLocaleString('en-IN')}</span>
+            </div>
           </div>
         </div>
       )}
@@ -579,6 +585,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                       </div>
                     </div>
                     
+                    {/* Supply Office Overhead */}
                     <div className="flex justify-between items-center">
                       <label className="text-sm text-gray-600">Supply Office Overhead (%):</label>
                       <div className="flex items-center">
@@ -598,6 +605,19 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                       </div>
                     </div>
                     
+                    {/* Total Supply Cost */}
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium text-gray-700">Total Supply Cost:</label>
+                      <span className="text-sm font-medium">₹{costs?.totalSupplyCost.toLocaleString('en-IN')}</span>
+                    </div>
+
+                    {/* Total Own Cost */}
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium text-gray-700">Total Own Cost:</label>
+                      <span className="text-sm font-medium">₹{costs?.totalSupplyCost.toLocaleString('en-IN')}</span>
+                    </div>
+
+                    {/* Supply PO-variance */}
                     <div className="flex justify-between items-center">
                       <label className="text-sm text-gray-600">Supply PO-variance (%):</label>
                       <div className="flex items-center">
@@ -616,16 +636,11 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                         </span>
                       </div>
                     </div>
-                    
-                    <div className="border-t border-gray-200 pt-3 mt-3">
-                      <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium text-gray-700">Total Supply Cost:</label>
-                        <span className="text-sm font-medium">₹{costs?.totalSupplyCost.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <label className="text-sm font-medium text-gray-700">Final Supply Amount:</label>
-                        <span className="text-sm font-medium text-green-600">₹{costs?.finalSupplyAmount.toLocaleString('en-IN')}</span>
-                      </div>
+
+                    {/* Final Supply Amount */}
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium text-gray-700">Final Supply Amount:</label>
+                      <span className="text-sm font-medium text-green-600">₹{costs?.finalSupplyAmount.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 </div>
@@ -734,6 +749,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                       </div>
                     </div>
                     
+                    {/* Installation Office Overhead */}
                     <div className="flex justify-between items-center">
                       <label className="text-sm text-gray-600">Installation Office Overhead (%):</label>
                       <div className="flex items-center">
@@ -753,6 +769,13 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                       </div>
                     </div>
                     
+                    {/* Total Installation Cost */}
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium text-gray-700">Total Installation Cost:</label>
+                      <span className="text-sm font-medium">₹{costs?.totalInstallationCost.toLocaleString('en-IN')}</span>
+                    </div>
+
+                    {/* Installation PO-variance */}
                     <div className="flex justify-between items-center">
                       <label className="text-sm text-gray-600">Installation PO-variance (%):</label>
                       <div className="flex items-center">
@@ -771,16 +794,11 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                         </span>
                       </div>
                     </div>
-                    
-                    <div className="border-t border-gray-200 pt-3 mt-3">
-                      <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium text-gray-700">Total Installation Cost:</label>
-                        <span className="text-sm font-medium">₹{costs?.totalInstallationCost.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <label className="text-sm font-medium text-gray-700">Final Installation Amount:</label>
-                        <span className="text-sm font-medium text-green-600">₹{costs?.finalInstallationAmount.toLocaleString('en-IN')}</span>
-                      </div>
+
+                    {/* Final Installation Amount */}
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium text-gray-700">Final Installation Amount:</label>
+                      <span className="text-sm font-medium text-green-600">₹{costs?.finalInstallationAmount.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 </div>
