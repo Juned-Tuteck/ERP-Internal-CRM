@@ -59,8 +59,8 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
             name: spec.spec_description,
             items: (spec.details || []).map((detail: any) => ({
               id: detail.item_id,
-              itemCode: detail.item?.item_code || '',
-              itemName: detail.item?.item_name || '',
+              itemCode: detail?.item_code || '',
+              itemName: detail?.item_name || '',
               quantity: detail.required_quantity,
               uomName: '-',
               brand: '-'

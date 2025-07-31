@@ -124,7 +124,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
 
   const addItemToSpec = (specId: string, masterItem: any) => {
     const newItem: BOMItem = {
-      id: Date.now().toString(),
+      id: masterItem.id,
       itemCode: masterItem.itemCode,
       itemName: masterItem.itemName,
       uomName: masterItem.uomName,
