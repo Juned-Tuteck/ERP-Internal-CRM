@@ -1,19 +1,53 @@
-import React, { useState } from 'react';
-import { Truck, MapPin, DollarSign, Calendar, Tag, Phone, Mail, FileText, CreditCard, Globe, Building2, Trash2, Power, SquarePen } from 'lucide-react';
-import AddVendorModal from './AddVendorModal';
+import React, { useState } from "react";
+import { deleteVendor, deactivateVendor } from "../../../utils/vendorApi";
+import { getVendorBranchById } from "../../../utils/vendorBranchApi";
+import {
+  Truck,
+  MapPin,
+  DollarSign,
+  Calendar,
+  Tag,
+  Phone,
+  Mail,
+  FileText,
+  CreditCard,
+  Globe,
+  Building2,
+  Trash2,
+  Power,
+  SquarePen,
+} from "lucide-react";
+import AddVendorModal from "./AddVendorModal";
 
 interface VendorDetailsProps {
-  vendor: any;
+  data: {
+    vendor: any;
+    branches: any[];
+    contacts: any[];
+    files: any[];
+  };
 }
 
-const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
-  if (!vendor) {
+const VendorDetails: React.FC<
+  VendorDetailsProps & { onVendorDeleted?: () => void }
+> = ({ data, onVendorDeleted }) => {
+  console.log("Rendering VendorDetails component"); // Add debug logs to trace modal visibility
+  // Debug log to inspect data.vendor
+  console.log("Vendor data:", data.vendor);
+
+  // Debug log to inspect the data prop
+  console.log("VendorDetails data prop:", data);
+
+  if (!data || !data.vendor) {
+    console.log("No vendor data available");
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
         <div className="text-gray-400">
           <Truck className="h-12 w-12 mx-auto mb-4" />
           <h3 className="text-lg font-medium">Select a vendor</h3>
-          <p className="text-sm">Choose a vendor from the list to view their details</p>
+          <p className="text-sm">
+            Choose a vendor from the list to view their details
+          </p>
         </div>
       </div>
     );
@@ -22,98 +56,105 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState<any>(null);
+  const [branchDetails, setBranchDetails] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<string>("general");
+
+  // No enhancedVendor, use vendor, branches, contacts, files directly
+  const vendor = data?.vendor || null;
+  const branches = data?.branches || [];
+  const contacts = data?.contacts || [];
+  const files = data?.files || [];
+  // Fetch branch details when selectedBranch changes
+  React.useEffect(() => {
+    if (selectedBranch) {
+      // Debug: log the selected branch object and branchId
+      console.log("Selected branch (effect):", selectedBranch);
+      const branchId = selectedBranch.branchId || selectedBranch.id;
+      console.log("BranchId to fetch:", branchId);
+      if (branchId) {
+        getVendorBranchById(branchId)
+          .then((data) => {
+            console.log("Fetched branch details:", data);
+            setBranchDetails(data);
+          })
+          .catch((err) => {
+            console.log("Error fetching branch details:", err);
+            setBranchDetails(null);
+          });
+      } else {
+        setBranchDetails(null);
+      }
+    } else {
+      setBranchDetails(null);
+    }
+  }, [selectedBranch]);
   // Transform vendor data for edit modal (if needed)
   // Map all fields required by AddVendorModal's formData
   const transformToFormData = (vendor: any) => ({
-    // Step 1: General Information
-    vendorCategory: vendor.vendorCategory || vendor.category || '',
-    vendorType: vendor.vendorType || vendor.type || '',
-    businessName: vendor.businessName || vendor.name || '',
-    contactNo: vendor.contactNo || vendor.phone || '',
-    email: vendor.email || '',
-    country: vendor.country || 'India',
-    currency: vendor.currency || 'INR',
-    state: vendor.state || '',
-    district: vendor.district || '',
-    city: vendor.city || '',
-    pincode: vendor.pincode || '',
-    active: typeof vendor.active === 'boolean' ? vendor.active : (vendor.status ? vendor.status === 'active' : true),
-    // Bank Details
-    panNumber: vendor.panNumber || '',
-    tanNumber: vendor.tanNumber || '',
-    gstNumber: vendor.gstNumber || '',
-    bankName: vendor.bankName || '',
-    bankAccountNumber: vendor.bankAccountNumber || '',
-    branchName: vendor.branchName || '',
-    ifscCode: vendor.ifscCode || '',
-    // Contact Persons
-    contactPersons: vendor.contactPersons || [],
-    // Step 2: Branch Information
+    vendorCategory: vendor.vendor_type || "",
+    vendorType: vendor.vendor_type || "",
+    businessName: vendor.business_name || "",
+    contactNo: vendor.contact_no || "",
+    country: vendor.country || "India",
+    currency: vendor.currency || "INR",
+    state: vendor.state || "",
+    district: vendor.district || "",
+    city: vendor.city || "",
+    pincode: vendor.pincode || "",
+    active: typeof vendor.is_active === "boolean" ? vendor.is_active : true,
+    panNumber: vendor.pan_number || "",
+    gstNumber: vendor.gst_number || "",
+    bankName: vendor.bank_name || "",
+    bankAccountNumber: vendor.bank_account_number || "",
+    branchName: vendor.branch_name || "",
+    ifscCode: vendor.ifsc_code || "",
+    contactPersons: vendor.contacts || [],
     branches: vendor.branches || [],
-    // Step 3: Upload Files
-    uploadedFiles: vendor.uploadedFiles || [],
+    uploadedFiles: vendor.files || [],
   });
-
-  // Enhanced vendor data with additional details
-  const enhancedVendor = {
-    ...vendor,
-    panNumber: 'ABCDE1234F',
-    tanNumber: 'ABCD12345E',
-    gstNumber: '27ABCDE1234F1Z5',
-    bankName: 'State Bank of India',
-    bankAccountNumber: '1234567890123456',
-    branchName: 'Mumbai Main Branch',
-    ifscCode: 'SBIN0001234',
-    contactPersons: [
-      { name: 'Rajesh Kumar', phone: '+91 98765 43210', email: 'rajesh@example.com', designation: 'Procurement Manager' },
-      { name: 'Priya Sharma', phone: '+91 87654 32109', email: 'priya@example.com', designation: 'Account Manager' }
-    ],
-    branches: [
-      {
-        branchName: 'Head Office',
-        contactNumber: '+91 98765 43210',
-        email: 'info@example.com',
-        address: 'Andheri East, Mumbai, Maharashtra - 400069',
-        contactPersons: [
-          { name: 'Vikram Singh', phone: '+91 76543 21098', email: 'vikram@example.com' }
-        ]
-      },
-      {
-        branchName: 'Manufacturing Unit',
-        contactNumber: '+91 65432 10987',
-        email: 'factory@example.com',
-        address: 'MIDC Industrial Area, Pune, Maharashtra - 411057',
-        contactPersons: [
-          { name: 'Amit Patel', phone: '+91 54321 09876', email: 'amit@example.com' }
-        ]
-      }
-    ],
-    uploadedFiles: [
-      { name: 'Company_Profile.pdf', size: '3.2 MB', uploadDate: '2023-09-15' },
-      { name: 'ISO_Certificate.pdf', size: '1.5 MB', uploadDate: '2023-09-15' },
-      { name: 'GST_Registration.pdf', size: '0.8 MB', uploadDate: '2023-09-15' }
-    ]
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "inactive":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const [activeTab, setActiveTab] = useState('general');
+  {
+    vendor.ifsc_code || "";
+  }
+
+  // Debug: log when branches tab is rendered and log branches array
+  React.useEffect(() => {
+    if (activeTab === "branches") {
+      console.log("Rendering Branches tab", branches);
+      if (!branches || branches.length === 0) {
+        console.log("No branches found for this vendor.");
+      }
+    }
+  }, [activeTab, branches]);
+
+  // Reset branch selection when switching to Branches tab
+  const handleTabChange = (tabId: string) => {
+    if (tabId === "branches") {
+      setSelectedBranch(null);
+      setBranchDetails(null);
+      console.log("Switched to Branches tab, reset branch selection");
+    }
+    setActiveTab(tabId);
+  };
 
   const tabs = [
-    { id: 'general', name: 'General Information', icon: Truck },
-    { id: 'branches', name: 'Branch Information', icon: Building2 },
-    { id: 'documents', name: 'Documents', icon: FileText },
+    { id: "general", name: "General Information", icon: Truck },
+    { id: "branches", name: "Branch Information", icon: Building2 },
+    { id: "documents", name: "Documents", icon: FileText },
   ];
 
   return (
@@ -123,13 +164,21 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-4">
             <div className="h-16 w-16 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-              <span className="text-2xl font-bold text-white">{vendor.avatar}</span>
+              <span className="text-2xl font-bold text-white">
+                {vendor.avatar}
+              </span>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">{vendor.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                {vendor.name}
+              </h2>
               <div className="flex items-center mt-1 gap-2">
                 <span className="text-sm text-gray-600">{vendor.type}</span>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status)}`}>
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                    vendor.status
+                  )}`}
+                >
                   {vendor.status}
                 </span>
               </div>
@@ -139,16 +188,19 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
             <div className="flex flex-col items-right">
               <p className="text-sm text-gray-500">Vendor since</p>
               <span className="text-sm font-medium text-gray-900">
-                {new Date(vendor.joinDate).toLocaleDateString('en-IN', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
+                {new Date(vendor.joinDate).toLocaleDateString("en-IN", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
                 })}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={() => {
+                  console.log("Edit button clicked");
+                  setIsEditModalOpen(true);
+                }}
                 className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                 title="Edit Vendor"
               >
@@ -169,19 +221,32 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
                 <Trash2 className="h-5 w-5" />
               </button>
             </div>
-      {/* Edit Vendor Modal (AddVendorModal in edit mode) */}
-      {isEditModalOpen && (
-        <AddVendorModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSubmit={(updatedVendorData) => {
-            // Replace with actual update logic, e.g., API call or state update
-            console.log('Updated Vendor:', updatedVendorData);
-            setIsEditModalOpen(false);
-          }}
-          initialData={() =>  {return transformToFormData(enhancedVendor)}}
-        />
-      )}
+            {/* Edit Vendor Modal (AddVendorModal in edit mode) */}
+            {isEditModalOpen &&
+              (console.log("Rendering AddVendorModal"),
+              (
+                <AddVendorModal
+                  isOpen={isEditModalOpen}
+                  onClose={() => {
+                    console.log("Closing modal");
+                    setIsEditModalOpen(false);
+                  }}
+                  onSubmit={(updatedVendorData) => {
+                    console.log("Updated Vendor:", updatedVendorData);
+                    setIsEditModalOpen(false);
+                  }}
+                  initialData={() => {
+                    const formData = transformToFormData({
+                      ...vendor,
+                      contactPersons: contacts,
+                      branches: branches,
+                      uploadedFiles: files,
+                    });
+                    console.log("Initial data for modal:", formData);
+                    return formData;
+                  }}
+                />
+              ))}
           </div>
         </div>
       </div>
@@ -191,9 +256,17 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
             <div className="flex items-center mb-4">
               <Trash2 className="h-6 w-6 text-red-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Delete Vendor</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Delete Vendor
+              </h3>
             </div>
-            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-red-600">permanently delete</span> this vendor? This action cannot be undone.</p>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to{" "}
+              <span className="font-semibold text-red-600">
+                permanently delete
+              </span>{" "}
+              this vendor? This action cannot be undone.
+            </p>
             <div className="flex justify-end gap-2">
               <button
                 className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -203,10 +276,16 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
               </button>
               <button
                 className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                onClick={() => {
-                  // TODO: Replace with actual delete logic
-                  alert('Vendor deleted!');
-                  setIsDeleteModalOpen(false);
+                onClick={async () => {
+                  try {
+                    await deleteVendor(vendor.vendor_id || vendor.id);
+                    setIsDeleteModalOpen(false);
+                    if (typeof onVendorDeleted === "function") {
+                      onVendorDeleted();
+                    }
+                  } catch (err) {
+                    alert("Failed to delete vendor. Please try again.");
+                  }
                 }}
               >
                 Delete
@@ -222,9 +301,15 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
             <div className="flex items-center mb-4">
               <Power className="h-6 w-6 text-yellow-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Deactivate Vendor</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Deactivate Vendor
+              </h3>
             </div>
-            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-yellow-600">deactivate</span> this vendor? You can reactivate them later.</p>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to{" "}
+              <span className="font-semibold text-yellow-600">deactivate</span>{" "}
+              this vendor? You can reactivate them later.
+            </p>
             <div className="flex justify-end gap-2">
               <button
                 className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -234,10 +319,16 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
               </button>
               <button
                 className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
-                onClick={() => {
-                  // TODO: Replace with actual deactivate logic
-                  alert('Vendor deactivated!');
-                  setIsDeactivateModalOpen(false);
+                onClick={async () => {
+                  try {
+                    await deactivateVendor(vendor.vendor_id || vendor.id);
+                    setIsDeactivateModalOpen(false);
+                    if (typeof onVendorDeleted === "function") {
+                      onVendorDeleted();
+                    }
+                  } catch (err) {
+                    alert("Failed to deactivate vendor. Please try again.");
+                  }
                 }}
               >
                 Deactivate
@@ -253,11 +344,11 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
               <div className="flex items-center space-x-2">
@@ -271,233 +362,317 @@ const VendorDetails: React.FC<VendorDetailsProps> = ({ vendor }) => {
 
       {/* Tab Content */}
       <div className="p-6">
-        {activeTab === 'general' && (
+        {activeTab === "general" && (
           <div className="space-y-8">
             {/* Vendor Information */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Vendor Information</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Vendor Information
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-3">
                   <Tag className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Category</p>
-                    <p className="text-sm font-medium text-gray-900">{vendor.category}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.category || vendor.vendorCategory || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <Truck className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Type</p>
-                    <p className="text-sm font-medium text-gray-900">{vendor.type}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.type || vendor.vendorType || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <MapPin className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Location</p>
-                    <p className="text-sm font-medium text-gray-900">{vendor.location}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.location ||
+                        [vendor.city, vendor.state].filter(Boolean).join(", ")}
+                    </p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
                   <Phone className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Phone</p>
-                    <p className="text-sm font-medium text-gray-900">{vendor.phone}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.phone || vendor.contactNo || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <Mail className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="text-sm font-medium text-gray-900">{vendor.email}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.email || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <Globe className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Website</p>
-                    <p className="text-sm font-medium text-gray-900">www.{vendor.name.toLowerCase().replace(/\s+/g, '')}.com</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      www.
+                      {(vendor.name || "").toLowerCase().replace(/\s+/g, "")}
+                      .com
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-
             {/* Bank Details */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bank Details</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Bank Details
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">PAN Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedVendor.panNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.pan_number || vendor.panNumber || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">TAN Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedVendor.tanNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.tan_number || vendor.tanNumber || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">GST Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedVendor.gstNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.gst_number || vendor.gstNumber || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <Building2 className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Bank Name</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedVendor.bankName}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.bank_name || vendor.bankName || ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Account Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedVendor.bankAccountNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.bank_account_number ||
+                        vendor.bankAccountNumber ||
+                        ""}
+                    </p>
                   </div>
                 </div>
-                
                 <div className="flex items-center space-x-3">
                   <Building2 className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">IFSC Code</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedVendor.ifscCode}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {vendor.ifsc_code || vendor.ifscCode || ""}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-
             {/* Contact Persons */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Persons</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Contact Persons
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {enhancedVendor.contactPersons.map((person: any, index: number) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-white">
-                          {person.name.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{person.name}</p>
-                        <p className="text-xs text-gray-500">{person.designation}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                        {person.phone}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                        {person.email}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'branches' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Branch Information</h3>
-            
-            {enhancedVendor.branches.map((branch: any, index: number) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-6 mb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-medium text-gray-900">{branch.branchName}</h4>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{branch.contactNumber}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{branch.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{branch.address}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="border-t border-gray-200 pt-4">
-                  <h5 className="text-sm font-medium text-gray-900 mb-3">Branch Contact Persons</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {branch.contactPersons.map((person: any, personIndex: number) => (
-                      <div key={personIndex} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-medium text-white">
-                            {person.name.split(' ').map((n: string) => n[0]).join('')}
+                {(contacts || vendor.contacts || []).map(
+                  (person: any, index: number) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-white">
+                            {person.name
+                              ? person.name
+                                  .split(" ")
+                                  .map((n: string) => n[0])
+                                  .join("")
+                              : ""}
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{person.name}</p>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {person.phone}
-                          </div>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {person.email}
-                          </div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {person.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {person.designation}
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                          {person.phone}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                          {person.email}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
-            ))}
+            </div>
           </div>
         )}
 
-        {activeTab === 'documents' && (
+        {activeTab === "branches" && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Vendor Documents</h3>
-            
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Branch Information
+            </h3>
+            {branches && branches.length > 0 ? (
+              branches.map((branch: any, index: number) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-6 mb-4"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-medium text-gray-900">
+                      {branch.branchName || branch.branch_name || ""}
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center space-x-3">
+                      <Phone className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Contact Number</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {branch.contactNumber || branch.contact_number || ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {branch.email || branch.email_id || ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <MapPin className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Address</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {branch.address ||
+                            [
+                              branch.city,
+                              branch.district,
+                              branch.state,
+                              branch.pincode,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-t border-gray-200 pt-4">
+                    <h5 className="text-sm font-medium text-gray-900 mb-3">
+                      Branch Contact Persons
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {(
+                        branch.contactPersons ||
+                        branch.branchContacts ||
+                        []
+                      ).map((person: any, personIndex: number) => (
+                        <div
+                          key={personIndex}
+                          className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-white">
+                              {person.name
+                                ? person.name
+                                    .split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")
+                                : ""}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {person.name}
+                            </p>
+                            <div className="flex items-center text-xs text-gray-500">
+                              <Phone className="h-3 w-3 mr-1" />
+                              {person.phone}
+                            </div>
+                            <div className="flex items-center text-xs text-gray-500">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {person.email}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-red-500">
+                No branches found for this vendor.
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "documents" && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Vendor Documents
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {enhancedVendor.uploadedFiles.map((file: any, index: number) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+              {(files || vendor.files || []).map((file: any, index: number) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+                >
                   <div className="flex items-center space-x-3 mb-3">
                     <FileText className="h-8 w-8 text-indigo-600" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {file.name}
+                      </p>
                       <p className="text-xs text-gray-500">{file.size}</p>
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-gray-500">
-                      Uploaded: {new Date(file.uploadDate).toLocaleDateString('en-IN')}
+                      Uploaded:{" "}
+                      {file.uploadDate
+                        ? new Date(file.uploadDate).toLocaleDateString("en-IN")
+                        : ""}
                     </span>
                     <button className="text-xs text-blue-600 hover:text-blue-800">
                       View

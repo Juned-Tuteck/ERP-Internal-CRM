@@ -1,10 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Upload, Plus, Trash2, Copy, Camera } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { registerVendorBranch } from "../../../utils/registerVendorBranchApi";
+import { vendorBranchContactBulkUpload } from "../../../utils/vendorBranchContactBulkUploadApi";
+import { registerVendor } from "../../../utils/registerVendorApi";
+import { bulkUpload } from "../../../utils/bulkUploadApi";
+import {
+  X,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  Plus,
+  Trash2,
+  Copy,
+  Camera,
+} from "lucide-react";
 
 interface AddVendorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (vendorData: any) => void;
+  onRefresh?: () => Promise<void>;
   initialData?: any;
 }
 
@@ -14,6 +29,7 @@ interface ContactPerson {
   phone: string;
   email: string;
   photo?: string;
+  designation?: string;
 }
 
 interface Branch {
@@ -30,63 +46,128 @@ interface Branch {
   contactPersons: ContactPerson[];
 }
 
-const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
+const AddVendorModal: React.FC<AddVendorModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData,
+  onRefresh,
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(initialData || {
-    // Step 1: General Information
-    vendorCategory: '',
-    vendorType: '',
-    businessName: '',
-    contactNo: '',
-    email: '',
-    country: 'India',
-    currency: 'INR',
-    state: '',
-    district: '',
-    city: '',
-    pincode: '',
-    active: true,
-    // Bank Details
-    panNumber: '',
-    tanNumber: '',
-    gstNumber: '',
-    bankName: '',
-    bankAccountNumber: '',
-    branchName: '',
-    ifscCode: '',
-    // Contact Persons
-    contactPersons: [] as ContactPerson[],
-    // Step 2: Branch Information
-    branches: [] as Branch[],
-    // Step 3: Upload Files
-    uploadedFiles: [] as File[]
-  });
+  const [formData, setFormData] = useState(
+    initialData || {
+      // Step 1: General Information
+      vendorCategory: "",
+      vendorType: "",
+      businessName: "",
+      contactNo: "",
+      email: "",
+      country: "India",
+      currency: "INR",
+      state: "",
+      district: "",
+      city: "",
+      pincode: "",
+      active: true,
+      // Bank Details
+      panNumber: "",
+      tanNumber: "",
+      gstNumber: "",
+      bankName: "",
+      bankAccountNumber: "",
+      branchName: "",
+      ifscCode: "",
+      // Contact Persons
+      contactPersons: [] as ContactPerson[],
+      // Step 2: Branch Information
+      branches: [] as Branch[],
+      // Step 3: Upload Files
+      uploadedFiles: [] as File[],
+      // For branch creation
+      vendorId: undefined,
+    }
+  );
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   const steps = [
-    { id: 1, name: 'General Information', description: 'Vendor and bank details' },
-    { id: 2, name: 'Branch Information', description: 'Branch locations and contacts' },
-    { id: 3, name: 'Upload Files', description: 'Supporting documents' }
+    {
+      id: 1,
+      name: "General Information",
+      description: "Vendor and bank details",
+    },
+    {
+      id: 2,
+      name: "Branch Information",
+      description: "Branch locations and contacts",
+    },
+    { id: 3, name: "Upload Files", description: "Supporting documents" },
   ];
 
   // Mock data for dropdowns
-  const vendorCategories = ['Electronics', 'Raw Materials', 'Automotive', 'Chemicals', 'Furniture', 'IT Services', 'Office Supplies'];
-  const vendorTypes = ['Manufacturer', 'Distributor', 'Supplier', 'Service Provider', 'Contractor'];
-  const countries = ['India', 'USA', 'UK', 'China', 'Japan'];
-  const currencies = ['INR', 'USD', 'EUR', 'GBP', 'JPY'];
-  const states = ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Gujarat', 'Rajasthan', 'Uttar Pradesh', 'West Bengal'];
+  const vendorCategories = [
+    "Electronics",
+    "Raw Materials",
+    "Automotive",
+    "Chemicals",
+    "Furniture",
+    "IT Services",
+    "Office Supplies",
+  ];
+  const vendorTypes = [
+    "Manufacturer",
+    "Distributor",
+    "Supplier",
+    "Service Provider",
+    "Contractor",
+  ];
+  const countries = ["India", "USA", "UK", "China", "Japan"];
+  const currencies = ["INR", "USD", "EUR", "GBP", "JPY"];
+  const states = [
+    "Maharashtra",
+    "Delhi",
+    "Karnataka",
+    "Tamil Nadu",
+    "Gujarat",
+    "Rajasthan",
+    "Uttar Pradesh",
+    "West Bengal",
+  ];
   const districts = {
-    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad'],
-    'Delhi': ['Central Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi'],
-    'Karnataka': ['Bangalore Urban', 'Mysore', 'Hubli-Dharwad', 'Mangalore', 'Belgaum'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem'],
-    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar']
+    Maharashtra: ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"],
+    Delhi: [
+      "Central Delhi",
+      "North Delhi",
+      "South Delhi",
+      "East Delhi",
+      "West Delhi",
+    ],
+    Karnataka: [
+      "Bangalore Urban",
+      "Mysore",
+      "Hubli-Dharwad",
+      "Mangalore",
+      "Belgaum",
+    ],
+    "Tamil Nadu": [
+      "Chennai",
+      "Coimbatore",
+      "Madurai",
+      "Tiruchirappalli",
+      "Salem",
+    ],
+    Gujarat: ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar"],
   };
   const cities = {
-    'Mumbai': ['Mumbai', 'Navi Mumbai', 'Thane', 'Kalyan', 'Vasai-Virar'],
-    'Pune': ['Pune', 'Pimpri-Chinchwad', 'Wakad', 'Hinjewadi', 'Kharadi'],
-    'Bangalore Urban': ['Bangalore', 'Electronic City', 'Whitefield', 'Koramangala', 'Indiranagar']
+    Mumbai: ["Mumbai", "Navi Mumbai", "Thane", "Kalyan", "Vasai-Virar"],
+    Pune: ["Pune", "Pimpri-Chinchwad", "Wakad", "Hinjewadi", "Kharadi"],
+    "Bangalore Urban": [
+      "Bangalore",
+      "Electronic City",
+      "Whitefield",
+      "Koramangala",
+      "Indiranagar",
+    ],
   };
 
   useEffect(() => {
@@ -101,18 +182,23 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
     if (isEditMode) setCurrentStep(stepId);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
   const handleToggle = (name: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: !prev[name as keyof typeof prev]
+      [name]: !prev[name as keyof typeof prev],
     }));
   };
 
@@ -120,30 +206,32 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
   const addContactPerson = () => {
     const newContactPerson: ContactPerson = {
       id: Date.now().toString(),
-      name: '',
-      phone: '',
-      email: '',
-      photo: ''
+      name: "",
+      phone: "",
+      email: "",
+      photo: "",
     };
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      contactPersons: [...prev.contactPersons, newContactPerson]
+      contactPersons: [...prev.contactPersons, newContactPerson],
     }));
   };
 
   const updateContactPerson = (id: string, field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      contactPersons: prev.contactPersons.map(cp => 
+      contactPersons: prev.contactPersons.map((cp: ContactPerson) =>
         cp.id === id ? { ...cp, [field]: value } : cp
-      )
+      ),
     }));
   };
 
   const removeContactPerson = (id: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      contactPersons: prev.contactPersons.filter(cp => cp.id !== id)
+      contactPersons: prev.contactPersons.filter(
+        (cp: ContactPerson) => cp.id !== id
+      ),
     }));
   };
 
@@ -151,116 +239,229 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
   const addBranch = () => {
     const newBranch: Branch = {
       id: Date.now().toString(),
-      branchName: '',
-      contactNumber: '',
-      email: '',
-      country: 'India',
-      currency: 'INR',
-      state: '',
-      district: '',
-      city: '',
-      pincode: '',
-      contactPersons: []
+      branchName: "",
+      contactNumber: "",
+      email: "",
+      country: "India",
+      currency: "INR",
+      state: "",
+      district: "",
+      city: "",
+      pincode: "",
+      contactPersons: [],
     };
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: [...prev.branches, newBranch]
+      branches: [...prev.branches, newBranch],
     }));
   };
 
   const copyFromVendorDetails = (branchId: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
-        branch.id === branchId ? {
-          ...branch,
-          contactNumber: prev.contactNo,
-          email: prev.email,
-          country: prev.country,
-          currency: prev.currency,
-          state: prev.state,
-          district: prev.district,
-          city: prev.city,
-          pincode: prev.pincode,
-          contactPersons: [...prev.contactPersons]
-        } : branch
-      )
+      branches: prev.branches.map((branch: Branch) =>
+        branch.id === branchId
+          ? {
+              ...branch,
+              contactNumber: prev.contactNo,
+              email: prev.email,
+              country: prev.country,
+              currency: prev.currency,
+              state: prev.state,
+              district: prev.district,
+              city: prev.city,
+              pincode: prev.pincode,
+              contactPersons: [...prev.contactPersons],
+            }
+          : branch
+      ),
     }));
   };
 
   const updateBranch = (id: string, field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
+      branches: prev.branches.map((branch: Branch) =>
         branch.id === id ? { ...branch, [field]: value } : branch
-      )
+      ),
     }));
   };
 
   const removeBranch = (id: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.filter(branch => branch.id !== id)
+      branches: prev.branches.filter((branch: Branch) => branch.id !== id),
     }));
   };
 
   const addBranchContactPerson = (branchId: string) => {
     const newContactPerson: ContactPerson = {
       id: Date.now().toString(),
-      name: '',
-      phone: '',
-      email: '',
-      photo: ''
+      name: "",
+      phone: "",
+      email: "",
+      photo: "",
+      designation: "",
     };
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
-        branch.id === branchId ? {
-          ...branch,
-          contactPersons: [...branch.contactPersons, newContactPerson]
-        } : branch
-      )
+      branches: prev.branches.map((branch: Branch) =>
+        branch.id === branchId
+          ? {
+              ...branch,
+              contactPersons: [...branch.contactPersons, newContactPerson],
+            }
+          : branch
+      ),
     }));
   };
 
-  const updateBranchContactPerson = (branchId: string, contactId: string, field: string, value: string) => {
-    setFormData(prev => ({
+  const updateBranchContactPerson = (
+    branchId: string,
+    contactId: string,
+    field: string,
+    value: string
+  ) => {
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
-        branch.id === branchId ? {
-          ...branch,
-          contactPersons: branch.contactPersons.map(cp => 
-            cp.id === contactId ? { ...cp, [field]: value } : cp
-          )
-        } : branch
-      )
+      branches: prev.branches.map((branch: Branch) =>
+        branch.id === branchId
+          ? {
+              ...branch,
+              contactPersons: branch.contactPersons.map((cp: ContactPerson) =>
+                cp.id === contactId ? { ...cp, [field]: value } : cp
+              ),
+            }
+          : branch
+      ),
     }));
   };
 
   const removeBranchContactPerson = (branchId: string, contactId: string) => {
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map(branch => 
-        branch.id === branchId ? {
-          ...branch,
-          contactPersons: branch.contactPersons.filter(cp => cp.id !== contactId)
-        } : branch
-      )
+      branches: prev.branches.map((branch: Branch) =>
+        branch.id === branchId
+          ? {
+              ...branch,
+              contactPersons: branch.contactPersons.filter(
+                (cp: ContactPerson) => cp.id !== contactId
+              ),
+            }
+          : branch
+      ),
     }));
   };
 
   // File Management
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles(prev => [...prev, ...files]);
+    setUploadedFiles((prev) => [...prev, ...files]);
   };
 
   const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleNext = () => {
-    if (currentStep < 3) {
+  // Utility to convert camelCase keys to snake_case
+  const toSnakeCase = (obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(toSnakeCase);
+    } else if (obj !== null && typeof obj === "object") {
+      return Object.keys(obj).reduce((acc, key) => {
+        const snakeKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+        acc[snakeKey] = toSnakeCase(obj[key]);
+        return acc;
+      }, {} as any);
+    }
+    return obj;
+  };
+
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      try {
+        const vendorPayload = toSnakeCase(formData);
+        const vendorRes = await registerVendor(vendorPayload);
+        const vendorId =
+          vendorRes?.data?.vendor_id || vendorRes?.vendor_id || vendorRes?.id;
+        if (!vendorId) throw new Error("Vendor ID not returned");
+        // Save vendorId in formData for use in branch creation
+        setFormData((prev: typeof formData) => ({ ...prev, vendorId }));
+        // Prepare contact persons array for bulk upload
+        const contacts = (formData.contactPersons || []).map(
+          (cp: ContactPerson) => ({
+            vendor_id: vendorId,
+            name: cp.name,
+            designation: cp.designation || "",
+            email: cp.email,
+            phone: cp.phone,
+          })
+        );
+        if (contacts.length > 0) {
+          await bulkUpload(contacts);
+        }
+        setCurrentStep(currentStep + 1);
+      } catch (err) {
+        alert("Failed to create vendor or bulk upload. Please try again.");
+      }
+    } else if (currentStep === 2) {
+      try {
+        // Register all branches with vendor_id (use backend field names)
+        const vendorId = formData.vendorId || formData.id || formData.vendor_id;
+        let updatedBranches = [...(formData.branches || [])];
+        for (let i = 0; i < updatedBranches.length; i++) {
+          const branch = updatedBranches[i];
+          const branchPayload = {
+            vendor_id: vendorId,
+            branch_name: branch.branchName,
+            contact_number: branch.contactNumber,
+            email_id: branch.email,
+            country: branch.country,
+            currency: branch.currency,
+            state: branch.state,
+            district: branch.district,
+            city: branch.city,
+            pincode: branch.pincode,
+          };
+          const branchRes: any = await registerVendorBranch(branchPayload);
+          // Accept id from branchRes.data.id (API returns id as branch id)
+          const branchId =
+            branchRes?.data?.id ||
+            branchRes?.data?.branch_id ||
+            branchRes?.branch_id ||
+            branchRes?.id;
+          if (branchId) {
+            updatedBranches[i] = { ...branch, branchId };
+          }
+        }
+        // Prepare all branch contacts for bulk upload (use backend field names)
+        let branchContacts: any[] = [];
+        updatedBranches.forEach((branch) => {
+          if (
+            branch &&
+            branch.contactPersons &&
+            branch.contactPersons.length > 0 &&
+            branch.branchId
+          ) {
+            branch.contactPersons.forEach((cp: ContactPerson) => {
+              branchContacts.push({
+                vendor_branch_id: branch.branchId,
+                name: cp.name,
+                designation: cp.designation || "",
+                email: cp.email,
+                phone: cp.phone,
+              });
+            });
+          }
+        });
+        if (branchContacts.length > 0) {
+          await vendorBranchContactBulkUpload(branchContacts);
+        }
+        setCurrentStep(currentStep + 1);
+      } catch (err) {
+        alert("Failed to create branch or branch contacts. Please try again.");
+      }
+    } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -271,45 +472,38 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalData = {
-      ...formData,
-      uploadedFiles: uploadedFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type
-      })),
-      status: 'Pending Approval',
-      registrationDate: new Date().toISOString()
-    };
-    onSubmit(finalData);
-    
+    if (typeof onSubmit === "function") {
+      onRefresh(); // Only trigger fetchVendors in parent, do not send vendor data
+    }
+    onClose();
+
     // Reset form
     setCurrentStep(1);
     setFormData({
-      vendorCategory: '',
-      vendorType: '',
-      businessName: '',
-      contactNo: '',
-      email: '',
-      country: 'India',
-      currency: 'INR',
-      state: '',
-      district: '',
-      city: '',
-      pincode: '',
+      vendorCategory: "",
+      vendorType: "",
+      businessName: "",
+      contactNo: "",
+      email: "",
+      country: "India",
+      currency: "INR",
+      state: "",
+      district: "",
+      city: "",
+      pincode: "",
       active: true,
-      panNumber: '',
-      tanNumber: '',
-      gstNumber: '',
-      bankName: '',
-      bankAccountNumber: '',
-      branchName: '',
-      ifscCode: '',
+      panNumber: "",
+      tanNumber: "",
+      gstNumber: "",
+      bankName: "",
+      bankAccountNumber: "",
+      branchName: "",
+      ifscCode: "",
       contactPersons: [],
       branches: [],
-      uploadedFiles: []
+      uploadedFiles: [],
     });
     setUploadedFiles([]);
   };
@@ -321,7 +515,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Register New Vendor</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Register New Vendor
+            </h3>
             <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
           </div>
           <button
@@ -342,15 +538,28 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                     type="button"
                     onClick={() => handleBreadcrumbClick(step.id)}
                     className={`flex items-center space-x-2 focus:outline-none ${
-                      currentStep === step.id ? 'text-blue-600' : 
-                      currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                      currentStep === step.id
+                        ? "text-blue-600"
+                        : currentStep > step.id
+                        ? "text-green-600"
+                        : "text-gray-400"
                     }`}
-                    style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      margin: 0,
+                    }}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                      currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        currentStep === step.id
+                          ? "bg-blue-100 text-blue-600"
+                          : currentStep > step.id
+                          ? "bg-green-100 text-green-600"
+                          : "bg-gray-100 text-gray-400"
+                      }`}
+                    >
                       {step.id}
                     </div>
                     <div>
@@ -359,14 +568,24 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                     </div>
                   </button>
                 ) : (
-                  <div className={`flex items-center space-x-2 ${
-                    currentStep === step.id ? 'text-blue-600' : 
-                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                  }`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                      currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
+                  <div
+                    className={`flex items-center space-x-2 ${
+                      currentStep === step.id
+                        ? "text-blue-600"
+                        : currentStep > step.id
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        currentStep === step.id
+                          ? "bg-blue-100 text-blue-600"
+                          : currentStep > step.id
+                          ? "bg-green-100 text-green-600"
+                          : "bg-gray-100 text-gray-400"
+                      }`}
+                    >
                       {step.id}
                     </div>
                     <div>
@@ -390,7 +609,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
               <div className="space-y-8">
                 {/* Vendor Details */}
                 <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">Vendor Details</h4>
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">
+                    Vendor Details
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -404,8 +625,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Select Category</option>
-                        {vendorCategories.map(category => (
-                          <option key={category} value={category}>{category}</option>
+                        {vendorCategories.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -422,8 +645,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Select Type</option>
-                        {vendorTypes.map(type => (
-                          <option key={type} value={type}>{type}</option>
+                        {vendorTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -484,8 +709,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         required
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        {countries.map(country => (
-                          <option key={country} value={country}>{country}</option>
+                        {countries.map((country) => (
+                          <option key={country} value={country}>
+                            {country}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -501,8 +728,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         required
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        {currencies.map(currency => (
-                          <option key={currency} value={currency}>{currency}</option>
+                        {currencies.map((currency) => (
+                          <option key={currency} value={currency}>
+                            {currency}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -519,8 +748,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Select State</option>
-                        {states.map(state => (
-                          <option key={state} value={state}>{state}</option>
+                        {states.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -538,9 +769,14 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       >
                         <option value="">Select District</option>
-                        {formData.state && districts[formData.state as keyof typeof districts]?.map(district => (
-                          <option key={district} value={district}>{district}</option>
-                        ))}
+                        {formData.state &&
+                          districts[
+                            formData.state as keyof typeof districts
+                          ]?.map((district) => (
+                            <option key={district} value={district}>
+                              {district}
+                            </option>
+                          ))}
                       </select>
                     </div>
 
@@ -557,9 +793,14 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       >
                         <option value="">Select City</option>
-                        {formData.district && cities[formData.district as keyof typeof cities]?.map(city => (
-                          <option key={city} value={city}>{city}</option>
-                        ))}
+                        {formData.district &&
+                          cities[formData.district as keyof typeof cities]?.map(
+                            (city) => (
+                              <option key={city} value={city}>
+                                {city}
+                              </option>
+                            )
+                          )}
                       </select>
                     </div>
 
@@ -583,10 +824,12 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         <input
                           type="checkbox"
                           checked={formData.active}
-                          onChange={() => handleToggle('active')}
+                          onChange={() => handleToggle("active")}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="ml-2 text-sm text-gray-700">Active</span>
+                        <span className="ml-2 text-sm text-gray-700">
+                          Active
+                        </span>
                       </label>
                     </div>
                   </div>
@@ -594,7 +837,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
 
                 {/* Bank Details */}
                 <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">Bank Details</h4>
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">
+                    Bank Details
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -706,7 +951,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                 {/* Contact Persons */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-medium text-gray-900">Contact Persons</h4>
+                    <h4 className="text-lg font-medium text-gray-900">
+                      Contact Persons
+                    </h4>
                     <button
                       type="button"
                       onClick={addContactPerson}
@@ -716,71 +963,102 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                       Add Contact Person
                     </button>
                   </div>
-                  
-                  {formData.contactPersons.map((person, index) => (
-                    <div key={person.id} className="border border-gray-200 rounded-lg p-4 mb-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h5 className="text-sm font-medium text-gray-900">Contact Person {index + 1}</h5>
-                        <button
-                          type="button"
-                          onClick={() => removeContactPerson(person.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Name
-                          </label>
-                          <input
-                            type="text"
-                            value={person.name}
-                            onChange={(e) => updateContactPerson(person.id, 'name', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Contact person name"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Phone Number
-                          </label>
-                          <input
-                            type="tel"
-                            value={person.phone}
-                            onChange={(e) => updateContactPerson(person.id, 'phone', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="+91 98765 43210"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Email ID
-                          </label>
-                          <input
-                            type="email"
-                            value={person.email}
-                            onChange={(e) => updateContactPerson(person.id, 'email', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="contact@company.com"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Photo
-                          </label>
+
+                  {formData.contactPersons.map(
+                    (person: ContactPerson, index: number) => (
+                      <div
+                        key={person.id}
+                        className="border border-gray-200 rounded-lg p-4 mb-4"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="text-sm font-medium text-gray-900">
+                            Contact Person {index + 1}
+                          </h5>
                           <button
                             type="button"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+                            onClick={() => removeContactPerson(person.id)}
+                            className="text-red-600 hover:text-red-800"
                           >
-                            <Camera className="h-4 w-4 mr-2" />
-                            Upload Photo
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={person.name}
+                              onChange={(e) =>
+                                updateContactPerson(
+                                  person.id,
+                                  "name",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Contact person name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Phone Number
+                            </label>
+                            <input
+                              type="tel"
+                              value={person.phone}
+                              onChange={(e) =>
+                                updateContactPerson(
+                                  person.id,
+                                  "phone",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="+91 98765 43210"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Email ID
+                            </label>
+                            <input
+                              type="email"
+                              value={person.email}
+                              onChange={(e) =>
+                                updateContactPerson(
+                                  person.id,
+                                  "email",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="contact@company.com"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Designation
+                            </label>
+                            <input
+                              type="text"
+                              value={person.designation || ""}
+                              onChange={(e) =>
+                                updateContactPerson(
+                                  person.id,
+                                  "designation",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Designation"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -789,7 +1067,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-lg font-medium text-gray-900">Branch Information</h4>
+                  <h4 className="text-lg font-medium text-gray-900">
+                    Branch Information
+                  </h4>
                   <button
                     type="button"
                     onClick={addBranch}
@@ -800,10 +1080,15 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                   </button>
                 </div>
 
-                {formData.branches.map((branch, index) => (
-                  <div key={branch.id} className="border border-gray-200 rounded-lg p-6">
+                {formData.branches.map((branch: Branch, index: number) => (
+                  <div
+                    key={branch.id}
+                    className="border border-gray-200 rounded-lg p-6"
+                  >
                     <div className="flex items-center justify-between mb-4">
-                      <h5 className="text-lg font-medium text-gray-900">Branch {index + 1}</h5>
+                      <h5 className="text-lg font-medium text-gray-900">
+                        Branch {index + 1}
+                      </h5>
                       <div className="flex space-x-2">
                         <button
                           type="button"
@@ -831,7 +1116,13 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         <input
                           type="text"
                           value={branch.branchName}
-                          onChange={(e) => updateBranch(branch.id, 'branchName', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(
+                              branch.id,
+                              "branchName",
+                              e.target.value
+                            )
+                          }
                           required
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Branch name"
@@ -845,7 +1136,13 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         <input
                           type="tel"
                           value={branch.contactNumber}
-                          onChange={(e) => updateBranch(branch.id, 'contactNumber', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(
+                              branch.id,
+                              "contactNumber",
+                              e.target.value
+                            )
+                          }
                           required
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="+91 98765 43210"
@@ -859,7 +1156,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         <input
                           type="email"
                           value={branch.email}
-                          onChange={(e) => updateBranch(branch.id, 'email', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(branch.id, "email", e.target.value)
+                          }
                           required
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="branch@company.com"
@@ -872,12 +1171,16 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         </label>
                         <select
                           value={branch.country}
-                          onChange={(e) => updateBranch(branch.id, 'country', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(branch.id, "country", e.target.value)
+                          }
                           required
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
-                          {countries.map(country => (
-                            <option key={country} value={country}>{country}</option>
+                          {countries.map((country) => (
+                            <option key={country} value={country}>
+                              {country}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -888,13 +1191,17 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         </label>
                         <select
                           value={branch.state}
-                          onChange={(e) => updateBranch(branch.id, 'state', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(branch.id, "state", e.target.value)
+                          }
                           required
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="">Select State</option>
-                          {states.map(state => (
-                            <option key={state} value={state}>{state}</option>
+                          {states.map((state) => (
+                            <option key={state} value={state}>
+                              {state}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -905,15 +1212,22 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         </label>
                         <select
                           value={branch.district}
-                          onChange={(e) => updateBranch(branch.id, 'district', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(branch.id, "district", e.target.value)
+                          }
                           required
                           disabled={!branch.state}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                         >
                           <option value="">Select District</option>
-                          {branch.state && districts[branch.state as keyof typeof districts]?.map(district => (
-                            <option key={district} value={district}>{district}</option>
-                          ))}
+                          {branch.state &&
+                            districts[
+                              branch.state as keyof typeof districts
+                            ]?.map((district) => (
+                              <option key={district} value={district}>
+                                {district}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
@@ -923,15 +1237,22 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         </label>
                         <select
                           value={branch.city}
-                          onChange={(e) => updateBranch(branch.id, 'city', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(branch.id, "city", e.target.value)
+                          }
                           required
                           disabled={!branch.district}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                         >
                           <option value="">Select City</option>
-                          {branch.district && cities[branch.district as keyof typeof cities]?.map(city => (
-                            <option key={city} value={city}>{city}</option>
-                          ))}
+                          {branch.district &&
+                            cities[branch.district as keyof typeof cities]?.map(
+                              (city) => (
+                                <option key={city} value={city}>
+                                  {city}
+                                </option>
+                              )
+                            )}
                         </select>
                       </div>
 
@@ -942,7 +1263,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         <input
                           type="text"
                           value={branch.pincode}
-                          onChange={(e) => updateBranch(branch.id, 'pincode', e.target.value)}
+                          onChange={(e) =>
+                            updateBranch(branch.id, "pincode", e.target.value)
+                          }
                           required
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="400001"
@@ -953,7 +1276,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                     {/* Branch Contact Persons */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h6 className="text-sm font-medium text-gray-900">Branch Contact Persons</h6>
+                        <h6 className="text-sm font-medium text-gray-900">
+                          Branch Contact Persons
+                        </h6>
                         <button
                           type="button"
                           onClick={() => addBranchContactPerson(branch.id)}
@@ -964,43 +1289,76 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                         </button>
                       </div>
 
-                      {branch.contactPersons.map((person, personIndex) => (
-                        <div key={person.id} className="border border-gray-100 rounded p-3 mb-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-gray-700">Contact {personIndex + 1}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeBranchContactPerson(branch.id, person.id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
+                      {branch.contactPersons.map(
+                        (person: ContactPerson, personIndex: number) => (
+                          <div
+                            key={person.id}
+                            className="border border-gray-100 rounded p-3 mb-3"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-gray-700">
+                                Contact {personIndex + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeBranchContactPerson(
+                                    branch.id,
+                                    person.id
+                                  )
+                                }
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <input
+                                type="text"
+                                value={person.name}
+                                onChange={(e) =>
+                                  updateBranchContactPerson(
+                                    branch.id,
+                                    person.id,
+                                    "name",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                placeholder="Name"
+                              />
+                              <input
+                                type="tel"
+                                value={person.phone}
+                                onChange={(e) =>
+                                  updateBranchContactPerson(
+                                    branch.id,
+                                    person.id,
+                                    "phone",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                placeholder="Phone"
+                              />
+                              <input
+                                type="email"
+                                value={person.email}
+                                onChange={(e) =>
+                                  updateBranchContactPerson(
+                                    branch.id,
+                                    person.id,
+                                    "email",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                placeholder="Email"
+                              />
+                            </div>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <input
-                              type="text"
-                              value={person.name}
-                              onChange={(e) => updateBranchContactPerson(branch.id, person.id, 'name', e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="Name"
-                            />
-                            <input
-                              type="tel"
-                              value={person.phone}
-                              onChange={(e) => updateBranchContactPerson(branch.id, person.id, 'phone', e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="Phone"
-                            />
-                            <input
-                              type="email"
-                              value={person.email}
-                              onChange={(e) => updateBranchContactPerson(branch.id, person.id, 'email', e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="Email"
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1017,10 +1375,12 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-sm text-gray-600 mb-2">
-                      Upload compliance certificates, company profile, and other relevant documents
+                      Upload compliance certificates, company profile, and other
+                      relevant documents
                     </p>
                     <p className="text-xs text-gray-500 mb-4">
-                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG (Max 15MB per file)
+                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG (Max
+                      15MB per file)
                     </p>
                     <input
                       type="file"
@@ -1041,12 +1401,19 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
 
                 {uploadedFiles.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Files</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Uploaded Files
+                    </h4>
                     <div className="space-y-2">
                       {uploadedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                        >
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {file.name}
+                            </p>
                             <p className="text-xs text-gray-500">
                               {(file.size / 1024 / 1024).toFixed(2)} MB
                             </p>
@@ -1088,7 +1455,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
             >
               Cancel
             </button>
-            
+
             {isEditMode ? (
               <button
                 type="submit"
@@ -1098,26 +1465,24 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSubm
                 <Save className="h-4 w-4 mr-2" />
                 Save
               </button>
+            ) : currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </button>
             ) : (
-              currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  onClick={handleSubmit}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Register Vendor
-                </button>
-              )
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Register Vendor
+              </button>
             )}
           </div>
         </div>

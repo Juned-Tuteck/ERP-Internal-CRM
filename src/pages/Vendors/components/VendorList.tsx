@@ -1,7 +1,15 @@
-import React from 'react';
-import { Truck, MapPin, DollarSign, Calendar, Tag, Phone, Mail } from 'lucide-react';
+import React from "react";
+import {
+  Truck,
+  MapPin,
+  DollarSign,
+  Calendar,
+  Tag,
+  Phone,
+  Mail,
+} from "lucide-react";
 
-interface Vendor {
+export interface Vendor {
   id: string;
   name: string;
   category: string;
@@ -11,111 +19,48 @@ interface Vendor {
   phone: string;
   email: string;
   joinDate: string;
-  status: 'active' | 'inactive' | 'pending';
+  status: "active" | "inactive" | "pending";
   avatar: string;
 }
 
 interface VendorListProps {
   selectedVendor: Vendor | null;
   onSelectVendor: (vendor: Vendor) => void;
+  vendors: Vendor[];
 }
 
-const VendorList: React.FC<VendorListProps> = ({ selectedVendor, onSelectVendor }) => {
-  const vendors: Vendor[] = [
-    {
-      id: '1',
-      name: 'Bharat Electronics Ltd',
-      category: 'Electronics',
-      type: 'Manufacturer',
-      location: 'Bangalore, Karnataka',
-      contactPerson: 'Rajesh Kumar',
-      phone: '+91 98765 43210',
-      email: 'rajesh.kumar@bel.co.in',
-      joinDate: '2023-06-15',
-      status: 'active',
-      avatar: 'BE',
-    },
-    {
-      id: '2',
-      name: 'Tata Steel Supplies',
-      category: 'Raw Materials',
-      type: 'Distributor',
-      location: 'Mumbai, Maharashtra',
-      contactPerson: 'Priya Sharma',
-      phone: '+91 87654 32109',
-      email: 'priya.sharma@tatasteel.com',
-      joinDate: '2023-08-22',
-      status: 'active',
-      avatar: 'TS',
-    },
-    {
-      id: '3',
-      name: 'Ashok Leyland Parts',
-      category: 'Automotive',
-      type: 'Manufacturer',
-      location: 'Chennai, Tamil Nadu',
-      contactPerson: 'Vikram Singh',
-      phone: '+91 76543 21098',
-      email: 'vikram@ashokleyland.com',
-      joinDate: '2023-04-10',
-      status: 'active',
-      avatar: 'AL',
-    },
-    {
-      id: '4',
-      name: 'Reliance Polymers',
-      category: 'Chemicals',
-      type: 'Manufacturer',
-      location: 'Vadodara, Gujarat',
-      contactPerson: 'Amit Patel',
-      phone: '+91 65432 10987',
-      email: 'amit.patel@reliancepolymers.in',
-      joinDate: '2023-02-05',
-      status: 'inactive',
-      avatar: 'RP',
-    },
-    {
-      id: '5',
-      name: 'Godrej Interio',
-      category: 'Furniture',
-      type: 'Supplier',
-      location: 'Pune, Maharashtra',
-      contactPerson: 'Neha Gupta',
-      phone: '+91 54321 09876',
-      email: 'neha.gupta@godrejinterio.com',
-      joinDate: '2023-09-18',
-      status: 'pending',
-      avatar: 'GI',
-    },
-  ];
-
+const VendorList: React.FC<VendorListProps> = ({
+  selectedVendor,
+  onSelectVendor,
+  vendors,
+}) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "inactive":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Electronics':
-        return 'bg-blue-100 text-blue-800';
-      case 'Raw Materials':
-        return 'bg-gray-100 text-gray-800';
-      case 'Automotive':
-        return 'bg-red-100 text-red-800';
-      case 'Chemicals':
-        return 'bg-purple-100 text-purple-800';
-      case 'Furniture':
-        return 'bg-amber-100 text-amber-800';
+      case "Electronics":
+        return "bg-blue-100 text-blue-800";
+      case "Raw Materials":
+        return "bg-gray-100 text-gray-800";
+      case "Automotive":
+        return "bg-red-100 text-red-800";
+      case "Chemicals":
+        return "bg-purple-100 text-purple-800";
+      case "Furniture":
+        return "bg-amber-100 text-amber-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -125,53 +70,75 @@ const VendorList: React.FC<VendorListProps> = ({ selectedVendor, onSelectVendor 
         <h3 className="text-lg font-semibold text-gray-900">All Vendors</h3>
         <p className="text-sm text-gray-500">{vendors.length} total vendors</p>
       </div>
-      
+
       <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-        {vendors.map((vendor) => (
-          <div
-            key={vendor.id}
-            onClick={() => onSelectVendor(vendor)}
-            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${
-              selectedVendor?.id === vendor.id ? 'bg-blue-50 border-r-2 border-blue-600' : ''
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <div className="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <span className="text-sm font-medium text-white">{vendor.avatar}</span>
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900 truncate">{vendor.name}</p>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status)}`}>
-                    {vendor.status}
-                  </span>
-                </div>
-                <div className="flex items-center mt-1">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-2 ${getCategoryColor(vendor.category)}`}>
-                    {vendor.category}
-                  </span>
-                  <span className="text-xs text-gray-500">{vendor.type}</span>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center text-xs text-gray-500">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {vendor.location.split(',')[0]}
-                  </div>
-                  <div className="flex items-center text-xs text-gray-500">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Since {new Date(vendor.joinDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+        {Array.isArray(vendors) && vendors.length > 0 ? (
+          vendors.map((vendor) => (
+            <div
+              key={vendor.id}
+              onClick={() => onSelectVendor(vendor)}
+              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${
+                selectedVendor?.id === vendor.id
+                  ? "bg-blue-50 border-r-2 border-blue-600"
+                  : ""
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <span className="text-sm font-medium text-white">
+                      {vendor.avatar}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center mt-1 text-xs text-gray-500">
-                  <Phone className="h-3 w-3 mr-1" />
-                  {vendor.phone}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {vendor.name}
+                    </p>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        vendor.status
+                      )}`}
+                    >
+                      {vendor.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center mt-1">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-2 ${getCategoryColor(
+                        vendor.category
+                      )}`}
+                    >
+                      {vendor.category}
+                    </span>
+                    <span className="text-xs text-gray-500">{vendor.type}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center text-xs text-gray-500">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {vendor.location.split(",")[0]}
+                    </div>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Since{" "}
+                      {new Date(vendor.joinDate).toLocaleDateString("en-IN", {
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center mt-1 text-xs text-gray-500">
+                    <Phone className="h-3 w-3 mr-1" />
+                    {vendor.phone}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <div className="p-4 text-gray-500">No vendors found.</div>
+        )}
       </div>
     </div>
   );
