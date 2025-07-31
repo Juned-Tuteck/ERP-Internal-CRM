@@ -255,7 +255,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
+                  {/* <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th> */}
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
@@ -266,7 +266,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.brand}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
+                    {/* <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td> */}
                     <td className="px-3 py-2 whitespace-nowrap">
                       <button
                         onClick={() => {
@@ -396,7 +396,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₹)</th>
+                        {/* <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₹)</th> */}
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
@@ -425,7 +425,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                               className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td>
+                          {/* <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td> */}
                           <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
                               <button
