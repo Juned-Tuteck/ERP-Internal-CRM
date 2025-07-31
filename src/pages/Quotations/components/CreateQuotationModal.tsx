@@ -37,43 +37,39 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     supervisionCosts: [],
     financeCosts: [],
     contingencyCosts: [],
-   projectSummary: {
-     contractValue: 0,
-     materialCost: 0,
-     labourCost: 0,
-     totalOwnCost: 0
-   },
+    totalOverheadsCost: 0,
+    materialCost: 0,
+    labourCost: 0,
+    totalOwnCost: 0,
+    contractValue: 0,
     // Step 3: Summary
-    supplyData: {
+    supplySummary: {
       ownAmount: 0,
-      overheadsPercentage: 10,
+      overheadsPercentage: 0,
       overheadsAmount: 0,
-      subtotal1: 0,
-      marginPercentage: 15,
+      marginPercentage: 0,
+      subTotal: 0,
       marginAmount: 0,
-      subtotal2: 0,
       sellingAmount: 0,
       mf: 0
     },
-    labourData: {
+    labourSummary: {
       ownAmount: 0,
-      overheadsPercentage: 12,
+      overheadsPercentage: 0,
       overheadsAmount: 0,
-      subtotal1: 0,
-      marginPercentage: 20,
+      marginPercentage: 0,
+      subTotal: 0,
       marginAmount: 0,
-      subtotal2: 0,
       sellingAmount: 0,
       mf: 0
     },
-    sitcData: {
+    sitcSummary: {
       ownAmount: 0,
-      overheadsPercentage: 8,
+      overheadsPercentage: 0,
       overheadsAmount: 0,
-      subtotal1: 0,
-      marginPercentage: 18,
+      marginPercentage: 0,
+      subTotal: 0,
       marginAmount: 0,
-      subtotal2: 0,
       sellingAmount: 0,
       mf: 0
     },
@@ -82,6 +78,18 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       highSideSupply: 18,
       lowSideSupply: 18,
       installation: 18
+    },
+    finalCosting: {
+      categorizedItems: [],
+      highSideAmount: 0,
+      lowSideAmount: 0,
+      installationAmount: 0,
+      highSideWithGST: 0,
+      lowSideWithGST: 0,
+      installationWithGST: 0,
+      totalWithoutGST: 0,
+      totalWithGST: 0,
+      totalGSTAmount: 0
     },
     // Step 5: Comments
     comments: []
@@ -105,30 +113,39 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         leadId: leadId || '',
         bomId: initialData.bomId || '',
         items: initialData.items || [],
+        // Step 2: POC
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
         financeCosts: initialData.financeCosts || [],
         contingencyCosts: initialData.contingencyCosts || [],
-        projectSummary: {
-          ...defaultData.projectSummary,
-          ...(initialData.projectSummary || {})
+        totalOverheadsCost: initialData.totalOverheadsCost || 0,
+        materialCost: initialData.materialCost || 0,
+        labourCost: initialData.labourCost || 0,
+        totalOwnCost: initialData.totalOwnCost || 0,
+        contractValue: initialData.contractValue || 0,
+        // Step 3: Summary
+        supplySummary: {
+          ...defaultData.supplySummary,
+          ...(initialData.supplySummary || {})
         },
-        supplyData: {
-          ...defaultData.supplyData,
-          ...(initialData.supplyData || {})
+        labourSummary: {
+          ...defaultData.labourSummary,
+          ...(initialData.labourSummary || {})
         },
-        labourData: {
-          ...defaultData.labourData,
-          ...(initialData.labourData || {})
+        sitcSummary: {
+          ...defaultData.sitcSummary,
+          ...(initialData.sitcSummary || {})
         },
-        sitcData: {
-          ...defaultData.sitcData,
-          ...(initialData.sitcData || {})
-        },
+        // Step 4: Final Costing
         gstRates: {
           ...defaultData.gstRates,
           ...(initialData.gstRates || {})
         },
+        finalCosting: {
+          ...defaultData.finalCosting,
+          ...(initialData.finalCosting || {})
+        },
+        // Step 5: Comments
         comments: initialData.comments || []
       };
     }
@@ -162,30 +179,39 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         leadId: leadId || '',
         bomId: initialData.bomId || '',
         items: initialData.items || [],
+        // Step 2: POC
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
         financeCosts: initialData.financeCosts || [],
         contingencyCosts: initialData.contingencyCosts || [],
-        projectSummary: {
-          ...defaultData.projectSummary,
-          ...(initialData.projectSummary || {})
+        totalOverheadsCost: initialData.totalOverheadsCost || 0,
+        materialCost: initialData.materialCost || 0,
+        labourCost: initialData.labourCost || 0,
+        totalOwnCost: initialData.totalOwnCost || 0,
+        contractValue: initialData.contractValue || 0,
+        // Step 3: Summary
+        supplySummary: {
+          ...defaultData.supplySummary,
+          ...(initialData.supplySummary || {})
         },
-        supplyData: {
-          ...defaultData.supplyData,
-          ...(initialData.supplyData || {})
+        labourSummary: {
+          ...defaultData.labourSummary,
+          ...(initialData.labourSummary || {})
         },
-        labourData: {
-          ...defaultData.labourData,
-          ...(initialData.labourData || {})
+        sitcSummary: {
+          ...defaultData.sitcSummary,
+          ...(initialData.sitcSummary || {})
         },
-        sitcData: {
-          ...defaultData.sitcData,
-          ...(initialData.sitcData || {})
-        },
+        // Step 4: Final Costing
         gstRates: {
           ...defaultData.gstRates,
           ...(initialData.gstRates || {})
         },
+        finalCosting: {
+          ...defaultData.finalCosting,
+          ...(initialData.finalCosting || {})
+        },
+        // Step 5: Comments
         comments: initialData.comments || []
       });
     }
@@ -217,10 +243,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   };
   
   // Calculate total items cost for Step 2
-  const totalItemsCost = (formData.items || []).reduce(
-    (sum: number, item: any) => sum + (item.supplyOwnAmount || item.price || 0) + (item.installationOwnAmount || (item.price * 0.3) || 0), 
-    0
-  );
+  const totalItemsCost = (formData.items || []).reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0) + (item.finalInstallationAmount || 0), 0);
 
   if (!isOpen) return null;
 
@@ -366,7 +389,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isEditMode ? 'Save Changes' : 'Create Quotation'}
+                Create Quotation
               </button>
             )}
           </div>

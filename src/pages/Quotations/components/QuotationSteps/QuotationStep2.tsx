@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface QuotationStep2Props {
   formData: any;
@@ -8,664 +8,336 @@ interface QuotationStep2Props {
 }
 
 const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData, totalItemsCost }) => {
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [costCategory, setCostCategory] = useState<'project' | 'supervision' | 'finance' | 'contingency'>('project');
-  const [costItem, setCostItem] = useState({
-    description: '',
-    nosPercentage: '',
-    monthlyExpense: '',
-    months: '',
-    diversity: '',
-    amount: 0
+  const [expandedSections, setExpandedSections] = useState({
+    project: true,
+    supervision: true,
+    finance: true,
+    contingency: true
   });
 
-  // Mock data for dropdowns
-  const projectDescriptions = ['Site Setup', 'Project Management', 'Quality Control', 'HSE Management'];
-  const supervisionDescriptions = ['Project Manager', 'Site Engineer', 'Safety Officer', 'Quality Control Engineer'];
-  const financeDescriptions = ['Bank Guarantee', 'Insurance', 'Letter of Credit', 'Processing Fee'];
-  const contingencyDescriptions = ['Project Contingency', 'Weather Contingency', 'Material Price Fluctuation', 'Labor Shortage'];
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setCostItem({
-      ...costItem,
-      [name]: value
-    });
-
-    // Calculate amount if all required fields are filled
-    if (name === 'nosPercentage' || name === 'monthlyExpense' || name === 'months' || name === 'diversity') {
-      calculateAmount();
-    }
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section as keyof typeof prev]
+    }));
   };
 
-  const calculateAmount = () => {
-    if (costCategory === 'finance' || costCategory === 'contingency') {
-      // For finance and contingency, calculate based on percentage of total items cost
-      if (costItem.nosPercentage) {
-        const percentage = parseFloat(costItem.nosPercentage) || 0;
-        const amount = (percentage / 100) * totalItemsCost;
-        setCostItem(prev => ({
-          ...prev,
-          amount: amount,
-          // Set default values for other fields if they're empty
-          monthlyExpense: prev.monthlyExpense || '0',
-          months: prev.months || '1',
-          diversity: prev.diversity || '100'
-        }));
-      }
-    } else {
-      // For project and supervision, use the full calculation
-      if (costItem.nosPercentage && costItem.monthlyExpense && costItem.months && costItem.diversity) {
-        const nos = parseFloat(costItem.nosPercentage) || 0;
-        const expense = parseFloat(costItem.monthlyExpense) || 0;
-        const months = parseFloat(costItem.months) || 0;
-        const diversity = parseFloat(costItem.diversity) || 0;
-        
-        const amount = nos * expense * months * (diversity / 100);
-        setCostItem(prev => ({
-          ...prev,
-          amount: amount
-        }));
-      }
-    }
-  };
-
-  const handleAddCost = () => {
-    const newCost = {
+  const addCostItem = (section: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts') => {
+    const newItem = {
       id: Date.now().toString(),
-      ...costItem
+      description: '',
+      nosPercentage: 0,
+      monthlyExpense: 0,
+      months: 0,
+      diversity: 0,
+      total: 0
     };
 
-    if (costCategory === 'project') {
-      setFormData({
-        ...formData,
-        projectCosts: [...formData.projectCosts, newCost]
-      });
-    } else if (costCategory === 'supervision') {
-      setFormData({
-        ...formData,
-        supervisionCosts: [...formData.supervisionCosts, newCost]
-      });
-    } else if (costCategory === 'finance') {
-      setFormData({
-        ...formData,
-        financeCosts: [...formData.financeCosts, newCost]
-      });
-    } else if (costCategory === 'contingency') {
-      setFormData({
-        ...formData,
-        contingencyCosts: [...formData.contingencyCosts, newCost]
-      });
-    }
-
-    // Reset form
-    setCostItem({
-      description: '',
-      nosPercentage: '',
-      monthlyExpense: '',
-      months: '',
-      diversity: '',
-      amount: 0
+    setFormData({
+      ...formData,
+      [section]: [...(formData[section] || []), newItem]
     });
-    setShowAddModal(false);
   };
 
-  const handleRemoveCost = (category: 'project' | 'supervision' | 'finance' | 'contingency', id: string) => {
-    if (category === 'project') {
-      setFormData({
-        ...formData,
-        projectCosts: formData.projectCosts.filter((cost: any) => cost.id !== id)
-      });
-    } else if (category === 'supervision') {
-      setFormData({
-        ...formData,
-        supervisionCosts: formData.supervisionCosts.filter((cost: any) => cost.id !== id)
-      });
-    } else if (category === 'finance') {
-      setFormData({
-        ...formData,
-        financeCosts: formData.financeCosts.filter((cost: any) => cost.id !== id)
-      });
-    } else if (category === 'contingency') {
-      setFormData({
-        ...formData,
-        contingencyCosts: formData.contingencyCosts.filter((cost: any) => cost.id !== id)
-      });
+  const updateCostItem = (section: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts', index: number, field: string, value: any) => {
+    const updatedItems = [...(formData[section] || [])];
+    updatedItems[index][field] = value;
+    
+    // Calculate total
+    if (field !== 'description') {
+      const item = updatedItems[index];
+      item.total = (item.monthlyExpense * item.months) * item.diversity * item.nosPercentage;
     }
-  };
-
-  const openAddModal = (category: 'project' | 'supervision' | 'finance' | 'contingency') => {
-    setCostCategory(category);
-    setCostItem({
-      description: '',
-      nosPercentage: '',
-      monthlyExpense: '',
-      months: '',
-      diversity: '',
-      amount: 0
-    });
-    setShowAddModal(true);
-  };
-
-  // Calculate totals
-  const totalProjectCost = formData.projectCosts?.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0) || 0;
-  const totalSupervisionCost = formData.supervisionCosts.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0);
-  const totalFinanceCost = formData.financeCosts.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0);
-  const totalContingencyCost = formData.contingencyCosts.reduce((sum: number, cost: any) => sum + parseFloat(cost.amount || 0), 0);
-  const totalOverheadsCost = totalProjectCost + totalSupervisionCost + totalFinanceCost + totalContingencyCost;
-
-  // Handle project summary changes
-  const handleProjectSummaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    const numValue = parseFloat(value) || 0;
-    
-    const updatedSummary = {
-      ...formData.projectSummary,
-      [name]: numValue
-    };
-    
-    // Calculate total own cost
-    updatedSummary.totalOwnCost = updatedSummary.materialCost + updatedSummary.labourCost;
     
     setFormData({
       ...formData,
-      projectSummary: updatedSummary
+      [section]: updatedItems
     });
+  };
+
+  const removeCostItem = (section: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts', index: number) => {
+    const updatedItems = [...(formData[section] || [])];
+    updatedItems.splice(index, 1);
+    
+    setFormData({
+      ...formData,
+      [section]: updatedItems
+    });
+  };
+
+  // Calculate section totals
+  const totalProjectCost = (formData.projectCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
+  const totalSupervisionCost = (formData.supervisionCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
+  const totalFinanceCost = (formData.financeCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
+  const totalContingencyCost = (formData.contingencyCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
+  const totalOverheadsCost = totalProjectCost + totalSupervisionCost + totalFinanceCost + totalContingencyCost;
+
+  // Calculate summary values
+  const materialCost = formData.materialCost || (formData.items?.reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0), 0) || 0);
+  const labourCost = formData.labourCost || (formData.items?.reduce((sum: number, item: any) => sum + (item.finalInstallationAmount || 0), 0) || 0);
+  const totalOwnCost = materialCost + labourCost;
+  const contractValue = formData.contractValue || (totalOwnCost + totalOverheadsCost);
+
+  const handleSummaryChange = (field: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setFormData({
+      ...formData,
+      [field]: numValue
+    });
+  };
+
+  const renderCostSection = (
+    title: string,
+    sectionKey: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts',
+    expandKey: 'project' | 'supervision' | 'finance' | 'contingency',
+    total: number
+  ) => {
+    const items = formData[sectionKey] || [];
+    
+    return (
+      <div className="border border-gray-200 rounded-lg">
+        <div 
+          className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer"
+          onClick={() => toggleSection(expandKey)}
+        >
+          <div className="flex items-center space-x-2">
+            {expandedSections[expandKey] ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
+            <h4 className="text-md font-medium text-gray-900">{title}</h4>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm font-medium text-green-600">
+              Total: ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                addCostItem(sectionKey);
+              }}
+              className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add
+            </button>
+          </div>
+        </div>
+        
+        {expandedSections[expandKey] && (
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nos / % Age</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {items.map((item: any, index: number) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={item.description || ''}
+                          onChange={(e) => updateCostItem(sectionKey, index, 'description', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="Enter description"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={item.nosPercentage || 0}
+                          onChange={(e) => updateCostItem(sectionKey, index, 'nosPercentage', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={item.monthlyExpense || 0}
+                          onChange={(e) => updateCostItem(sectionKey, index, 'monthlyExpense', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={item.months || 0}
+                          onChange={(e) => updateCostItem(sectionKey, index, 'months', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={item.diversity || 0}
+                          onChange={(e) => updateCostItem(sectionKey, index, 'diversity', parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-sm font-medium text-gray-900">
+                        ₹{(item.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          onClick={() => removeCostItem(sectionKey, index)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {items.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-4 text-sm text-gray-500 text-center">
+                        No items added yet. Click "Add" to create the first item.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-50 p-4 rounded-lg mb-4">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
-        <p className="text-sm text-gray-600">Overhead costs associated with this project.</p>
-      </div>
-      
-      {/* Project Management & Site Establishment Cost */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-md font-medium text-gray-900">Project Management & Site Establishment Cost</h4>
-          <button
-            type="button"
-            onClick={() => openAddModal('project')}
-            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </button>
-        </div>
-        
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {formData.projectCosts?.map((cost: any) => (
-              <tr key={cost.id} className="hover:bg-gray-50">
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{cost.description}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.nosPercentage}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(cost.monthlyExpense).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.months}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.diversity}%</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(cost.amount).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleRemoveCost('project', cost.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {!formData.projectCosts || formData.projectCosts.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                  No project management costs added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          {formData.projectCosts && formData.projectCosts.length > 0 && (
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Project Management Cost:</td>
-                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{totalProjectCost.toLocaleString('en-IN')}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      {/* Supervision Costs */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-md font-medium text-gray-900">Supervision Costs</h4>
-          <button
-            type="button"
-            onClick={() => openAddModal('supervision')}
-            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </button>
-        </div>
-        
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {formData.supervisionCosts.map((cost: any) => (
-              <tr key={cost.id} className="hover:bg-gray-50">
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{cost.description}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.nosPercentage}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(cost.monthlyExpense).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.months}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.diversity}%</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(cost.amount).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleRemoveCost('supervision', cost.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {formData.supervisionCosts.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                  No supervision costs added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          {formData.supervisionCosts.length > 0 && (
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
-                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{totalSupervisionCost.toLocaleString('en-IN')}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      {/* Finance Costs */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-md font-medium text-gray-900">Finance Costs</h4>
-          <button
-            type="button"
-            onClick={() => openAddModal('finance')}
-            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </button>
-        </div>
-        
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {formData.financeCosts.map((cost: any) => (
-              <tr key={cost.id} className="hover:bg-gray-50">
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{cost.description}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.nosPercentage}%</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(cost.monthlyExpense).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.months}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.diversity}%</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(cost.amount).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleRemoveCost('finance', cost.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {formData.financeCosts.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                  No finance costs added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          {formData.financeCosts.length > 0 && (
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Finance Cost:</td>
-                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{totalFinanceCost.toLocaleString('en-IN')}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      {/* Contingencies */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-md font-medium text-gray-900">Contingencies</h4>
-          <button
-            type="button"
-            onClick={() => openAddModal('contingency')}
-            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </button>
-        </div>
-        
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NOS / %</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {formData.contingencyCosts.map((cost: any) => (
-              <tr key={cost.id} className="hover:bg-gray-50">
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{cost.description}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.nosPercentage}%</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(cost.monthlyExpense).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.months}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{cost.diversity}%</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(cost.amount).toLocaleString('en-IN')}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleRemoveCost('contingency', cost.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {formData.contingencyCosts.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                  No contingency costs added yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          {formData.contingencyCosts.length > 0 && (
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Contingency Cost:</td>
-                <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{totalContingencyCost.toLocaleString('en-IN')}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      {/* Total Overheads */}
       <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="flex justify-between font-medium">
-          <span className="text-md text-gray-900">Total Overheads Cost:</span>
-          <span className="text-md text-gray-900">₹{totalOverheadsCost.toLocaleString('en-IN')}</span>
-        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
+        <p className="text-sm text-gray-600">Calculate overhead costs associated with this project.</p>
       </div>
-     
-     {/* Project Summary Card */}
-     <div className="border border-gray-200 rounded-lg p-4 mt-6">
-       <h4 className="text-md font-medium text-gray-900 mb-4">Project Summary</h4>
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">
-             Contract Value
-           </label>
-           <input
-             type="number"
-             name="contractValue"
-             value={formData.projectSummary.contractValue}
-             onChange={handleProjectSummaryChange}
-             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Enter contract value"
-           />
-         </div>
-         
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">
-             Material Cost
-           </label>
-           <input
-             type="number"
-             name="materialCost"
-             value={formData.projectSummary.materialCost}
-             onChange={handleProjectSummaryChange}
-             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Enter material cost"
-           />
-         </div>
-         
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">
-             Labour Cost
-           </label>
-           <input
-             type="number"
-             name="labourCost"
-             value={formData.projectSummary.labourCost}
-             onChange={handleProjectSummaryChange}
-             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-             placeholder="Enter labour cost"
-           />
-         </div>
-         
-         <div>
-           <label className="block text-sm font-medium text-gray-700 mb-1">
-             Total Own Cost
-           </label>
-           <input
-             type="number"
-             value={formData.projectSummary.totalOwnCost}
-             className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-             placeholder="0.00"
-             readOnly
-           />
-         </div>
-       </div>
-     </div>
 
-      {/* Add Cost Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Add {costCategory === 'project' ? 'Project Management' : 
-                     costCategory === 'supervision' ? 'Supervision' : 
-                     costCategory === 'finance' ? 'Finance' : 'Contingency'} Cost
-              </h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="p-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
-                  </label>
-                  <select
-                    name="description"
-                    value={costItem.description}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select Description</option>
-                    {costCategory === 'project' && projectDescriptions.map(desc => (
-                      <option key={desc} value={desc}>{desc}</option>
-                    ))}
-                    {costCategory === 'supervision' && supervisionDescriptions.map(desc => (
-                      <option key={desc} value={desc}>{desc}</option>
-                    ))}
-                    {costCategory === 'finance' && financeDescriptions.map(desc => (
-                      <option key={desc} value={desc}>{desc}</option>
-                    ))}
-                    {costCategory === 'contingency' && contingencyDescriptions.map(desc => (
-                      <option key={desc} value={desc}>{desc}</option>
-                    ))}
-                  </select>
-                </div>
+      {/* Four Cost Sections */}
+      <div className="space-y-4">
+        {renderCostSection(
+          'Project Management & Site Establishment Cost',
+          'projectCosts',
+          'project',
+          totalProjectCost
+        )}
+        
+        {renderCostSection(
+          'Supervision',
+          'supervisionCosts',
+          'supervision',
+          totalSupervisionCost
+        )}
+        
+        {renderCostSection(
+          'Finance Cost',
+          'financeCosts',
+          'finance',
+          totalFinanceCost
+        )}
+        
+        {renderCostSection(
+          'Contingencies',
+          'contingencyCosts',
+          'contingency',
+          totalContingencyCost
+        )}
+      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {costCategory === 'finance' || costCategory === 'contingency' ? 'Percentage (%)' : 'NOS'} *
-                  </label>
-                  <input
-                    type="number"
-                    name="nosPercentage"
-                    value={costItem.nosPercentage}
-                    onChange={handleInputChange}
-                    required
-                    min="0"
-                    step={costCategory === 'finance' || costCategory === 'contingency' ? "0.1" : "1"}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={costCategory === 'finance' || costCategory === 'contingency' ? "Enter percentage" : "Enter number"}
-                  />
-                  {(costCategory === 'finance' || costCategory === 'contingency') && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Percentage of total items cost (₹{totalItemsCost.toLocaleString('en-IN')})
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monthly Expense (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    name="monthlyExpense"
-                    value={costItem.monthlyExpense}
-                    onChange={handleInputChange}
-                    required={costCategory !== 'finance' && costCategory !== 'contingency'}
-                    min="0"
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      costCategory === 'finance' || costCategory === 'contingency' ? 'bg-gray-50' : ''
-                    }`}
-                    placeholder="Enter amount"
-                    readOnly={costCategory === 'finance' || costCategory === 'contingency'}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Months *
-                  </label>
-                  <input
-                    type="number"
-                    name="months"
-                    value={costItem.months}
-                    onChange={handleInputChange}
-                    required={costCategory !== 'finance' && costCategory !== 'contingency'}
-                    min="0"
-                    step="1"
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      costCategory === 'finance' || costCategory === 'contingency' ? 'bg-gray-50' : ''
-                    }`}
-                    placeholder="Enter months"
-                    readOnly={costCategory === 'finance' || costCategory === 'contingency'}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Diversity (%) *
-                  </label>
-                  <input
-                    type="number"
-                    name="diversity"
-                    value={costItem.diversity}
-                    onChange={handleInputChange}
-                    required={costCategory !== 'finance' && costCategory !== 'contingency'}
-                    min="0"
-                    max="100"
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      costCategory === 'finance' || costCategory === 'contingency' ? 'bg-gray-50' : ''
-                    }`}
-                    placeholder="Enter percentage"
-                    readOnly={costCategory === 'finance' || costCategory === 'contingency'}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Calculated Amount
-                  </label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                    ₹{costItem.amount.toLocaleString('en-IN')}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end p-4 border-t border-gray-200">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mr-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddCost}
-                disabled={!costItem.description || !costItem.nosPercentage}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Add Cost
-              </button>
+      {/* Summary Section */}
+      <div className="border border-gray-200 rounded-lg p-6 bg-blue-50">
+        <h4 className="text-lg font-medium text-gray-900 mb-4">Summary</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Total Overheads Cost
+            </label>
+            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
+              ₹{totalOverheadsCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Material Cost
+            </label>
+            <input
+              type="number"
+              value={materialCost}
+              onChange={(e) => handleSummaryChange('materialCost', e.target.value)}
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Labour Cost
+            </label>
+            <input
+              type="number"
+              value={labourCost}
+              onChange={(e) => handleSummaryChange('labourCost', e.target.value)}
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Total Own Cost
+            </label>
+            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
+              ₹{totalOwnCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contract Value
+            </label>
+            <input
+              type="number"
+              value={contractValue}
+              onChange={(e) => handleSummaryChange('contractValue', e.target.value)}
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder={`Auto: ₹${(totalOwnCost + totalOverheadsCost).toLocaleString('en-IN')}`}
+            />
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Update formData with calculated totals */}
+      {React.useEffect(() => {
+        setFormData((prev: any) => ({
+          ...prev,
+          totalOverheadsCost,
+          totalOwnCost,
+          materialCost: prev.materialCost || materialCost,
+          labourCost: prev.labourCost || labourCost,
+          contractValue: prev.contractValue || contractValue
+        }));
+      }, [totalOverheadsCost, totalOwnCost, materialCost, labourCost, contractValue])}
     </div>
   );
 };
