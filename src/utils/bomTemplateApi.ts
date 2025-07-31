@@ -81,7 +81,7 @@ export const createBOMTemplateDetails = async (details: any[]) => {
 
 // Get BOM template items for dropdown
 export const getBOMTemplateItems = async () => {
-  const response = await axios.patch(`${API_BASE_URL}/bom-template/items/all`);
+  const response = await axios.get(`${API_BASE_URL}/bom-template/items`);
   
   // Map backend response to UI format
   const mappedItems = response.data.data?.map((item: any) => ({

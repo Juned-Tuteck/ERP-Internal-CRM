@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Search, Edit } from 'lucide-react';
+import { getLeads, createBOM, getBOMTemplates, getBOMTemplateById } from '../../../utils/bomApi';
+import { LEAD_KEY_MAP, BOM_TEMPLATE_RESPONSE_KEY_MAP, BOM_TEMPLATE_SPEC_KEY_MAP, BOM_TEMPLATE_DETAIL_KEY_MAP } from '../../../utils/bomApi';
 
 interface CreateBOMProps {
   isOpen: boolean;
@@ -35,48 +37,67 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [specification, setSpecification] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [filteredItems, setFilteredItems] = useState<BOMItem[]>([]);
+  const [createdBOMId, setCreatedBOMId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // API state
+  const [leads, setLeads] = useState<any[]>([]);
+  const [bomTemplates, setBOMTemplates] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [templateSpecs, setTemplateSpecs] = useState<any[]>([]);
 
-  // Mock data for dropdowns
-  const leads = [
-    { id: '1', name: 'Mumbai Metro Ventilation System', workType: 'Basement Ventilation' },
-    { id: '2', name: 'Corporate Office HVAC Upgrade', workType: 'HVAC Systems' },
-    { id: '3', name: 'Hospital Fire Safety System', workType: 'Fire Safety' },
-    { id: '4', name: 'Residential Complex Electrical', workType: 'Electrical' },
-    { id: '5', name: 'Shopping Mall Plumbing System', workType: 'Plumbing' },
-  ];
+  // Fetch leads when modal opens
+  useEffect(() => {
+    const fetchLeads = async () => {
+      if (isOpen) {
+        try {
+          const response = await getLeads();
+          const apiLeads = response.data || [];
+          
+          // Map API response to UI format
+          const mappedLeads = apiLeads.map((lead: any) => ({
+            [LEAD_KEY_MAP.lead_id]: lead.lead_id,
+            [LEAD_KEY_MAP.project_name]: lead.project_name,
+            [LEAD_KEY_MAP.work_type]: lead.work_type,
+            [LEAD_KEY_MAP.business_name]: lead.business_name
+          }));
+          
+          setLeads(mappedLeads);
+        } catch (error) {
+          console.error('Error fetching leads:', error);
+          setLeads([]);
+        }
+      }
+    };
 
-  const templates: BOMItem[] = [
-    {
-      id: '1',
-      itemCode: 'FAN-001',
-      itemName: 'Industrial Exhaust Fan',
-      uomName: 'Nos',
-      rate: 12500,
-      quantity: 4,
-      price: 50000,
-    },
-    {
-      id: '2',
-      itemCode: 'DUCT-001',
-      itemName: 'Galvanized Steel Duct',
-      uomName: 'Meter',
-      rate: 850,
-      quantity: 120,
-      price: 102000,
-    },
-    {
-      id: '3',
-      itemCode: 'DAMPER-001',
-      itemName: 'Fire Damper',
-      uomName: 'Nos',
-      rate: 3200,
-      quantity: 6,
-      price: 19200,
-    },
-  ];
+    fetchLeads();
+  }, [isOpen]);
+
+  // Fetch BOM templates when step 2 loads
+  useEffect(() => {
+    const fetchBOMTemplates = async () => {
+      if (currentStep === 2) {
+        try {
+          const response = await getBOMTemplates();
+          const apiTemplates = response.data || [];
+          
+          // Map API response to UI format
+          const mappedTemplates = apiTemplates.map((template: any) => ({
+            [BOM_TEMPLATE_RESPONSE_KEY_MAP.id]: template.id,
+            [BOM_TEMPLATE_RESPONSE_KEY_MAP.name]: template.name,
+            [BOM_TEMPLATE_RESPONSE_KEY_MAP.workType]: template.work_type
+          }));
+          
+          setBOMTemplates(mappedTemplates);
+        } catch (error) {
+          console.error('Error fetching BOM templates:', error);
+          setBOMTemplates([]);
+        }
+      }
+    };
+
+    fetchBOMTemplates();
+  }, [currentStep]);
 
   // Ensure hooks are called unconditionally and consistently
   useEffect(() => {
@@ -86,33 +107,6 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       setCurrentStep(1);
     }
   }, [initialData]);
-
-  useEffect(() => {
-    setFilteredItems(
-      masterItems.filter(item =>
-        item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.itemCode.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    );
-  }, [searchQuery]);
-
-  const masterItems: BOMItem[] = [
-    { id: '1', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', rate: 12500, quantity: 0, price: 0 },
-    { id: '2', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', rate: 850, quantity: 0, price: 0 },
-    { id: '3', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', rate: 3200, quantity: 0, price: 0 },
-    { id: '4', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', rate: 1800, quantity: 0, price: 0 },
-    { id: '5', itemCode: 'CABLE-001', itemName: 'Electrical Cable', uomName: 'Meter', rate: 120, quantity: 0, price: 0 },
-    { id: '6', itemCode: 'PANEL-001', itemName: 'Control Panel', uomName: 'Nos', rate: 25000, quantity: 0, price: 0 },
-    { id: '7', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500, quantity: 0, price: 0 },
-    { id: '8', itemCode: 'PIPE-001', itemName: 'PVC Pipe', uomName: 'Meter', rate: 350, quantity: 0, price: 0 },
-  ];
-
-  useEffect(() => {
-    if (templates.length > 0) {
-      const defaultTemplate = templates[0];
-      setItems([defaultTemplate]);
-    }
-  }, []);
 
   const statuses = ['DRAFT', 'Submitted for Approval'];
 
@@ -129,44 +123,52 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       if (selectedLead) {
         setFormData(prev => ({
           ...prev,
-          leadName: selectedLead.name,
+          leadName: selectedLead.projectName,
           workType: selectedLead.workType
         }));
       }
     }
   };
 
-  const handleAddItem = () => {
-    if (selectedItem && quantity > 0) {
-      const newItem: BOMItem = {
-        id: Date.now().toString(),
-        itemCode: selectedItem.itemCode,
-        itemName: selectedItem.itemName,
-        uomName: selectedItem.uomName,
-        rate: selectedItem.rate,
-        quantity: quantity,
-        price: selectedItem.rate * quantity,
-        specifications: '',
-      };
-
-      setItems(prev => [...prev, newItem]);
-      setSelectedItem(null);
-      setQuantity(1);
-      setSearchQuery('');
+  // Handle BOM template selection
+  const handleTemplateSelect = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const templateId = e.target.value;
+    if (!templateId) {
+      setSelectedTemplate(null);
+      setTemplateSpecs([]);
+      return;
     }
-  };
 
-  const handleUpdateItem = () => {
-    if (selectedItem && quantity > 0) {
-      setItems(prev => prev.map(item =>
-        item.id === selectedItem.id ? {
-          ...item,
-          quantity: quantity,
-          price: selectedItem.rate * quantity,
-        } : item
-      ));
-      setSelectedItem(null);
-      setQuantity(1);
+    try {
+      const response = await getBOMTemplateById(templateId);
+      const templateData = response.data;
+      
+      setSelectedTemplate(templateData);
+      
+      // Map specs and items from API response
+      const mappedSpecs = templateData.specs?.map((spec: any) => ({
+        [BOM_TEMPLATE_SPEC_KEY_MAP.spec_id]: spec.spec_id,
+        [BOM_TEMPLATE_SPEC_KEY_MAP.spec_description]: spec.spec_description,
+        isExpanded: true,
+        [BOM_TEMPLATE_SPEC_KEY_MAP.details]: spec.details?.map((detail: any) => ({
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.detail_id]: detail.detail_id,
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.item_id]: detail.item_id,
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.required_quantity]: detail.required_quantity,
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.item_code]: detail.item_code,
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.item_name]: detail.item_name,
+          uomName: '-', // As specified
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.latest_lowest_basic_supply_rate]: detail.latest_lowest_basic_supply_rate,
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.latest_lowest_basic_installation_rate]: detail.latest_lowest_basic_installation_rate,
+          [BOM_TEMPLATE_DETAIL_KEY_MAP.latest_lowest_net_rate]: detail.latest_lowest_net_rate,
+          price: detail.required_quantity * detail.latest_lowest_net_rate
+        })) || []
+      })) || [];
+      
+      setTemplateSpecs(mappedSpecs);
+    } catch (error) {
+      console.error('Error fetching BOM template details:', error);
+      setSelectedTemplate(null);
+      setTemplateSpecs([]);
     }
   };
 
@@ -193,13 +195,62 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     }
   };
 
-  const handleRemoveItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
+  const toggleSpecExpansion = (specId: string) => {
+    setTemplateSpecs(prev => prev.map(spec => 
+      spec.id === specId ? { ...spec, isExpanded: !spec.isExpanded } : spec
+    ));
+  };
+
+  const updateSpecItemQuantity = (specId: string, itemId: string, quantity: number) => {
+    if (quantity <= 0) return;
+    
+    setTemplateSpecs(prev => prev.map(spec => 
+      spec.id === specId ? {
+        ...spec,
+        items: spec.items.map((item: any) => 
+          item.itemId === itemId ? {
+            ...item,
+            quantity,
+            price: item.netRate * quantity
+          } : item
+        )
+      } : spec
+    ));
+  };
+
+  // Create BOM API call
+  const handleCreateBOM = async () => {
+    if (!formData.leadId) return;
+    
+    setIsSubmitting(true);
+    try {
+      const bomPayload = {
+        name: formData.leadName,
+        leadId: formData.leadId,
+        date: formData.date,
+        workType: formData.workType
+      };
+      
+      const response = await createBOM(bomPayload);
+      const bomId = response.data?.id;
+      
+      if (bomId) {
+        setCreatedBOMId(bomId);
+        setCurrentStep(2);
+      } else {
+        throw new Error('BOM ID not received from API');
+      }
+    } catch (error) {
+      console.error('Error creating BOM:', error);
+      alert('Failed to create BOM. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleNext = () => {
     if (currentStep === 1 && formData.leadId) {
-      setCurrentStep(2);
+      handleCreateBOM();
     }
   };
 
@@ -212,9 +263,9 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
   const handleSubmit = () => {
     const bomData = {
       ...formData,
-      items,
-      totalItems: items.length,
-      totalValue: items.reduce((sum, item) => sum + item.price, 0),
+      specs: templateSpecs,
+      totalItems: templateSpecs.reduce((sum, spec) => sum + spec.items.length, 0),
+      totalValue: templateSpecs.reduce((sum, spec) => sum + spec.items.reduce((itemSum: number, item: any) => itemSum + item.price, 0), 0),
       createdDate: initialData?.createdDate || new Date().toISOString(),
     };
     
@@ -222,6 +273,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     
     // Reset form
     setCurrentStep(1);
+    setCreatedBOMId(null);
     setFormData({
       leadId: '',
       leadName: '',
@@ -230,7 +282,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       note: '',
       status: 'DRAFT',
     });
-    setItems([]);
+    setTemplateSpecs([]);
+    setSelectedTemplate(null);
   };
 
   if (!isOpen) return null;
@@ -248,9 +301,9 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
   const handleSave = () => {
     const bomData = {
       ...formData,
-      items,
-      totalItems: items.length,
-      totalValue: items.reduce((sum, item) => sum + item.price, 0),
+      specs: templateSpecs,
+      totalItems: templateSpecs.reduce((sum, spec) => sum + spec.items.length, 0),
+      totalValue: templateSpecs.reduce((sum, spec) => sum + spec.items.reduce((itemSum: number, item: any) => itemSum + item.price, 0), 0),
       createdDate: initialData?.createdDate || new Date().toISOString(),
     };
     onSubmit(bomData);
@@ -263,17 +316,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       note: '',
       status: 'DRAFT',
     });
-    setItems([]);
-  };
-
-  const handleTemplateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const templateId = e.target.value;
-    const selectedTemplate = templates.find(template => template.id === templateId);
-    if (selectedTemplate) {
-      setItems([selectedTemplate]);
-    } else {
-      setItems([]);
-    }
+    setTemplateSpecs([]);
+    setSelectedTemplate(null);
   };
 
   return (
@@ -332,7 +376,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
                 >
                   <option value="">Select Lead</option>
                   {leads.map(lead => (
-                    <option key={lead.id} value={lead.id}>{lead.name}</option>
+                    <option key={lead.id} value={lead.id}>{lead.projectName}</option>
                   ))}
                 </select>
               </div>
@@ -375,227 +419,104 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Select Template</h4>
                 <select
                   onChange={handleTemplateSelect}
-                  defaultValue={templates.length > 0 ? templates[0].id : ''}
+                  value={selectedTemplate?.id || ''}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select Template</option>
-                  {templates.map(template => (
-                    <option key={template.id} value={template.id}>{template.itemName}</option>
+                  {bomTemplates.map(template => (
+                    <option key={template.id} value={template.id}>{template.name}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Add Items Section */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Add Items</h4>
-                <div className="flex space-x-4 mb-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Search items by name or code"
-                      />
-                    </div>
-                  </div>
-                  <div className="w-24">
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => setQuantity(Number(e.target.value))}
-                      min="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Qty"
-                      disabled={!selectedItem}
-                    />
-                  </div>
-                  <button
-                    onClick={editingItemId ? handleUpdateItem : handleAddItem}
-                    disabled={!selectedItem}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    {editingItemId ? 'Update' : 'Add'}
-                  </button>
-                </div>
-
-                {/* Search Results */}
-                {searchQuery && !selectedItem && (
-                  <div className="border border-gray-200 rounded-md mb-4 max-h-40 overflow-y-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredItems.map(item => (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-2 whitespace-nowrap">
-                              <button
-                                onClick={() => {
-                                  setSelectedItem(item);
-                                  setSearchQuery('');
-                                }}
-                                className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                              >
-                                Select
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                        {filteredItems.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-2 text-sm text-gray-500 text-center">No items found</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* Selected Item */}
-                {selectedItem && (
-                  <div className="border border-gray-200 rounded-md p-4 mb-4 bg-blue-50">
-                    <div className="flex justify-between items-center mb-2">
-                      <h5 className="text-sm font-medium text-gray-900">Selected Item</h5>
-                      <button
-                        onClick={() => {
-                          setSelectedItem(null);
-                          setEditingItemId(null);
-                          setQuantity(1);
-                          setSpecification('');
-                        }}
-                        className="text-gray-400 hover:text-gray-600"
+              {/* Template Specs and Items */}
+              {templateSpecs.length > 0 && (
+                <div className="space-y-4">
+                  {templateSpecs.map((spec: any) => (
+                    <div key={spec.id} className="border border-gray-200 rounded-lg">
+                      {/* Spec Header */}
+                      <div 
+                        className="p-4 bg-gray-50 border-b border-gray-200 cursor-pointer"
+                        onClick={() => toggleSpecExpansion(spec.id)}
                       >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-gray-500">Item Code:</span> {selectedItem.itemCode}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Item Name:</span> {selectedItem.itemName}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">UOM:</span> {selectedItem.uomName}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Rate:</span> ₹{selectedItem.rate.toLocaleString('en-IN')}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Total:</span> ₹{(selectedItem.rate * quantity).toLocaleString('en-IN')}
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <button
-                        onClick={() => setShowSpecModal(true)}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Add Specification
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Items Table */}
-                <div className="border border-gray-200 rounded-md overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₹)</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {items.map(item => (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.quantity}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => {
-                                  // Increase quantity by 1 and update price accordingly
-                                  setItems(prev =>
-                                    prev.map(i =>
-                                      i.id === item.id
-                                        ? {
-                                            ...i,
-                                            quantity: i.quantity + 1,
-                                            price: (i.quantity + 1) * i.rate,
-                                          }
-                                        : i
-                                    )
-                                  );
-                                }}
-                                className="text-green-600 hover:text-green-900"
-                                title="Increase Quantity"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </button>
-                              {/* Edit icon beside + */}
-                              <button
-                                onClick={() => handleAddSpecification(item.id)}
-                                className="text-blue-600 hover:text-blue-900 pl-5"
-                                title="Edit Specification"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div>
+                              <h4 className="text-md font-medium text-gray-900">{spec.name}</h4>
+                              <p className="text-sm text-gray-500">{spec.items.length} item(s)</p>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {items.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                            No items added yet. Select a template or upload a CSV file.
-                          </td>
-                        </tr>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-green-600">
+                              ₹{spec.items.reduce((sum: number, item: any) => sum + item.price, 0).toLocaleString('en-IN')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Spec Items */}
+                      {spec.isExpanded && (
+                        <div className="p-4">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {spec.items.map((item: any) => (
+                                  <tr key={item.itemId} className="hover:bg-gray-50">
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.supplyRate.toLocaleString('en-IN')}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.installationRate.toLocaleString('en-IN')}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                      <input
+                                        type="number"
+                                        value={item.quantity}
+                                        onChange={(e) => updateSpecItemQuantity(spec.id, item.itemId, parseInt(e.target.value) || 1)}
+                                        min="1"
+                                        className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="bg-gray-50">
+                                <tr>
+                                  <td colSpan={6} className="px-3 py-2 text-sm font-medium text-right">Spec Total:</td>
+                                  <td className="px-3 py-2 text-sm font-medium text-gray-900">
+                                    ₹{spec.items.reduce((sum: number, item: any) => sum + item.price, 0).toLocaleString('en-IN')}
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
                       )}
-                    </tbody>
-                    {items.length > 0 && (
-                      <tfoot className="bg-gray-50">
-                        <tr>
-                          <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total:</td>
-                          <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                            ₹{items.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
-                          </td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
+                    </div>
+                  ))}
+                  
+                  {/* Overall Total */}
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-medium text-gray-900">Grand Total:</span>
+                      <span className="text-lg font-bold text-green-600">
+                        ₹{templateSpecs.reduce((sum, spec) => sum + spec.items.reduce((itemSum: number, item: any) => itemSum + item.price, 0), 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -704,17 +625,17 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={!formData.leadId}
+                disabled={!formData.leadId || isSubmitting}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Next
+                {isSubmitting ? 'Creating...' : 'Next'}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={items.length === 0}
+                disabled={templateSpecs.length === 0}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 <Save className="h-4 w-4 mr-2" />

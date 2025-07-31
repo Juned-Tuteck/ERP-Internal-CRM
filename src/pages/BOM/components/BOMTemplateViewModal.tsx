@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Tag } from 'lucide-react';
-import { getBOMTemplateById } from '../../../utils/bomTemplateApi';
+import { getBOMTemplateById } from '../../../utils/bomApi';
+import { BOM_TEMPLATE_RESPONSE_KEY_MAP, BOM_TEMPLATE_SPEC_KEY_MAP, BOM_TEMPLATE_DETAIL_KEY_MAP } from '../../../utils/bomApi';
 
 interface BOMTemplateViewModalProps {
   isOpen: boolean;
@@ -50,23 +51,23 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
         
         // Map API response to UI format
         const mappedTemplate: TemplateDetail = {
-          id: apiData.id,
-          name: apiData.name,
-          workType: apiData.work_type,
-          description: apiData.reason || '',
+          [BOM_TEMPLATE_RESPONSE_KEY_MAP.id]: apiData.id,
+          [BOM_TEMPLATE_RESPONSE_KEY_MAP.name]: apiData.name,
+          [BOM_TEMPLATE_RESPONSE_KEY_MAP.work_type]: apiData.work_type,
+          [BOM_TEMPLATE_RESPONSE_KEY_MAP.reason]: apiData.reason || '',
           specs: (apiData.specs || []).map((spec: any) => ({
-            id: spec.id,
-            name: spec.spec_description,
+            [BOM_TEMPLATE_SPEC_KEY_MAP.spec_id]: spec.spec_id,
+            [BOM_TEMPLATE_SPEC_KEY_MAP.spec_description]: spec.spec_description,
             items: (spec.details || []).map((detail: any) => ({
-              id: detail.item_id,
-              itemCode: detail?.item_code || '',
-              itemName: detail?.item_name || '',
-              quantity: detail.required_quantity,
+              [BOM_TEMPLATE_DETAIL_KEY_MAP.item_id]: detail.item_id,
+              [BOM_TEMPLATE_DETAIL_KEY_MAP.item_code]: detail.item_code || '',
+              [BOM_TEMPLATE_DETAIL_KEY_MAP.item_name]: detail.item_name || '',
+              [BOM_TEMPLATE_DETAIL_KEY_MAP.required_quantity]: detail.required_quantity,
               uomName: '-',
               brand: '-'
             }))
           })),
-          createdAt: apiData.created_at,
+          [BOM_TEMPLATE_RESPONSE_KEY_MAP.created_at]: apiData.created_at,
           status: apiData.is_active ? 'active' : 'inactive'
         };
         
