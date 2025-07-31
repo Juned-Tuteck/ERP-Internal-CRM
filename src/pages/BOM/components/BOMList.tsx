@@ -1,6 +1,8 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Calendar, Tag, Edit, Trash2, Download, CheckCircle, XCircle } from 'lucide-react';
 import CreateBOM from './CreateBOM';
+import BOMViewModal from './BOMViewModal';
 
 interface BOM {
   id: string;
@@ -19,64 +21,45 @@ interface BOMListProps {
 }
 
 const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
-  const [boms, setBoms] = React.useState<BOM[]>([
-    {
-      id: '1',
-      leadName: 'Mumbai Metro Ventilation System',
-      workType: 'Basement Ventilation',
-      itemCount: 24,
-      totalValue: '₹18,75,000',
-      createdBy: 'Rajesh Kumar',
-      createdDate: '2024-01-15',
-      status: 'approved',
-    },
-    {
-      id: '2',
-      leadName: 'Corporate Office HVAC Upgrade',
-      workType: 'HVAC Systems',
-      itemCount: 36,
-      totalValue: '₹12,50,000',
-      createdBy: 'Priya Sharma',
-      createdDate: '2024-01-10',
-      status: 'pending_approval',
-    },
-    {
-      id: '3',
-      leadName: 'Hospital Fire Safety System',
-      workType: 'Fire Safety',
-      itemCount: 18,
-      totalValue: '₹22,80,000',
-      createdBy: 'Amit Singh',
-      createdDate: '2024-01-05',
-      status: 'draft',
-    },
-    {
-      id: '4',
-      leadName: 'Residential Complex Electrical',
-      workType: 'Electrical',
-      itemCount: 42,
-      totalValue: '₹8,45,000',
-      createdBy: 'Sneha Patel',
-      createdDate: '2023-12-28',
-      status: 'approved',
-    },
-    {
-      id: '5',
-      leadName: 'Shopping Mall Plumbing System',
-      workType: 'Plumbing',
-      itemCount: 29,
-      totalValue: '₹14,30,000',
-      createdBy: 'Vikram Gupta',
-      createdDate: '2023-12-20',
-      status: 'rejected',
-    },
-  ]);
+  const [boms, setBoms] = useState<BOM[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [bomToDelete, setBomToDelete] = React.useState<BOM | null>(null);
   const [editModalOpen, setEditModalOpen] = React.useState(false);
   const [editInitialData, setEditInitialData] = React.useState<any>(null);
-  const [viewBOM, setViewBOM] = React.useState<any | null>(null);
+  const [viewBOMId, setViewBOMId] = React.useState<string | null>(null);
+  const [showViewModal, setShowViewModal] = React.useState(false);
 
+  // Fetch BOMs from API
+  useEffect(() => {
+    const fetchBOMs = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/`);
+        const data = await response.json();
+        const apiBOMs = data.data || [];
+        
+        // Map API response to UI format
+        const mappedBOMs: BOM[] = apiBOMs.map((apiBOM: any) => ({
+          id: apiBOM.id,
+          leadName: apiBOM.name,
+          workType: apiBOM.work_type || 'Unknown',
+          itemCount: apiBOM.specs?.reduce((sum: number, spec: any) => sum + (spec.details?.length || 0), 0) || 0,
+          totalValue: `₹${(apiBOM.total_price || 0).toLocaleString('en-IN')}`,
+          createdBy: apiBOM.created_by || 'Unknown',
+          createdDate: apiBOM.created_at || new Date().toISOString(),
+          status: apiBOM.approval_status?.toLowerCase() || 'draft',
+        }));
+        
+        setBoms(mappedBOMs);
+      } catch (error) {
+        console.error('Error fetching BOMs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBOMs();
+  }, []);
   // BOMItem and BOMTemplate types
   type BOMItem = {
     id: string;
@@ -234,13 +217,8 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
 
   // Handler for viewing BOM details
   const handleRowClick = (bom: BOM) => {
-    // Find the template and items for this BOM
-    const template = templates.find(t => t.workType === bom.workType);
-    setViewBOM({
-      ...bom,
-      templateName: template?.name || '',
-      items: template?.items || [],
-    });
+    setViewBOMId(bom.id);
+    setShowViewModal(true);
     onSelectBOM(bom);
   };
 
@@ -248,94 +226,109 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">Bills of Materials</h3>
-        <p className="text-sm text-gray-500">{boms.length} total BOMs</p>
+        <p className="text-sm text-gray-500">
+          {loading ? 'Loading...' : `${boms.length} total BOMs`}
+        </p>
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Lead Name
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Work Type
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Items
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Value
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {boms.map((bom) => (
-              <tr 
-                key={bom.id} 
-                className={`hover:bg-gray-50 cursor-pointer ${selectedBOM?.id === bom.id ? 'bg-blue-50' : ''}`}
-                onClick={() => handleRowClick(bom)}
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <FileText className="h-5 w-5 text-gray-500" />
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{bom.leadName}</div>
-                      <div className="text-xs text-gray-500">
-                        Created: {new Date(bom.createdDate).toLocaleDateString('en-IN')}
+      {loading ? (
+        <div className="p-8 text-center text-gray-500">
+          Loading BOMs...
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Lead Name
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Work Type
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Items
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Value
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {boms.map((bom) => (
+                <tr 
+                  key={bom.id} 
+                  className={`hover:bg-gray-50 cursor-pointer ${selectedBOM?.id === bom.id ? 'bg-blue-50' : ''}`}
+                  onClick={() => handleRowClick(bom)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <FileText className="h-5 w-5 text-gray-500" />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{bom.leadName}</div>
+                        <div className="text-xs text-gray-500">
+                          Created: {new Date(bom.createdDate).toLocaleDateString('en-IN')}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getWorkTypeColor(bom.workType)}`}>
-                    {bom.workType}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {bom.itemCount} items
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-green-600">{bom.totalValue}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getStatusColor(bom.status)}`}>
-                    {getStatusIcon(bom.status)}
-                    {bom.status.replace('_', ' ')}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-2">
-                    <button
-                      className="text-blue-600 hover:text-blue-900"
-                      onClick={e => { e.stopPropagation(); handleEditClick(e, bom); }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button className="text-indigo-600 hover:text-indigo-900">
-                      <Download className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="text-red-600 hover:text-red-900"
-                      onClick={e => { e.stopPropagation(); handleDeleteClick(e, bom); }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getWorkTypeColor(bom.workType)}`}>
+                      {bom.workType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {bom.itemCount} items
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-green-600">{bom.totalValue}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getStatusColor(bom.status)}`}>
+                      {getStatusIcon(bom.status)}
+                      {bom.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        className="text-blue-600 hover:text-blue-900"
+                        onClick={e => { e.stopPropagation(); handleEditClick(e, bom); }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button className="text-indigo-600 hover:text-indigo-900">
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="text-red-600 hover:text-red-900"
+                        onClick={e => { e.stopPropagation(); handleDeleteClick(e, bom); }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {boms.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-sm text-gray-500 text-center">
+                    No BOMs found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       {deleteDialogOpen && (
@@ -377,254 +370,18 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
       )}
 
       {/* View BOM Modal */}
-      {viewBOM && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-          onClick={() => setViewBOM(null)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto relative border border-gray-200"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="p-8">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-8 border-b pb-4">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-8 w-8 text-blue-500" />
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{viewBOM.leadName}</h2>
-                    <div className="text-xs text-gray-500 mt-1">
-                      BOM ID: <span className="font-mono">{viewBOM.id}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(viewBOM.status)}`}>
-                    {getStatusIcon(viewBOM.status)}
-                    {viewBOM.status.replace('_', ' ')}
-                  </span>
-                  <div className="mt-2 text-xs text-gray-500">
-                    {new Date(viewBOM.createdDate).toLocaleDateString('en-IN')}
-                  </div>
-                </div>
-              </div>
-
-              {/* Invoice Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <div className="mb-2">
-                    <span className="font-semibold text-gray-700">Work Type:</span>
-                    <span className={`ml-2 px-2 py-1 rounded ${getWorkTypeColor(viewBOM.workType)}`}>{viewBOM.workType}</span>
-                  </div>
-                  <div className="mb-2">
-                    <span className="font-semibold text-gray-700">Template:</span>
-                    <span className="ml-2 px-2 py-1 rounded bg-gray-100 text-gray-800">{viewBOM.templateName}</span>
-                  </div>
-                  <div className="mb-2">
-                    <span className="font-semibold text-gray-700">Created By:</span>
-                    <span className="ml-2">{viewBOM.createdBy}</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-2">
-                    <span className="font-semibold text-gray-700">Total Value:</span>
-                    <span className="ml-2 text-green-700 font-bold">{viewBOM.totalValue}</span>
-                  </div>
-                  <div className="mb-2">
-                    <span className="font-semibold text-gray-700">Total Items:</span>
-                    <span className="ml-2">{viewBOM.items.length}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* BOM Items Table */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 mt-2 text-gray-800 border-b pb-2">BOM Items</h3>
-                <div className="border border-gray-200 rounded-lg overflow-x-auto bg-gray-50">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Code</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Name</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">UOM</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rate (₹)</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Qty</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Price (₹)</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Specs</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-100">
-                      {viewBOM.items.length > 0 ? (
-                        viewBOM.items.map((item: any) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-2 text-sm font-mono text-gray-700">{item.itemCode}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900">{item.itemName}</td>
-                            <td className="px-4 py-2 text-sm text-gray-700">{item.uomName}</td>
-                            <td className="px-4 py-2 text-sm text-right text-gray-700">₹{item.rate.toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-2 text-sm text-right text-gray-700">{item.quantity}</td>
-                            <td className="px-4 py-2 text-sm text-right text-gray-900 font-semibold">₹{item.price.toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500">{item.specifications || '-'}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                            No items found for this BOM.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                    {viewBOM.items.length > 0 && (
-                      <tfoot>
-                        <tr>
-                          <td colSpan={5}></td>
-                          <td className="px-4 py-2 text-right font-bold text-base text-green-700 border-t">
-                            ₹{viewBOM.items.reduce((sum: number, i: any) => sum + i.price, 0).toLocaleString('en-IN')}
-                          </td>
-                          <td className="px-4 py-2 border-t"></td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {showViewModal && viewBOMId && (
+        <BOMViewModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setViewBOMId(null);
+          }}
+          bomId={viewBOMId}
+        />
       )}
     </div>
   );
 };
-
-// --- BOMViewModal Component ---
-interface BOMViewModalProps {
-  viewBOM: any;
-  onClose: () => void;
-  getStatusColor: (status: string) => string;
-  getStatusIcon: (status: string) => React.ReactNode;
-  getWorkTypeColor: (workType: string) => string;
-}
-
-const BOMViewModal: React.FC<BOMViewModalProps> = ({
-  viewBOM,
-  onClose,
-  getStatusColor,
-  getStatusIcon,
-  getWorkTypeColor,
-}) => (
-  <div
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-    onClick={onClose}
-  >
-    <div
-      className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto relative border border-gray-200"
-      onClick={e => e.stopPropagation()}
-    >
-      <div className="p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 border-b pb-4">
-          <div className="flex items-center space-x-3">
-            <FileText className="h-8 w-8 text-blue-500" />
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{viewBOM.leadName}</h2>
-              <div className="text-xs text-gray-500 mt-1">
-                BOM ID: <span className="font-mono">{viewBOM.id}</span>
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(viewBOM.status)}`}>
-              {getStatusIcon(viewBOM.status)}
-              {viewBOM.status.replace('_', ' ')}
-            </span>
-            <div className="mt-2 text-xs text-gray-500">
-              {new Date(viewBOM.createdDate).toLocaleDateString('en-IN')}
-            </div>
-          </div>
-        </div>
-
-        {/* Invoice Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div>
-            <div className="mb-2">
-              <span className="font-semibold text-gray-700">Work Type:</span>
-              <span className={`ml-2 px-2 py-1 rounded ${getWorkTypeColor(viewBOM.workType)}`}>{viewBOM.workType}</span>
-            </div>
-            <div className="mb-2">
-              <span className="font-semibold text-gray-700">Template:</span>
-              <span className="ml-2 px-2 py-1 rounded bg-gray-100 text-gray-800">{viewBOM.templateName}</span>
-            </div>
-            <div className="mb-2">
-              <span className="font-semibold text-gray-700">Created By:</span>
-              <span className="ml-2">{viewBOM.createdBy}</span>
-            </div>
-          </div>
-          <div>
-            <div className="mb-2">
-              <span className="font-semibold text-gray-700">Total Value:</span>
-              <span className="ml-2 text-green-700 font-bold">{viewBOM.totalValue}</span>
-            </div>
-            <div className="mb-2">
-              <span className="font-semibold text-gray-700">Total Items:</span>
-              <span className="ml-2">{viewBOM.items.length}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* BOM Items Table */}
-        <div>
-          <h3 className="text-lg font-semibold mb-3 mt-2 text-gray-800 border-b pb-2">BOM Items</h3>
-          <div className="border border-gray-200 rounded-lg overflow-x-auto bg-gray-50">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Code</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">UOM</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Rate (₹)</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Qty</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Price (₹)</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Specs</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {viewBOM.items.length > 0 ? (
-                  viewBOM.items.map((item: any) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-2 text-sm font-mono text-gray-700">{item.itemCode}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{item.itemName}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{item.uomName}</td>
-                      <td className="px-4 py-2 text-sm text-right text-gray-700">₹{item.rate.toLocaleString('en-IN')}</td>
-                      <td className="px-4 py-2 text-sm text-right text-gray-700">{item.quantity}</td>
-                      <td className="px-4 py-2 text-sm text-right text-gray-900 font-semibold">₹{item.price.toLocaleString('en-IN')}</td>
-                      <td className="px-4 py-2 text-sm text-gray-500">{item.specifications || '-'}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-4 text-sm text-gray-500 text-center">
-                      No items found for this BOM.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-              {viewBOM.items.length > 0 && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={5}></td>
-                    <td className="px-4 py-2 text-right font-bold text-base text-green-700 border-t">
-                      ₹{viewBOM.items.reduce((sum: number, i: any) => sum + i.price, 0).toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-4 py-2 border-t"></td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export default BOMList;

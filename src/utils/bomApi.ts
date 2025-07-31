@@ -78,3 +78,39 @@ export const getBOMTemplateById = async (id: string) => {
   const response = await axios.get(`${API_BASE_URL}/bom-template/${id}`);
   return response.data;
 };
+
+// Get all BOMs
+export const getBOMs = async () => {
+  const response = await axios.get(`${API_BASE_URL}/bom/`);
+  return response.data;
+};
+
+// Get BOM by ID with full details
+export const getBOMById = async (id: string) => {
+  const response = await axios.get(`${API_BASE_URL}/bom/${id}`);
+  return response.data;
+};
+
+// Create BOM specs in bulk
+export const createBOMSpecs = async (specs: any[]) => {
+  const response = await axios.post(`${API_BASE_URL}/bom-spec/bulk`, specs);
+  return response.data;
+};
+
+// Create BOM details in bulk
+export const createBOMDetails = async (details: any[]) => {
+  const response = await axios.post(`${API_BASE_URL}/bom-detail/bulk`, details);
+  return response.data;
+};
+
+// Update BOM
+export const updateBOM = async (id: string, bomData: any) => {
+  const response = await axios.put(`${API_BASE_URL}/bom/${id}`, bomData);
+  return response.data;
+};
+
+// Get all items for dropdown
+export const getAllItems = async () => {
+  const response = await axios.patch(`${API_BASE_URL}/bom-template/items/all`);
+  return response.data;
+};
