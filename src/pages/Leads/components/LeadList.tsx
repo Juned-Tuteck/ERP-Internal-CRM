@@ -154,6 +154,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
         console.error('Error fetching lead associates:', associatesError);
       }
 
+      
       // 4. Fetch follow-up comments
       try {
         const followUpResponse = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/lead-follow-up/`, {
