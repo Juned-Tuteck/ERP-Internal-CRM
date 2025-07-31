@@ -163,7 +163,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
             No leads found
           </div>
         ) : (
-        {leads.map((lead) => (
+          leads.map((lead) => (
           <div
             key={lead.id}
             onClick={() => onSelectLead(lead)}
@@ -236,7 +236,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
               </div>
             </div>
           </div>
-        ))}
+        ))
         )}
       </div>
     </div>
