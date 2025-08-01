@@ -198,19 +198,3 @@ const QuotationList: React.FC<QuotationListProps> = ({ selectedQuotation, onSele
 };
 
 export default QuotationList;
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-export default QuotationList;
