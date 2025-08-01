@@ -1,12 +1,139 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { getBOMById } from '../../../../utils/bomApi';
 
 // Mock data for leads
 export const leads = [
-  { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: 'BOM-2024-001' },
-  { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: 'BOM-2024-002' },
-  { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: 'BOM-2024-003' },
+  { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: '1' },
+  { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: '2' },
+  { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: '3' },
 ];
+
+// Mock BOM data as fallback
+const mockBOMData = {
+  '1': {
+    id: '1',
+    name: 'Mumbai Metro Ventilation System',
+    specs: [
+      {
+        spec_id: 'spec-1',
+        spec_description: 'Ventilation Equipment',
+        details: [
+          {
+            detail_id: 'detail-1',
+            item_id: 'item-1',
+            item_code: 'FAN-001',
+            item_name: 'Industrial Exhaust Fan',
+            required_quantity: 4,
+            supply_rate: 12500,
+            installation_rate: 2500,
+            net_rate: 15000
+          },
+          {
+            detail_id: 'detail-2',
+            item_id: 'item-2',
+            item_code: 'DUCT-001',
+            item_name: 'Galvanized Steel Duct',
+            required_quantity: 120,
+            supply_rate: 850,
+            installation_rate: 350,
+            net_rate: 1200
+          }
+        ]
+      },
+      {
+        spec_id: 'spec-2',
+        spec_description: 'Control Systems',
+        details: [
+          {
+            detail_id: 'detail-3',
+            item_id: 'item-3',
+            item_code: 'SENSOR-001',
+            item_name: 'CO2 Sensor',
+            required_quantity: 8,
+            supply_rate: 1800,
+            installation_rate: 400,
+            net_rate: 2200
+          },
+          {
+            detail_id: 'detail-4',
+            item_id: 'item-4',
+            item_code: 'DAMPER-001',
+            item_name: 'Fire Damper',
+            required_quantity: 6,
+            supply_rate: 3200,
+            installation_rate: 800,
+            net_rate: 4000
+          }
+        ]
+      }
+    ]
+  },
+  '2': {
+    id: '2',
+    name: 'Corporate Office HVAC Upgrade',
+    specs: [
+      {
+        spec_id: 'spec-3',
+        spec_description: 'HVAC Equipment',
+        details: [
+          {
+            detail_id: 'detail-5',
+            item_id: 'item-5',
+            item_code: 'AC-001',
+            item_name: 'Central AC Unit',
+            required_quantity: 2,
+            supply_rate: 85000,
+            installation_rate: 15000,
+            net_rate: 100000
+          },
+          {
+            detail_id: 'detail-6',
+            item_id: 'item-6',
+            item_code: 'FILTER-001',
+            item_name: 'HEPA Filter',
+            required_quantity: 6,
+            supply_rate: 4500,
+            installation_rate: 800,
+            net_rate: 5300
+          }
+        ]
+      }
+    ]
+  },
+  '3': {
+    id: '3',
+    name: 'Hospital Fire Safety System',
+    specs: [
+      {
+        spec_id: 'spec-4',
+        spec_description: 'Fire Safety Equipment',
+        details: [
+          {
+            detail_id: 'detail-7',
+            item_id: 'item-7',
+            item_code: 'ALARM-001',
+            item_name: 'Fire Alarm Control Panel',
+            required_quantity: 1,
+            supply_rate: 35000,
+            installation_rate: 8000,
+            net_rate: 43000
+          },
+          {
+            detail_id: 'detail-8',
+            item_id: 'item-8',
+            item_code: 'SPRINKLER-001',
+            item_name: 'Automatic Sprinkler',
+            required_quantity: 36,
+            supply_rate: 800,
+            installation_rate: 200,
+            net_rate: 1000
+          }
+        ]
+      }
+    ]
+  }
+};
 
 interface QuotationStep1Props {
   formData: any;
@@ -40,9 +167,28 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
   // Fetch BOM details with specs when lead is selected
   const fetchBOMDetails = async (bomId: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/${bomId}`);
-      const data = await response.json();
-      const bomData = data.data;
+      console.log('Fetching BOM details for ID:', bomId);
+      
+      // Try to fetch from API first
+      let bomData;
+      try {
+        const response = await getBOMById(bomId);
+        bomData = response.data;
+        console.log('Fetched BOM data from API:', bomData);
+      } catch (apiError) {
+        console.log('API fetch failed, using mock data:', apiError);
+        // Fallback to mock data
+        bomData = mockBOMData[bomId as keyof typeof mockBOMData];
+        if (!bomData) {
+          console.log('No mock data found for BOM ID:', bomId);
+          return [];
+        }
+      }
+      
+      if (!bomData || !bomData.specs) {
+        console.log('No specs found in BOM data');
+        return [];
+      }
       
       // Map API response to specs structure
       const mappedSpecs = bomData.specs?.map((spec: any) => ({
@@ -84,9 +230,43 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
         }))
       })) || [];
       
+      console.log('Mapped specs:', mappedSpecs);
       return mappedSpecs;
     } catch (error) {
       console.error('Error fetching BOM details:', error);
+      
+      // Fallback to mock data on any error
+      const bomData = mockBOMData[bomId as keyof typeof mockBOMData];
+      if (bomData && bomData.specs) {
+        console.log('Using mock data as fallback');
+        const mappedSpecs = bomData.specs.map((spec: any) => {
+          const mappedItems = spec.details?.map((detail: any) => ({
+            id: detail.item_id,
+            itemCode: detail.item_code,
+            itemName: detail.item_name,
+            uomName: '-',
+            supplyRate: detail.supply_rate || 0,
+            installationRate: detail.installation_rate || 0,
+            netRate: detail.net_rate || 0,
+            quantity: detail.required_quantity,
+            price: detail.required_quantity * (detail.net_rate || 0),
+            specifications: ''
+          })) || [];
+
+          const specPrice = mappedItems.reduce((sum: number, item: any) => sum + item.price, 0);
+
+          return {
+            id: spec.spec_id,
+            name: spec.spec_description,
+            items: mappedItems,
+            isExpanded: true,
+            price: specPrice
+          };
+        });
+        
+        return mappedSpecs;
+      }
+      
       return [];
     }
   };
