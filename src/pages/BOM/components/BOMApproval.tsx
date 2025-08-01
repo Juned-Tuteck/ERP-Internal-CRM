@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Eye, Clock, AlertTriangle, FileText, Download } from 'lucide-react';
 
 interface BOMApprovalProps {
@@ -10,55 +10,57 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
   const [reason, setReason] = useState('');
+  const [pendingBOMs, setPendingBOMs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock data for pending BOMs
-  const pendingBOMs = [
-    {
-      id: '1',
-      leadName: 'Corporate Office HVAC Upgrade',
-      workType: 'HVAC Systems',
-      itemCount: 36,
-      totalValue: '₹12,50,000',
-      createdBy: 'Priya Sharma',
-      createdDate: '2024-01-10',
-      status: 'pending_approval',
-      items: [
-        { id: '201', itemCode: 'AC-001', itemName: 'Central AC Unit', uomName: 'Nos', rate: 85000, quantity: 2, price: 170000 },
-        { id: '202', itemCode: 'DUCT-002', itemName: 'Insulated Duct', uomName: 'Meter', rate: 1200, quantity: 80, price: 96000 },
-        { id: '203', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', rate: 4500, quantity: 6, price: 27000 },
-      ]
-    },
-    {
-      id: '2',
-      leadName: 'Hospital Fire Safety System',
-      workType: 'Fire Safety',
-      itemCount: 18,
-      totalValue: '₹22,80,000',
-      createdBy: 'Amit Singh',
-      createdDate: '2024-01-05',
-      status: 'pending_approval',
-      items: [
-        { id: '301', itemCode: 'ALARM-001', itemName: 'Fire Alarm Control Panel', uomName: 'Nos', rate: 35000, quantity: 1, price: 35000 },
-        { id: '302', itemCode: 'SENSOR-002', itemName: 'Smoke Detector', uomName: 'Nos', rate: 1200, quantity: 24, price: 28800 },
-        { id: '303', itemCode: 'SPRINKLER-001', itemName: 'Automatic Sprinkler', uomName: 'Nos', rate: 800, quantity: 36, price: 28800 },
-      ]
-    },
-    {
-      id: '3',
-      leadName: 'Residential Complex Electrical',
-      workType: 'Electrical',
-      itemCount: 42,
-      totalValue: '₹8,45,000',
-      createdBy: 'Sneha Patel',
-      createdDate: '2023-12-28',
-      status: 'pending_approval',
-      items: [
-        { id: '401', itemCode: 'CABLE-001', itemName: 'Electrical Cable', uomName: 'Meter', rate: 120, quantity: 500, price: 60000 },
-        { id: '402', itemCode: 'PANEL-001', itemName: 'Distribution Panel', uomName: 'Nos', rate: 18000, quantity: 4, price: 72000 },
-        { id: '403', itemCode: 'SWITCH-001', itemName: 'MCB Switch', uomName: 'Nos', rate: 350, quantity: 48, price: 16800 },
-      ]
-    }
-  ];
+  // Fetch BOMs with pending approval status
+  useEffect(() => {
+    const fetchPendingBOMs = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch BOMs');
+        }
+        
+        const data = await response.json();
+        
+        // Filter BOMs with pending approval status and map to component format
+        const filteredBOMs = (data.data || [])
+          .filter((bom: any) => bom.approval_status === 'PENDING')
+          .map((bom: any) => ({
+            id: bom.id,
+            leadName: bom.name,
+            workType: bom.work_type,
+            itemCount: bom.total_items || 0,
+            totalValue: `₹${(bom.total_price || 0).toLocaleString('en-IN')}`,
+            createdBy: bom.created_by || 'Unknown',
+            createdDate: bom.created_at || new Date().toISOString(),
+            status: bom.approval_status,
+            description: bom.description,
+            leadId: bom.lead_id,
+            bomTemplateId: bom.bom_template_id,
+            // Add any other fields you need
+          }));
+        
+        setPendingBOMs(filteredBOMs);
+      } catch (error) {
+        console.error('Error fetching pending BOMs:', error);
+        setPendingBOMs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPendingBOMs();
+  }, []);
 
   const getWorkTypeColor = (workType: string) => {
     switch (workType) {
@@ -83,12 +85,42 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
     setShowReasonModal(true);
   };
 
-  const handleConfirmAction = () => {
-    if (selectedBOM) {
+  const handleConfirmAction = async () => {
+    if (!selectedBOM) return;
+    
+    setIsSubmitting(true);
+    try {
+      const status = actionType === 'approve' ? 'APPROVED' : 'REJECTED';
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/${selectedBOM.id}/approval?status=${status}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${actionType} BOM`);
+      }
+      
+      // Remove the BOM from the pending list
+      setPendingBOMs(prev => prev.filter(bom => bom.id !== selectedBOM.id));
+      
+      // Call the parent callback
       onApprovalAction(selectedBOM.id, actionType, reason);
+      
+      // Reset modal state
       setShowReasonModal(false);
       setReason('');
       setSelectedBOM(null);
+      
+      // Show success message (you can replace with a toast notification)
+      alert(`BOM ${actionType === 'approve' ? 'approved' : 'rejected'} successfully!`);
+      
+    } catch (error) {
+      console.error(`Error ${actionType}ing BOM:`, error);
+      alert(`Failed to ${actionType} BOM. Please try again.`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -109,95 +141,95 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lead Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Work Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Items
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Value
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created By
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {pendingBOMs.map((bom) => (
-                <tr key={bom.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <FileText className="h-5 w-5 text-gray-500" />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{bom.leadName}</div>
-                        <div className="text-xs text-gray-500">
-                          Created: {new Date(bom.createdDate).toLocaleDateString('en-IN')}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-sm text-gray-600">Loading BOMs...</span>
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Lead Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Work Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Items
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Value
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created By
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {pendingBOMs.map((bom) => (
+                  <tr key={bom.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <FileText className="h-5 w-5 text-gray-500" />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{bom.leadName}</div>
+                          <div className="text-xs text-gray-500">
+                            Created: {new Date(bom.createdDate).toLocaleDateString('en-IN')}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getWorkTypeColor(bom.workType)}`}>
-                      {bom.workType}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {bom.itemCount} items
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-green-600">{bom.totalValue}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{bom.createdBy}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setSelectedBOM(bom)}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </button>
-                      <button
-                        onClick={() => handleApprovalClick(bom, 'approve')}
-                        className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleApprovalClick(bom, 'reject')}
-                        className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Reject
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {pendingBOMs.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-sm text-gray-500 text-center">
-                    No BOMs pending approval
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getWorkTypeColor(bom.workType)}`}>
+                        {bom.workType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {bom.itemCount} items
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-green-600">{bom.totalValue}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{bom.createdBy}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleApprovalClick(bom, 'approve')}
+                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleApprovalClick(bom, 'reject')}
+                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {pendingBOMs.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4 text-sm text-gray-500 text-center">
+                      No BOMs pending approval
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -367,28 +399,38 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
               <button
                 onClick={() => setShowReasonModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                disabled={isSubmitting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmAction}
-                disabled={actionType === 'reject' && !reason.trim()}
+                disabled={(actionType === 'reject' && !reason.trim()) || isSubmitting}
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
                   actionType === 'approve' 
                     ? 'bg-green-600 hover:bg-green-700' 
                     : 'bg-red-600 hover:bg-red-700'
                 } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
-                {actionType === 'approve' ? (
+                {isSubmitting ? (
                   <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Approve BOM
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {actionType === 'approve' ? 'Approving...' : 'Rejecting...'}
                   </>
                 ) : (
                   <>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject BOM
+                    {actionType === 'approve' ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve BOM
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject BOM
+                      </>
+                    )}
                   </>
                 )}
               </button>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Search, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 import { getLeads, createBOM, getBOMTemplates, getBOMTemplateById } from '../../../utils/bomApi';
-import { LEAD_KEY_MAP, BOM_TEMPLATE_RESPONSE_KEY_MAP, BOM_TEMPLATE_SPEC_KEY_MAP, BOM_TEMPLATE_DETAIL_KEY_MAP } from '../../../utils/bomApi';
+import { LEAD_KEY_MAP, BOM_TEMPLATE_RESPONSE_KEY_MAP } from '../../../utils/bomApi';
 
 interface CreateBOMProps {
   isOpen: boolean;
@@ -173,24 +173,39 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       setSelectedTemplate(templateData);
       
       // Map specs and items from API response
-      const mappedSpecs = templateData.specs?.map((spec: any) => ({
-        [BOM_TEMPLATE_SPEC_KEY_MAP.spec_id]: spec.spec_id,
-        [BOM_TEMPLATE_SPEC_KEY_MAP.spec_description]: spec.spec_description,
-        isExpanded: true,
-        price: spec.spec_price || 0,
-        [BOM_TEMPLATE_SPEC_KEY_MAP.details]: spec.details?.map((detail: any) => ({
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.detail_id]: detail.detail_id,
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.item_id]: detail.item_id,
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.required_quantity]: detail.required_quantity,
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.item_code]: detail.item_code,
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.item_name]: detail.item_name,
-          uomName: '-',
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.latest_lowest_basic_supply_rate]: detail.supply_rate || 0,
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.latest_lowest_basic_installation_rate]: detail.installation_rate || 0,
-          [BOM_TEMPLATE_DETAIL_KEY_MAP.latest_lowest_net_rate]: detail.net_rate || 0,
-          price: detail.required_quantity * (detail.net_rate || 0)
-        })) || []
-      })) || [];
+      const mappedSpecs = templateData.specs?.map((spec: any) => {
+        const mappedItems = spec.details?.map((detail: any) => {
+          // Find the item in allItems to get latest rates
+          const itemWithRates = allItems.find(item => item.id === detail.item_id);
+          const supplyRate = itemWithRates?.latest_lowest_basic_supply_rate || detail.supply_rate || 0;
+          const installationRate = itemWithRates?.latest_lowest_basic_installation_rate || detail.installation_rate || 0;
+          const netRate = itemWithRates?.latest_lowest_net_rate || detail.net_rate || 0;
+          
+          return {
+            id: detail.item_id, // Use direct property name for item ID
+            itemCode: detail.item_code,
+            itemName: detail.item_name,
+            uomName: '-',
+            supplyRate: supplyRate,
+            installationRate: installationRate,
+            netRate: netRate,
+            quantity: detail.required_quantity,
+            price: detail.required_quantity * netRate,
+            specifications: ''
+          };
+        }) || [];
+
+        // Calculate spec price from mapped items
+        const specPrice = mappedItems.reduce((sum: number, item: any) => sum + item.price, 0);
+
+        return {
+          id: spec.spec_id,
+          name: spec.spec_description,
+          items: mappedItems,
+          isExpanded: true,
+          price: specPrice
+        };
+      }) || [];
       
       setSpecs(mappedSpecs);
     } catch (error) {
@@ -235,11 +250,11 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       itemCode: item.item_code,
       itemName: item.item_name,
       uomName: '-',
-      supplyRate: 0,
-      installationRate: 0,
-      netRate: 0,
+      supplyRate: item.latest_lowest_basic_supply_rate || 0,
+      installationRate: item.latest_lowest_basic_installation_rate || 0,
+      netRate: item.latest_lowest_net_rate || 0,
       quantity: 1,
-      price: 0,
+      price: item.latest_lowest_net_rate || 0,
       specifications: ''
     };
 
