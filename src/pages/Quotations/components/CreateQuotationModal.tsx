@@ -345,7 +345,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     } catch (error) {
       console.error('Error in Step 1:', error);
       alert('Failed to create quotation. Please try again.');
-    } finally {
+    } finally { 
       setIsSubmitting(false);
     }
   };
