@@ -1,5 +1,7 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { FileSpreadsheet, Calendar, Tag, Edit, Trash2, Download, CheckCircle, XCircle, Building2 } from 'lucide-react';
+import { getQuotations } from '../../../utils/quotationApi';
 
 interface Quotation {
   id: string;
@@ -19,63 +21,41 @@ interface QuotationListProps {
 }
 
 const QuotationList: React.FC<QuotationListProps> = ({ selectedQuotation, onSelectQuotation }) => {
-  const quotations: Quotation[] = [
-    {
-      id: '1',
-      leadName: 'Mumbai Metro Ventilation System',
-      businessName: 'TechCorp Solutions Pvt Ltd',
-      workType: 'Basement Ventilation',
-      totalValue: '₹24,75,000',
-      createdBy: 'Rajesh Kumar',
-      createdDate: '2024-01-15',
-      expiryDate: '2024-02-15',
-      status: 'approved',
-    },
-    {
-      id: '2',
-      leadName: 'Corporate Office HVAC Upgrade',
-      businessName: 'Innovate India Limited',
-      workType: 'HVAC Systems',
-      totalValue: '₹18,50,000',
-      createdBy: 'Priya Sharma',
-      createdDate: '2024-01-10',
-      expiryDate: '2024-02-10',
-      status: 'pending_approval',
-    },
-    {
-      id: '3',
-      leadName: 'Hospital Fire Safety System',
-      businessName: 'Digital Solutions Enterprise',
-      workType: 'Fire Safety',
-      totalValue: '₹32,80,000',
-      createdBy: 'Amit Singh',
-      createdDate: '2024-01-05',
-      expiryDate: '2024-02-05',
-      status: 'draft',
-    },
-    {
-      id: '4',
-      leadName: 'Residential Complex Electrical',
-      businessName: 'Manufacturing Industries Co',
-      workType: 'Electrical',
-      totalValue: '₹12,45,000',
-      createdBy: 'Sneha Patel',
-      createdDate: '2023-12-28',
-      expiryDate: '2024-01-28',
-      status: 'expired',
-    },
-    {
-      id: '5',
-      leadName: 'Shopping Mall Plumbing System',
-      businessName: 'FinTech Innovations Pvt Ltd',
-      workType: 'Plumbing',
-      totalValue: '₹19,30,000',
-      createdBy: 'Vikram Gupta',
-      createdDate: '2023-12-20',
-      expiryDate: '2024-01-20',
-      status: 'rejected',
-    },
-  ];
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch quotations from API
+  useEffect(() => {
+    const fetchQuotations = async () => {
+      try {
+        setLoading(true);
+        const response = await getQuotations();
+        const apiQuotations = response.data || [];
+        
+        // Map API response to UI format
+        const mappedQuotations: Quotation[] = apiQuotations.map((apiQuotation: any) => ({
+          id: apiQuotation.id,
+          leadName: apiQuotation.lead_name || 'Unknown Lead',
+          businessName: apiQuotation.business_name || 'Unknown Business',
+          workType: apiQuotation.work_type || 'Unknown',
+          totalValue: `₹${(apiQuotation.total_cost || 0).toLocaleString('en-IN')}`,
+          createdBy: apiQuotation.created_by || 'Unknown',
+          createdDate: apiQuotation.quotation_date || apiQuotation.created_at || new Date().toISOString(),
+          expiryDate: apiQuotation.expiry_date || new Date().toISOString(),
+          status: apiQuotation.approval_status?.toLowerCase() || 'draft',
+        }));
+        
+        setQuotations(mappedQuotations);
+      } catch (error) {
+        console.error('Error fetching quotations:', error);
+        setQuotations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuotations();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -132,42 +112,92 @@ const QuotationList: React.FC<QuotationListProps> = ({ selectedQuotation, onSele
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">All Quotations</h3>
-        <p className="text-sm text-gray-500">{quotations.length} total quotations</p>
+        <p className="text-sm text-gray-500">
+          {loading ? 'Loading...' : `${quotations.length} total quotations`}
+        </p>
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Project Details
-              </th>
-              
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {quotations.map((quotation) => (
-              <tr 
-                key={quotation.id} 
-                className={`hover:bg-gray-50 cursor-pointer ${selectedQuotation?.id === quotation.id ? 'bg-blue-50' : ''}`}
-                onClick={() => onSelectQuotation(quotation)}
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <FileSpreadsheet className="h-5 w-5 text-gray-500" />
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{quotation.leadName}</div>
-                      <div className="text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {quotation.businessName}
+      {loading ? (
+        <div className="p-8 text-center text-gray-500">
+          Loading quotations...
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Project Details
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Value & Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created By
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {quotations.map((quotation) => (
+                <tr 
+                  key={quotation.id} 
+                  className={`hover:bg-gray-50 cursor-pointer ${selectedQuotation?.id === quotation.id ? 'bg-blue-50' : ''}`}
+                  onClick={() => onSelectQuotation(quotation)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <FileSpreadsheet className="h-5 w-5 text-gray-500" />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{quotation.leadName}</div>
+                        <div className="text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {quotation.businessName}
+                          </div>
+                        </div>
+                        <div className="mt-1">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getWorkTypeColor(quotation.workType)}`}>
+                            {quotation.workType}
+                          </span>
                         </div>
                       </div>
-                      <div className="mt-1">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getWorkTypeColor(quotation.workType)}`}>
-                          {quotation.workType}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-green-600">{quotation.totalValue}</div>
+                    <div className="mt-1">
+                      <span className={`px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${getStatusColor(quotation.status)}`}>
+                        {getStatusIcon(quotation.status)}
+                        {quotation.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{quotation.createdBy}</div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(quotation.createdDate).toLocaleDateString('en-IN')}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {quotations.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={3} className="px-6 py-4 text-sm text-gray-500 text-center">
+                    No quotations found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default QuotationList;
                         </span>
                       </div>
                     </div>

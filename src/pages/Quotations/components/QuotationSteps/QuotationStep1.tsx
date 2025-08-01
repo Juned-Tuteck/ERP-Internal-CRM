@@ -1,139 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calculator, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { getBOMById } from '../../../../utils/bomApi';
-
-// Mock data for leads
-export const leads = [
-  { id: '1', name: 'Mumbai Metro Ventilation System', businessName: 'TechCorp Solutions Pvt Ltd', bomId: '1' },
-  { id: '2', name: 'Corporate Office HVAC Upgrade', businessName: 'Innovate India Limited', bomId: '2' },
-  { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: '3' },
-];
-
-// Mock BOM data as fallback
-const mockBOMData = {
-  '1': {
-    id: '1',
-    name: 'Mumbai Metro Ventilation System',
-    specs: [
-      {
-        spec_id: 'spec-1',
-        spec_description: 'Ventilation Equipment',
-        details: [
-          {
-            detail_id: 'detail-1',
-            item_id: 'item-1',
-            item_code: 'FAN-001',
-            item_name: 'Industrial Exhaust Fan',
-            required_quantity: 4,
-            supply_rate: 12500,
-            installation_rate: 2500,
-            net_rate: 15000
-          },
-          {
-            detail_id: 'detail-2',
-            item_id: 'item-2',
-            item_code: 'DUCT-001',
-            item_name: 'Galvanized Steel Duct',
-            required_quantity: 120,
-            supply_rate: 850,
-            installation_rate: 350,
-            net_rate: 1200
-          }
-        ]
-      },
-      {
-        spec_id: 'spec-2',
-        spec_description: 'Control Systems',
-        details: [
-          {
-            detail_id: 'detail-3',
-            item_id: 'item-3',
-            item_code: 'SENSOR-001',
-            item_name: 'CO2 Sensor',
-            required_quantity: 8,
-            supply_rate: 1800,
-            installation_rate: 400,
-            net_rate: 2200
-          },
-          {
-            detail_id: 'detail-4',
-            item_id: 'item-4',
-            item_code: 'DAMPER-001',
-            item_name: 'Fire Damper',
-            required_quantity: 6,
-            supply_rate: 3200,
-            installation_rate: 800,
-            net_rate: 4000
-          }
-        ]
-      }
-    ]
-  },
-  '2': {
-    id: '2',
-    name: 'Corporate Office HVAC Upgrade',
-    specs: [
-      {
-        spec_id: 'spec-3',
-        spec_description: 'HVAC Equipment',
-        details: [
-          {
-            detail_id: 'detail-5',
-            item_id: 'item-5',
-            item_code: 'AC-001',
-            item_name: 'Central AC Unit',
-            required_quantity: 2,
-            supply_rate: 85000,
-            installation_rate: 15000,
-            net_rate: 100000
-          },
-          {
-            detail_id: 'detail-6',
-            item_id: 'item-6',
-            item_code: 'FILTER-001',
-            item_name: 'HEPA Filter',
-            required_quantity: 6,
-            supply_rate: 4500,
-            installation_rate: 800,
-            net_rate: 5300
-          }
-        ]
-      }
-    ]
-  },
-  '3': {
-    id: '3',
-    name: 'Hospital Fire Safety System',
-    specs: [
-      {
-        spec_id: 'spec-4',
-        spec_description: 'Fire Safety Equipment',
-        details: [
-          {
-            detail_id: 'detail-7',
-            item_id: 'item-7',
-            item_code: 'ALARM-001',
-            item_name: 'Fire Alarm Control Panel',
-            required_quantity: 1,
-            supply_rate: 35000,
-            installation_rate: 8000,
-            net_rate: 43000
-          },
-          {
-            detail_id: 'detail-8',
-            item_id: 'item-8',
-            item_code: 'SPRINKLER-001',
-            item_name: 'Automatic Sprinkler',
-            required_quantity: 36,
-            supply_rate: 800,
-            installation_rate: 200,
-            net_rate: 1000
-          }
-        ]
-      }
-    ]
-  }
-};
+import { getLeads, getBOMByLeadId, getBOMDetailsById } from '../../../../utils/quotationApi';
 
 interface QuotationStep1Props {
   formData: any;
@@ -144,6 +11,8 @@ interface QuotationStep1Props {
 const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, isEditMode }) => {
   const [showCostModal, setShowCostModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [costDetails, setCostDetails] = useState<any>({
     // Supply section
     supplyDiscount: 0,
@@ -164,47 +33,91 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
     installationPOVariance: 0,
   });
 
-  // Fetch BOM details with specs when lead is selected
-  const fetchBOMDetails = async (bomId: string) => {
-    try {
-      console.log('Fetching BOM details for ID:', bomId);
-      
-      // Try to fetch from API first
-      let bomData;
+  // Fetch leads on component mount
+  useEffect(() => {
+    const fetchLeads = async () => {
       try {
-        const response = await getBOMById(bomId);
-        bomData = response.data;
-        console.log('Fetched BOM data from API:', bomData);
-      } catch (apiError) {
-        console.log('API fetch failed, using mock data:', apiError);
-        // Fallback to mock data
-        bomData = mockBOMData[bomId as keyof typeof mockBOMData];
-        if (!bomData) {
-          console.log('No mock data found for BOM ID:', bomId);
-          return [];
-        }
+        setLoading(true);
+        const response = await getLeads();
+        const apiLeads = response.data || [];
+        
+        // Map API response to UI format
+        const mappedLeads = apiLeads.map((lead: any) => ({
+          id: lead.lead_id,
+          name: lead.project_name,
+          businessName: lead.business_name,
+          workType: lead.work_type
+        }));
+        
+        setLeads(mappedLeads);
+      } catch (error) {
+        console.error('Error fetching leads:', error);
+        setLeads([]);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    fetchLeads();
+  }, []);
+
+  // Fetch BOM details with specs when lead is selected
+  const fetchBOMDetails = async (leadId: string) => {
+    try {
+      console.log('Fetching BOM for lead ID:', leadId);
+      
+      // Step 1: Get BOM by lead ID
+      const bomResponse = await getBOMByLeadId(leadId);
+      const bomArray = bomResponse.data || [];
+      
+      if (bomArray.length === 0) {
+        console.log('No BOM found for lead ID:', leadId);
+        return { bomId: null, specs: [] };
+      }
+      
+      // Take the first BOM from the array
+      const bomRecord = bomArray[0];
+      const bomId = bomRecord.id;
+      
+      console.log('Found BOM ID:', bomId);
+      
+      // Step 2: Get detailed BOM data
+      const bomDetailsResponse = await getBOMDetailsById(bomId);
+      const bomData = bomDetailsResponse.data;
+      
+      console.log('Fetched BOM details:', bomData);
       
       if (!bomData || !bomData.specs) {
         console.log('No specs found in BOM data');
-        return [];
+        return { bomId, specs: [] };
       }
       
-      // Map API response to specs structure
-      const mappedSpecs = bomData.specs?.map((spec: any) => ({
+      // Step 3: Map API response to specs structure
+      const mappedSpecs = bomData.specs.map((spec: any) => ({
         id: spec.spec_id,
         name: spec.spec_description,
         isExpanded: true,
+        price: spec.spec_price || 0,
         items: (spec.details || []).map((detail: any) => ({
           id: detail.detail_id,
+          itemId: detail.item_id,
           itemCode: detail.item_code || '',
           itemName: detail.item_name || '',
-          itemType: 'INSTALLATION',
+          itemType: detail.material_type || 'INSTALLATION',
           uomName: '-',
+          uomId: detail.uom_id || null,
+          hsnCode: detail.hsn_code || '',
+          description: detail.description || '',
+          dimensions: detail.dimensions || '',
+          unitPrice: detail.unit_price || 0,
+          uomValue: detail.uom_value || 1,
+          isCapitalItem: detail.is_capital_item || false,
+          isScrapItem: detail.is_scrap_item || false,
           basicSupplyRate: detail.supply_rate || 0,
           basicInstallationRate: detail.installation_rate || 0,
           supplyRate: detail.supply_rate || 0,
           installationRate: detail.installation_rate || 0,
+          netRate: detail.net_rate || 0,
           quantity: detail.required_quantity || 1,
           supplyOwnAmount: (detail.required_quantity || 1) * (detail.supply_rate || 0),
           installationOwnAmount: (detail.required_quantity || 1) * (detail.installation_rate || 0),
@@ -228,46 +141,13 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
             installationPOVariance: 0,
           }
         }))
-      })) || [];
+      }));
       
       console.log('Mapped specs:', mappedSpecs);
-      return mappedSpecs;
+      return { bomId, specs: mappedSpecs };
     } catch (error) {
       console.error('Error fetching BOM details:', error);
-      
-      // Fallback to mock data on any error
-      const bomData = mockBOMData[bomId as keyof typeof mockBOMData];
-      if (bomData && bomData.specs) {
-        console.log('Using mock data as fallback');
-        const mappedSpecs = bomData.specs.map((spec: any) => {
-          const mappedItems = spec.details?.map((detail: any) => ({
-            id: detail.item_id,
-            itemCode: detail.item_code,
-            itemName: detail.item_name,
-            uomName: '-',
-            supplyRate: detail.supply_rate || 0,
-            installationRate: detail.installation_rate || 0,
-            netRate: detail.net_rate || 0,
-            quantity: detail.required_quantity,
-            price: detail.required_quantity * (detail.net_rate || 0),
-            specifications: ''
-          })) || [];
-
-          const specPrice = mappedItems.reduce((sum: number, item: any) => sum + item.price, 0);
-
-          return {
-            id: spec.spec_id,
-            name: spec.spec_description,
-            items: mappedItems,
-            isExpanded: true,
-            price: specPrice
-          };
-        });
-        
-        return mappedSpecs;
-      }
-      
-      return [];
+      return { bomId: null, specs: [] };
     }
   };
 
@@ -276,20 +156,23 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
     const selectedLead = leads.find(lead => lead.id === leadId);
     
     if (selectedLead) {
-      const bomId = selectedLead.bomId;
+      setLoading(true);
       
       // Fetch BOM specs and items
-      const specs = await fetchBOMDetails(bomId);
+      const { bomId, specs } = await fetchBOMDetails(leadId);
       
       setFormData({
         ...formData,
         leadId: leadId,
         leadName: selectedLead.name,
         businessName: selectedLead.businessName,
+        workType: selectedLead.workType,
         bomId: bomId,
         specs: specs,
         items: [] // Keep for backward compatibility
       });
+      
+      setLoading(false);
     }
   };
 
@@ -534,13 +417,17 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
             value={formData.leadId || ''}
             onChange={handleLeadChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            disabled={loading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
           >
             <option value="">Select Lead</option>
             {leads.map(lead => (
               <option key={lead.id} value={lead.id}>{lead.name}</option>
             ))}
           </select>
+          {loading && (
+            <p className="text-xs text-blue-500 mt-1">Loading leads...</p>
+          )}
         </div>
 
         <div>
@@ -558,7 +445,19 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            BOM
+            Work Type
+          </label>
+          <input
+            type="text"
+            value={formData.workType || ''}
+            readOnly
+            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            BOM ID
           </label>
           <input
             type="text"
@@ -653,9 +552,15 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                           <tr key={item.id} className="hover:bg-gray-50">
                             <td className="px-4 py-3">
                               <div className="text-sm font-medium text-gray-900">{item.itemName}</div>
+                              {item.description && (
+                                <div className="text-xs text-gray-500">{item.description}</div>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <div className="text-sm text-gray-900">{item.itemCode}</div>
+                              {item.hsnCode && (
+                                <div className="text-xs text-gray-500">HSN: {item.hsnCode}</div>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <input
@@ -690,16 +595,17 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                                 className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{(item.supplyRate || 0).toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{(item.supplyOwnAmount || 0).toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{(item.installationRate || 0).toLocaleString('en-IN')}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{(item.installationOwnAmount || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">₹{(item.supplyRate || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">₹{(item.supplyOwnAmount || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">₹{(item.installationRate || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">₹{(item.installationOwnAmount || 0).toLocaleString('en-IN')}</td>
                             <td className="px-4 py-3">
                               <button
                                 onClick={() => openCostModal(spec.id, item, itemIndex)}
                                 className="inline-flex items-center px-2 py-1 border border-blue-300 rounded text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
                               >
                                 <Calculator className="h-3 w-3 mr-1" />
+                                Cost
                               </button>
                             </td>
                           </tr>
@@ -764,6 +670,12 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
         </div>
       )}
 
+      {formData.leadId && (!formData.specs || formData.specs.length === 0) && !loading && (
+        <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg">
+          <p className="text-sm">No BOM found for the selected lead or BOM has no specifications.</p>
+        </div>
+      )}
+
       {/* Note */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -801,7 +713,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Basic Supply Rate:</span>
-                      <span className="text-sm font-medium">{(selectedItem.basicSupplyRate || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-medium">₹{(selectedItem.basicSupplyRate || 0).toLocaleString('en-IN')}</span>
                     </div>
                     
                     {/* Supply Discount */}
@@ -824,7 +736,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                     {/* Discounted Base Supply Rate */}
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Discounted Base Supply Rate:</span>
-                      <span className="text-sm font-medium">{calculateFinalAmounts().discountedBaseSupplyRate.toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-medium">₹{calculateFinalAmounts().discountedBaseSupplyRate.toLocaleString('en-IN')}</span>
                     </div>
 
                     {/* Supply fields with percentage and amount */}
@@ -874,7 +786,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                           </div>
                           <div className="flex justify-between items-center mt-1">
                             <label className="text-sm text-gray-600">{amountLabel}</label>
-                            <span className="text-sm text-gray-700">{amount.toLocaleString('en-IN')}</span>
+                            <span className="text-sm text-gray-700">₹{amount.toLocaleString('en-IN')}</span>
                           </div>
                         </div>
                       );
@@ -883,11 +795,11 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                     <div className="border-t border-gray-200 pt-4 mt-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-900">Total Supply Cost:</span>
-                        <span className="text-sm font-medium">{calculateFinalAmounts().totalSupplyCost.toLocaleString('en-IN')} /-</span>
+                        <span className="text-sm font-medium">₹{calculateFinalAmounts().totalSupplyCost.toLocaleString('en-IN')} /-</span>
                       </div>
                       <div className="flex justify-between items-center mt-2">
                         <span className="text-sm font-medium text-gray-900">Total Supply Own Cost:</span>
-                        <span className="text-sm font-medium">{calculateFinalAmounts().totalSupplyOwnCost.toLocaleString('en-IN')} /-</span>
+                        <span className="text-sm font-medium">₹{calculateFinalAmounts().totalSupplyOwnCost.toLocaleString('en-IN')} /-</span>
                       </div>
                     </div>
                     
@@ -910,14 +822,14 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <label className="text-sm text-gray-600">Supply PO - Variance Amount</label>
-                        <span className="text-sm text-gray-700">{(calculateFinalAmounts().supplyPOVarianceAmount || 0).toLocaleString('en-IN')}</span>
+                        <span className="text-sm text-gray-700">₹{(calculateFinalAmounts().supplyPOVarianceAmount || 0).toLocaleString('en-IN')}</span>
                       </div>
                     </div>
                     
                     <div className="border-t border-gray-200 pt-4 mt-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-900">Final Supply Amount:</span>
-                        <span className="text-sm font-medium text-green-600">{calculateFinalAmounts().finalSupplyAmount.toLocaleString('en-IN')} /-</span>
+                        <span className="text-sm font-medium text-green-600">₹{calculateFinalAmounts().finalSupplyAmount.toLocaleString('en-IN')} /-</span>
                       </div>
                     </div>
                   </div>
@@ -929,7 +841,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Basic Installation Rate:</span>
-                      <span className="text-sm font-medium">{(selectedItem.basicInstallationRate || 0).toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-medium">₹{(selectedItem.basicInstallationRate || 0).toLocaleString('en-IN')}</span>
                     </div>
                     
                     {/* Installation fields with percentage and amount */}
@@ -979,7 +891,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                           </div>
                           <div className="flex justify-between items-center mt-1">
                             <label className="text-sm text-gray-600">{amountLabel}</label>
-                            <span className="text-sm text-gray-700">{amount.toLocaleString('en-IN')}</span>
+                            <span className="text-sm text-gray-700">₹{amount.toLocaleString('en-IN')}</span>
                           </div>
                         </div>
                       );
@@ -988,11 +900,11 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                     <div className="border-t border-gray-200 pt-4 mt-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-900">Total Installation Cost:</span>
-                        <span className="text-sm font-medium">{calculateFinalAmounts().totalInstallationCost.toLocaleString('en-IN')} /-</span>
+                        <span className="text-sm font-medium">₹{calculateFinalAmounts().totalInstallationCost.toLocaleString('en-IN')} /-</span>
                       </div>
                       <div className="flex justify-between items-center mt-2">
                         <span className="text-sm font-medium text-gray-900">Total Installation Own Cost:</span>
-                        <span className="text-sm font-medium">{calculateFinalAmounts().totalInstallationOwnCost.toLocaleString('en-IN')} /-</span>
+                        <span className="text-sm font-medium">₹{calculateFinalAmounts().totalInstallationOwnCost.toLocaleString('en-IN')} /-</span>
                       </div>
                     </div>
                     
@@ -1015,14 +927,14 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <label className="text-sm text-gray-600">Installation Povariance Amount</label>
-                        <span className="text-sm text-gray-700">{(calculateFinalAmounts().installationPOVarianceAmount || 0).toLocaleString('en-IN')}</span>
+                        <span className="text-sm text-gray-700">₹{(calculateFinalAmounts().installationPOVarianceAmount || 0).toLocaleString('en-IN')}</span>
                       </div>
                     </div>
                     
                     <div className="border-t border-gray-200 pt-4 mt-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-900">Final Installation Amount:</span>
-                        <span className="text-sm font-medium text-green-600">{calculateFinalAmounts().finalInstallationAmount.toLocaleString('en-IN')} /-</span>
+                        <span className="text-sm font-medium text-green-600">₹{calculateFinalAmounts().finalInstallationAmount.toLocaleString('en-IN')} /-</span>
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import { FileSpreadsheet, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import CreateQuotationModal from './CreateQuotationModal';
+import { getQuotationById } from '../../../utils/quotationApi';
 
 interface QuotationDetailsProps {
   quotation: any;
@@ -10,6 +12,63 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [quotationDetails, setQuotationDetails] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch detailed quotation information when quotation is selected
+  useEffect(() => {
+    const fetchQuotationDetails = async () => {
+      if (!quotation?.id) return;
+      
+      setLoading(true);
+      try {
+        const response = await getQuotationById(quotation.id);
+        const apiQuotation = response.data;
+        
+        // Map API response to UI format
+        const mappedQuotation = {
+          id: apiQuotation.id,
+          leadName: apiQuotation.lead_name || quotation.leadName,
+          businessName: apiQuotation.business_name || quotation.businessName,
+          workType: apiQuotation.work_type || quotation.workType,
+          totalValue: `₹${(apiQuotation.total_cost || 0).toLocaleString('en-IN')}`,
+          createdBy: apiQuotation.created_by || quotation.createdBy,
+          createdDate: apiQuotation.quotation_date || quotation.createdDate,
+          expiryDate: apiQuotation.expiry_date || quotation.expiryDate,
+          status: apiQuotation.approval_status?.toLowerCase() || quotation.status,
+          note: apiQuotation.note || '',
+          bomId: apiQuotation.bom_id || '',
+          leadId: apiQuotation.lead_id || '',
+          totalSupplyOwnCost: apiQuotation.total_supply_own_cost || 0,
+          totalInstallationOwnCost: apiQuotation.total_installation_own_cost || 0,
+          totalPocOverheadsCost: apiQuotation.total_poc_overheads_cost || 0,
+          highSideCostWithoutGst: apiQuotation.high_side_cost_without_gst || 0,
+          highSideGstPercentage: apiQuotation.high_side_gst_percentage || 18,
+          highSideCostWithGst: apiQuotation.high_side_cost_with_gst || 0,
+          lowSideCostWithoutGst: apiQuotation.low_side_cost_without_gst || 0,
+          lowSideGstPercentage: apiQuotation.low_side_gst_percentage || 18,
+          lowSideCostWithGst: apiQuotation.low_side_cost_with_gst || 0,
+          installationCostWithoutGst: apiQuotation.installation_cost_without_gst || 0,
+          installationGstPercentage: apiQuotation.installation_gst_percentage || 18,
+          installationCostWithGst: apiQuotation.installation_cost_with_gst || 0,
+          specs: apiQuotation.specs || [],
+          pocExpenses: apiQuotation.poc_expenses || [],
+          costMargins: apiQuotation.cost_margins || [],
+          comments: apiQuotation.comments || []
+        };
+        
+        setQuotationDetails(mappedQuotation);
+      } catch (error) {
+        console.error('Error fetching quotation details:', error);
+        // Fallback to the quotation data passed as prop
+        setQuotationDetails(quotation);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuotationDetails();
+  }, [quotation]);
 
   if (!quotation) {
     return (
@@ -22,6 +81,20 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
       </div>
     );
   }
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <div className="text-gray-400">
+          <FileSpreadsheet className="h-12 w-12 mx-auto mb-4" />
+          <h3 className="text-lg font-medium">Loading quotation details...</h3>
+        </div>
+      </div>
+    );
+  }
+
+  // Use detailed quotation data if available, otherwise fallback to prop data
+  const displayQuotation = quotationDetails || quotation;
 
   // Mock data for quotation details
   const quotationItems = [
