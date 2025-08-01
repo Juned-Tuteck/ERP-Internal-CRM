@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Calculator, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calculator, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Mock data for leads
 export const leads = [
@@ -8,40 +8,13 @@ export const leads = [
   { id: '3', name: 'Hospital Fire Safety System', businessName: 'Digital Solutions Enterprise', bomId: 'BOM-2024-003' },
 ];
 
-// Mock data for BOMs
-export const boms = [
-  { 
-    id: 'BOM-2024-001', 
-    items: [
-      { id: '101', itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', itemType: 'INSTALLATION', uomName: 'Nos', rate: 12500, quantity: 4, price: 50000 },
-      { id: '102', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', itemType: 'INSTALLATION', uomName: 'Meter', rate: 850, quantity: 120, price: 102000 },
-      { id: '103', itemCode: 'DAMPER-001', itemName: 'Fire Damper', itemType: 'INSTALLATION', uomName: 'Nos', rate: 3200, quantity: 6, price: 19200 },
-    ]
-  },
-  { 
-    id: 'BOM-2024-002', 
-    items: [
-      { id: '201', itemCode: 'AC-001', itemName: 'Central AC Unit', itemType: 'INSTALLATION', uomName: 'Nos', rate: 85000, quantity: 2, price: 170000 },
-      { id: '202', itemCode: 'DUCT-002', itemName: 'Insulated Duct', itemType: 'INSTALLATION', uomName: 'Meter', rate: 1200, quantity: 80, price: 96000 },
-      { id: '203', itemCode: 'FILTER-001', itemName: 'HEPA Filter', itemType: 'INSTALLATION', uomName: 'Nos', rate: 4500, quantity: 6, price: 27000 },
-    ]
-  },
-  { 
-    id: 'BOM-2024-003', 
-    items: [
-      { id: '301', itemCode: 'ALARM-001', itemName: 'Fire Alarm Control Panel', itemType: 'INSTALLATION', uomName: 'Nos', rate: 35000, quantity: 1, price: 35000 },
-      { id: '302', itemCode: 'SENSOR-002', itemName: 'Smoke Detector', itemType: 'INSTALLATION', uomName: 'Nos', rate: 1200, quantity: 24, price: 28800 },
-      { id: '303', itemCode: 'SPRINKLER-001', itemName: 'Automatic Sprinkler', itemType: 'INSTALLATION', uomName: 'Nos', rate: 800, quantity: 36, price: 28800 },
-    ]
-  },
-];
-
 interface QuotationStep1Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  isEditMode?: boolean;
 }
 
-const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }) => {
+const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, isEditMode }) => {
   const [showCostModal, setShowCostModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [costDetails, setCostDetails] = useState<any>({
@@ -64,43 +37,69 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
     installationPOVariance: 0,
   });
 
-  const handleLeadChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  // Fetch BOM details with specs when lead is selected
+  const fetchBOMDetails = async (bomId: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/${bomId}`);
+      const data = await response.json();
+      const bomData = data.data;
+      
+      // Map API response to specs structure
+      const mappedSpecs = bomData.specs?.map((spec: any) => ({
+        id: spec.spec_id,
+        name: spec.spec_description,
+        isExpanded: true,
+        items: (spec.details || []).map((detail: any) => ({
+          id: detail.detail_id,
+          itemCode: detail.item_code || '',
+          itemName: detail.item_name || '',
+          itemType: 'INSTALLATION',
+          uomName: '-',
+          basicSupplyRate: detail.supply_rate || 0,
+          basicInstallationRate: detail.installation_rate || 0,
+          supplyRate: detail.supply_rate || 0,
+          installationRate: detail.installation_rate || 0,
+          quantity: detail.required_quantity || 1,
+          supplyOwnAmount: (detail.required_quantity || 1) * (detail.supply_rate || 0),
+          installationOwnAmount: (detail.required_quantity || 1) * (detail.installation_rate || 0),
+          finalSupplyAmount: 0,
+          finalInstallationAmount: 0,
+          costDetails: {
+            supplyDiscount: 0,
+            supplyWastage: 0,
+            supplyTransportation: 0,
+            supplyContingency: 0,
+            supplyMiscellaneous: 0,
+            supplyOutstation: 0,
+            supplyOfficeOverhead: 0,
+            supplyPOVariance: 0,
+            installationWastage: 0,
+            installationTransportation: 0,
+            installationContingency: 0,
+            installationMiscellaneous: 0,
+            installationOutstation: 0,
+            installationOfficeOverhead: 0,
+            installationPOVariance: 0,
+          }
+        }))
+      })) || [];
+      
+      return mappedSpecs;
+    } catch (error) {
+      console.error('Error fetching BOM details:', error);
+      return [];
+    }
+  };
+
+  const handleLeadChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const leadId = e.target.value;
     const selectedLead = leads.find(lead => lead.id === leadId);
     
     if (selectedLead) {
       const bomId = selectedLead.bomId;
-      const selectedBom = boms.find(bom => bom.id === bomId);
       
-      const updatedItems = selectedBom ? selectedBom.items.map(item => ({
-        ...item,
-        itemType: 'INSTALLATION',
-        basicSupplyRate: item.rate,
-        basicInstallationRate: item.rate * 0.3,
-        supplyRate: item.rate, // Initially equals basic rate
-        installationRate: item.rate * 0.3, // Initially equals basic rate
-        supplyOwnAmount: item.quantity * item.rate,
-        installationOwnAmount: item.quantity * (item.rate * 0.3),
-        finalSupplyAmount: 0, // Variance only
-        finalInstallationAmount: 0, // Variance only
-        costDetails: {
-          supplyDiscount: 0,
-          supplyWastage: 0,
-          supplyTransportation: 0,
-          supplyContingency: 0,
-          supplyMiscellaneous: 0,
-          supplyOutstation: 0,
-          supplyOfficeOverhead: 0,
-          supplyPOVariance: 0,
-          installationWastage: 0,
-          installationTransportation: 0,
-          installationContingency: 0,
-          installationMiscellaneous: 0,
-          installationOutstation: 0,
-          installationOfficeOverhead: 0,
-          installationPOVariance: 0,
-        }
-      })) : [];
+      // Fetch BOM specs and items
+      const specs = await fetchBOMDetails(bomId);
       
       setFormData({
         ...formData,
@@ -108,7 +107,8 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
         leadName: selectedLead.name,
         businessName: selectedLead.businessName,
         bomId: bomId,
-        items: updatedItems
+        specs: specs,
+        items: [] // Keep for backward compatibility
       });
     }
   };
@@ -121,40 +121,58 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
     });
   };
 
-  const handleItemChange = (index: number, field: string, value: string) => {
-    const updatedItems = [...formData.items];
-    const numValue = parseFloat(value) || 0;
-    updatedItems[index][field] = numValue;
-    
-    // Recalculate based on field changes
-    if (field === 'quantity') {
-      // Recalculate Supply Own Amount = Quantity × Supply Rate
-      updatedItems[index].supplyOwnAmount = updatedItems[index].quantity * (updatedItems[index].supplyRate || 0);
-      // Recalculate Installation Own Amount = Quantity × Installation Rate  
-      updatedItems[index].installationOwnAmount = updatedItems[index].quantity * (updatedItems[index].installationRate || 0);
-    }
-    
-    if (field === 'basicSupplyRate') {
-      // Supply Rate comes from cost calculations, but starts with basic rate
-      if (!updatedItems[index].costDetails || Object.values(updatedItems[index].costDetails).every(v => v === 0)) {
-        updatedItems[index].supplyRate = numValue;
-        updatedItems[index].supplyOwnAmount = updatedItems[index].quantity * numValue;
-      }
-    }
-    
-    if (field === 'basicInstallationRate') {
-      // Installation Rate comes from cost calculations, but starts with basic rate
-      if (!updatedItems[index].costDetails || Object.values(updatedItems[index].costDetails).every(v => v === 0)) {
-        updatedItems[index].installationRate = numValue;
-        updatedItems[index].installationOwnAmount = updatedItems[index].quantity * numValue;
-      }
-    }
-    
-    setFormData({ ...formData, items: updatedItems });
+  const toggleSpecExpansion = (specId: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      specs: prev.specs?.map((spec: any) => 
+        spec.id === specId ? { ...spec, isExpanded: !spec.isExpanded } : spec
+      ) || []
+    }));
   };
 
-  const openCostModal = (item: any, index: number) => {
-    setSelectedItem({ ...item, index });
+  const handleSpecItemChange = (specId: string, itemId: string, field: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    
+    setFormData((prev: any) => ({
+      ...prev,
+      specs: prev.specs?.map((spec: any) => 
+        spec.id === specId ? {
+          ...spec,
+          items: spec.items.map((item: any) => {
+            if (item.id === itemId) {
+              const updatedItem = { ...item, [field]: numValue };
+              
+              // Recalculate based on field changes
+              if (field === 'quantity') {
+                updatedItem.supplyOwnAmount = updatedItem.quantity * (updatedItem.supplyRate || 0);
+                updatedItem.installationOwnAmount = updatedItem.quantity * (updatedItem.installationRate || 0);
+              }
+              
+              if (field === 'basicSupplyRate') {
+                if (!updatedItem.costDetails || Object.values(updatedItem.costDetails).every(v => v === 0)) {
+                  updatedItem.supplyRate = numValue;
+                  updatedItem.supplyOwnAmount = updatedItem.quantity * numValue;
+                }
+              }
+              
+              if (field === 'basicInstallationRate') {
+                if (!updatedItem.costDetails || Object.values(updatedItem.costDetails).every(v => v === 0)) {
+                  updatedItem.installationRate = numValue;
+                  updatedItem.installationOwnAmount = updatedItem.quantity * numValue;
+                }
+              }
+              
+              return updatedItem;
+            }
+            return item;
+          })
+        } : spec
+      ) || []
+    }));
+  };
+
+  const openCostModal = (specId: string, item: any, itemIndex: number) => {
+    setSelectedItem({ ...item, specId, itemIndex });
     setCostDetails(item.costDetails || {
       supplyDiscount: 0,
       supplyWastage: 0,
@@ -215,9 +233,8 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
     
     const totalSupplyOwnCost = discountedBaseSupplyRate + totalSupplyCost;
     
-    // Supply PO - Variance Amount = (Supply PO - Variance Percentage / 100) × Discounted Base Supply Rate
     const supplyPOVarianceAmount = discountedBaseSupplyRate * (costDetails.supplyPOVariance / 100);
-    const finalSupplyAmount = supplyPOVarianceAmount; // Final Supply Amount = Supply PO - Variance Amount
+    const finalSupplyAmount = supplyPOVarianceAmount;
 
     // B. Installation Cost Breakdown
     const installationWastageAmount = basicInstallationRate * (costDetails.installationWastage / 100);
@@ -232,15 +249,14 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
     
     const totalInstallationOwnCost = basicInstallationRate + totalInstallationCost;
     
-    // Installation Povariance Amount = (Installation Povariance Percentage / 100) × Total Installation Cost
     const installationPOVarianceAmount = totalInstallationCost * (costDetails.installationPOVariance / 100);
-    const finalInstallationAmount = installationPOVarianceAmount; // Final Installation Amount = Installation Povariance Amount
+    const finalInstallationAmount = installationPOVarianceAmount;
 
     return { 
       finalSupplyAmount, 
       finalInstallationAmount,
-      supplyRate: totalSupplyOwnCost, // Supply Rate = Total Supply Own Cost
-      installationRate: totalInstallationOwnCost, // Installation Rate = Total Installation Own Cost
+      supplyRate: totalSupplyOwnCost,
+      installationRate: totalInstallationOwnCost,
       discountedBaseSupplyRate,
       totalSupplyCost,
       totalSupplyOwnCost,
@@ -265,30 +281,65 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
 
   const handleSaveCostDetails = () => {
     if (selectedItem) {
-      const updatedItems = [...formData.items];
       const calculations = calculateFinalAmounts();
       
-      updatedItems[selectedItem.index] = {
-        ...updatedItems[selectedItem.index],
-        costDetails: { ...costDetails },
-        supplyRate: calculations.supplyRate, // Total Supply Own Cost
-        installationRate: calculations.installationRate, // Total Installation Own Cost
-        supplyOwnAmount: updatedItems[selectedItem.index].quantity * calculations.supplyRate,
-        installationOwnAmount: updatedItems[selectedItem.index].quantity * calculations.installationRate,
-        finalSupplyAmount: calculations.finalSupplyAmount, // Only variance amount
-        finalInstallationAmount: calculations.finalInstallationAmount // Only variance amount
-      };
+      setFormData((prev: any) => ({
+        ...prev,
+        specs: prev.specs?.map((spec: any) => 
+          spec.id === selectedItem.specId ? {
+            ...spec,
+            items: spec.items.map((item: any, index: number) => 
+              index === selectedItem.itemIndex ? {
+                ...item,
+                costDetails: { ...costDetails },
+                supplyRate: calculations.supplyRate,
+                installationRate: calculations.installationRate,
+                supplyOwnAmount: item.quantity * calculations.supplyRate,
+                installationOwnAmount: item.quantity * calculations.installationRate,
+                finalSupplyAmount: calculations.finalSupplyAmount,
+                finalInstallationAmount: calculations.finalInstallationAmount
+              } : item
+            )
+          } : spec
+        ) || []
+      }));
       
-      setFormData({ ...formData, items: updatedItems });
       setShowCostModal(false);
     }
   };
 
-  // Calculate totals
-  const totalSupplyOwnAmount = formData.items?.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || 0), 0) || 0;
-  const totalInstallationOwnAmount = formData.items?.reduce((sum: number, item: any) => sum + (item.installationOwnAmount || 0), 0) || 0;
-  const totalFinalSupplyAmount = formData.items?.reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0), 0) || 0;
-  const totalFinalInstallationAmount = formData.items?.reduce((sum: number, item: any) => sum + (item.finalInstallationAmount || 0), 0) || 0;
+  // Calculate totals across all specs
+  const calculateTotals = () => {
+    if (!formData.specs) return {
+      totalSupplyOwnAmount: 0,
+      totalInstallationOwnAmount: 0,
+      totalFinalSupplyAmount: 0,
+      totalFinalInstallationAmount: 0
+    };
+
+    let totalSupplyOwnAmount = 0;
+    let totalInstallationOwnAmount = 0;
+    let totalFinalSupplyAmount = 0;
+    let totalFinalInstallationAmount = 0;
+
+    formData.specs.forEach((spec: any) => {
+      spec.items.forEach((item: any) => {
+        totalSupplyOwnAmount += item.supplyOwnAmount || 0;
+        totalInstallationOwnAmount += item.installationOwnAmount || 0;
+        totalFinalSupplyAmount += item.finalSupplyAmount || 0;
+        totalFinalInstallationAmount += item.finalInstallationAmount || 0;
+      });
+    });
+
+    return {
+      totalSupplyOwnAmount,
+      totalInstallationOwnAmount,
+      totalFinalSupplyAmount,
+      totalFinalInstallationAmount
+    };
+  };
+
+  const totals = calculateTotals();
 
   return (
     <div className="space-y-6">
@@ -366,116 +417,170 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData }
         </div>
       </div>
 
-      {/* Main Table */}
-      {formData.items && formData.items.length > 0 && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Supply Rate</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Installation Rate</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Own Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Rate</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Installation Own Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {formData.items.map((item: any, index: number) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-medium text-gray-900">{item.itemName}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-gray-900">{item.itemType || 'INSTALLATION'}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-gray-900">{item.itemCode}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        value={item.quantity || 0}
-                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                        min="0"
-                        step="0.01"
-                        className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-gray-900">{item.uomName}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        value={item.basicSupplyRate || 0}
-                        onChange={(e) => handleItemChange(index, 'basicSupplyRate', e.target.value)}
-                        min="0"
-                        step="0.01"
-                        className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        value={item.basicInstallationRate || 0}
-                        onChange={(e) => handleItemChange(index, 'basicInstallationRate', e.target.value)}
-                        min="0"
-                        step="0.01"
-                        className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{(item.supplyRate || 0).toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{(item.supplyOwnAmount || 0).toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{(item.installationRate || 0).toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{(item.installationOwnAmount || 0).toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => openCostModal(item, index)}
-                        className="inline-flex items-center px-2 py-1 border border-blue-300 rounded text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
-                      >
-                        <Calculator className="h-3 w-3 mr-1" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-gray-50">
-                <tr>
-                  <td colSpan={7} className="px-4 py-3 text-sm font-medium text-right">Totals:</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">Total Supply Own Cost: {totalSupplyOwnAmount.toLocaleString('en-IN')}/-</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{totalSupplyOwnAmount.toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">Total Installation Own Cost: {totalInstallationOwnAmount.toLocaleString('en-IN')}/-</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{totalInstallationOwnAmount.toLocaleString('en-IN')}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
+      {/* Specifications and Items */}
+      {formData.specs && formData.specs.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-lg font-medium text-gray-700">Quotation Specifications</h4>
+          
+          {formData.specs.map((spec: any) => (
+            <div key={spec.id} className="border border-gray-200 rounded-lg">
+              {/* Spec Header */}
+              <div 
+                className="p-4 bg-gray-50 border-b border-gray-200 cursor-pointer"
+                onClick={() => toggleSpecExpansion(spec.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    {spec.isExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                    <div>
+                      <h4 className="text-md font-medium text-gray-900">{spec.name}</h4>
+                      <p className="text-sm text-gray-500">
+                        {spec.items.length} item(s) • 
+                        Supply: ₹{spec.items.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || 0), 0).toLocaleString('en-IN')} • 
+                        Installation: ₹{spec.items.reduce((sum: number, item: any) => sum + (item.installationOwnAmount || 0), 0).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Spec Content */}
+              {spec.isExpanded && (
+                <div className="p-4">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Supply Rate</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Install Rate</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Rate</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Own Amount</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Rate</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Install Own Amount</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {spec.items.map((item: any, itemIndex: number) => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <div className="text-sm font-medium text-gray-900">{item.itemName}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-900">{item.itemCode}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                value={item.quantity || 0}
+                                onChange={(e) => handleSpecItemChange(spec.id, item.id, 'quantity', e.target.value)}
+                                min="0"
+                                step="0.01"
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-900">{item.uomName}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                value={item.basicSupplyRate || 0}
+                                onChange={(e) => handleSpecItemChange(spec.id, item.id, 'basicSupplyRate', e.target.value)}
+                                min="0"
+                                step="0.01"
+                                className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input
+                                type="number"
+                                value={item.basicInstallationRate || 0}
+                                onChange={(e) => handleSpecItemChange(spec.id, item.id, 'basicInstallationRate', e.target.value)}
+                                min="0"
+                                step="0.01"
+                                className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{(item.supplyRate || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{(item.supplyOwnAmount || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{(item.installationRate || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{(item.installationOwnAmount || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => openCostModal(spec.id, item, itemIndex)}
+                                className="inline-flex items-center px-2 py-1 border border-blue-300 rounded text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
+                              >
+                                <Calculator className="h-3 w-3 mr-1" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50">
+                        <tr>
+                          <td colSpan={6} className="px-4 py-3 text-sm font-medium text-right">Spec Totals:</td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            Supply: ₹{spec.items.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || 0), 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            ₹{spec.items.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || 0), 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            Install: ₹{spec.items.reduce((sum: number, item: any) => sum + (item.installationOwnAmount || 0), 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            ₹{spec.items.reduce((sum: number, item: any) => sum + (item.installationOwnAmount || 0), 0).toLocaleString('en-IN')}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {/* Grand Totals */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+            <h4 className="text-lg font-medium text-gray-900 mb-3">Grand Totals</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Total Supply Own Cost:</span>
+                <span className="text-sm font-medium text-green-600">₹{totals.totalSupplyOwnAmount.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Total Installation Own Cost:</span>
+                <span className="text-sm font-medium text-green-600">₹{totals.totalInstallationOwnAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Final Amounts Summary */}
-      {formData.items && formData.items.length > 0 && (totalFinalSupplyAmount > 0 || totalFinalInstallationAmount > 0) && (
-        <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
-          <h4 className="text-lg font-medium text-gray-900 mb-3">Final Variance Amounts</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-700">Total Final Supply Amount (Variance):</span>
-              <span className="text-sm font-medium text-green-600">₹{totalFinalSupplyAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          {/* Final Amounts Summary */}
+          {(totals.totalFinalSupplyAmount > 0 || totals.totalFinalInstallationAmount > 0) && (
+            <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
+              <h4 className="text-lg font-medium text-gray-900 mb-3">Final Variance Amounts</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Total Final Supply Amount (Variance):</span>
+                  <span className="text-sm font-medium text-green-600">₹{totals.totalFinalSupplyAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Total Final Installation Amount (Variance):</span>
+                  <span className="text-sm font-medium text-green-600">₹{totals.totalFinalInstallationAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-700">Total Final Installation Amount (Variance):</span>
-              <span className="text-sm font-medium text-green-600">₹{totalFinalInstallationAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
