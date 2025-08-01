@@ -285,17 +285,14 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
               customer_quotation_id: quotationId,
               spec_id: specId,
               item_id: item.itemId,
-              uom_id: item.uomId,
               required_qty: item.quantity,
               base_rate: item.netRate || 0,
               cost_price: item.unitPrice || 0,
-              conversion_uom_id: null,
               conversion_qty: item.uomValue || 1,
               supply_rate: item.supplyRate,
               installation_rate: item.installationRate,
               supply_price: item.supplyOwnAmount,
               installation_price: item.installationOwnAmount,
-              parent_item_id: null,
               supply_wastage_amt: costDetails.supplyWastageAmount || 0,
               supply_transportation_amt: costDetails.supplyTransportationAmount || 0,
               supply_contingency_amt: costDetails.supplyContingencyAmount || 0,
@@ -337,7 +334,12 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       if (itemDetailsPayload.length > 0) {
         await createQuotationItemDetails(itemDetailsPayload);
       }
-      
+      setFormData({
+        ...formData,
+        materialCost: totals.totalSupplyOwnAmount,
+        labourCost: totals.totalInstallationOwnAmount,
+      })
+
       // Move to next step
       setCurrentStep(2);
     } catch (error) {
@@ -362,42 +364,42 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         ...(formData.projectCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement_unit_type: cost.nosPercentage,
+          measurement: cost.nosPercentage,
           monthly_expense: cost.monthlyExpense,
           months: cost.months,
           diversity: cost.diversity,
           total: cost.total,
-          poc_type: 'PROJECT'
+          poc_type: 'Project Management & Site Establishment Cost'
         })),
         ...(formData.supervisionCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement_unit_type: cost.nosPercentage,
+          measurement: cost.nosPercentage,
           monthly_expense: cost.monthlyExpense,
           months: cost.months,
           diversity: cost.diversity,
           total: cost.total,
-          poc_type: 'SUPERVISION'
+          poc_type: 'Supervision'
         })),
         ...(formData.financeCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement_unit_type: cost.nosPercentage,
+          measurement: cost.nosPercentage,
           monthly_expense: cost.monthlyExpense,
           months: cost.months,
           diversity: cost.diversity,
           total: cost.total,
-          poc_type: 'FINANCE'
+          poc_type: 'Finance Cost'
         })),
         ...(formData.contingencyCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement_unit_type: cost.nosPercentage,
+          measurement: cost.nosPercentage,
           monthly_expense: cost.monthlyExpense,
           months: cost.months,
           diversity: cost.diversity,
           total: cost.total,
-          poc_type: 'CONTINGENCY'
+          poc_type: 'Contingencies'
         }))
       ];
       
@@ -434,17 +436,17 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         {
           customer_quotation_id: createdQuotationId,
           margin: formData.supplySummary?.marginPercentage || 0,
-          cost_type: 'SUPPLY'
+          cost_type: 'supply'
         },
         {
           customer_quotation_id: createdQuotationId,
           margin: formData.labourSummary?.marginPercentage || 0,
-          cost_type: 'LABOUR'
+          cost_type: 'labour'
         },
         {
           customer_quotation_id: createdQuotationId,
           margin: formData.sitcSummary?.marginPercentage || 0,
-          cost_type: 'SITC'
+          cost_type: 'sitc'
         }
       ];
       

@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface QuotationStep2Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
-  totalItemsCost: number;
 }
 
-const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData, totalItemsCost }) => {
+const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }) => {
   const [expandedSections, setExpandedSections] = useState({
     project: true,
     supervision: true,
@@ -72,21 +71,24 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData, 
   const totalContingencyCost = (formData.contingencyCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
   const totalOverheadsCost = totalProjectCost + totalSupervisionCost + totalFinanceCost + totalContingencyCost;
 
-  // Calculate summary values
-  const materialCost = formData.materialCost || (formData.specs ? 
-    formData.specs.reduce((sum: number, spec: any) => 
-      sum + spec.items.reduce((itemSum: number, item: any) => 
-        itemSum + (item.finalSupplyAmount || 0), 0), 0) :
-    (formData.items?.reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0), 0) || 0));
-  
-  const labourCost = formData.labourCost || (formData.specs ? 
-    formData.specs.reduce((sum: number, spec: any) => 
-      sum + spec.items.reduce((itemSum: number, item: any) => 
-        itemSum + (item.finalInstallationAmount || 0), 0), 0) :
-    (formData.items?.reduce((sum: number, item: any) => sum + (item.finalInstallationAmount || 0), 0) || 0));
-  
+  // Calculate summary values - material and labour costs from step 1 grand totals
+  const materialCost = formData.materialCost || 0;
+  const labourCost = formData.labourCost || 0;
+
   const totalOwnCost = materialCost + labourCost;
-  const contractValue = formData.contractValue || (totalOwnCost + totalOverheadsCost);
+  const contractValue = formData.contractValue || 0;
+
+  // Update formData with calculated totals
+  React.useEffect(() => {
+    setFormData((prev: any) => ({
+      ...prev,
+      totalOwnCost,
+      materialCost,
+      labourCost,
+      totalOverheadsCost,
+      contractValue: prev.contractValue || 0
+    }));
+  }, [totalOwnCost, setFormData, materialCost, labourCost, totalOverheadsCost]);
 
   const handleSummaryChange = (field: string, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -287,28 +289,18 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData, 
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Material Cost
             </label>
-            <input
-              type="number"
-              value={materialCost}
-              onChange={(e) => handleSummaryChange('materialCost', e.target.value)}
-              min="0"
-              step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
+              ₹{materialCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Labour Cost
             </label>
-            <input
-              type="number"
-              value={labourCost}
-              onChange={(e) => handleSummaryChange('labourCost', e.target.value)}
-              min="0"
-              step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
+              ₹{labourCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
           
           <div>
@@ -336,18 +328,6 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData, 
           </div>
         </div>
       </div>
-
-      {/* Update formData with calculated totals */}
-      {React.useEffect(() => {
-        setFormData((prev: any) => ({
-          ...prev,
-          totalOverheadsCost,
-          totalOwnCost,
-          materialCost: prev.materialCost || materialCost,
-          labourCost: prev.labourCost || labourCost,
-          contractValue: prev.contractValue || contractValue
-        }));
-      }, [totalOverheadsCost, totalOwnCost, materialCost, labourCost, contractValue])}
     </div>
   );
 };
