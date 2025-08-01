@@ -285,6 +285,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
               customer_quotation_id: quotationId,
               spec_id: specId,
               item_id: item.itemId,
+              material_type: item.materialType,
               required_qty: item.quantity,
               base_rate: item.netRate || 0,
               cost_price: item.unitPrice || 0,

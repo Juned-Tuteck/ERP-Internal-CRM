@@ -103,7 +103,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
           itemId: detail.item_id,
           itemCode: detail.item_code || '',
           itemName: detail.item_name || '',
-          itemType: detail.material_type || 'INSTALLATION',
+          materialType: detail.material_type || 'INSTALLATION',
           uomName: '-',
           uomId: detail.uom_id || null,
           hsnCode: detail.hsn_code || '',
@@ -536,6 +536,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material Type</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Supply Rate</th>
@@ -561,6 +562,15 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                               {item.hsnCode && (
                                 <div className="text-xs text-gray-500">HSN: {item.hsnCode}</div>
                               )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                item.materialType === 'HIGH SIDE SUPPLY' ? 'bg-blue-100 text-blue-800' :
+                                item.materialType === 'LOW SIDE SUPPLY' ? 'bg-green-100 text-green-800' :
+                                'bg-purple-100 text-purple-800'
+                              }`}>
+                                {item.materialType}
+                              </span>
                             </td>
                             <td className="px-4 py-3">
                               <input
@@ -613,7 +623,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({ formData, setFormData, 
                       </tbody>
                       <tfoot className="bg-gray-50">
                         <tr>
-                          <td colSpan={6} className="px-4 py-3 text-sm font-medium text-right">Spec Totals:</td>
+                          <td colSpan={7} className="px-4 py-3 text-sm font-medium text-right">Spec Totals:</td>
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">
                             Supply: ₹{spec.items.reduce((sum: number, item: any) => sum + (item.supplyOwnAmount || 0), 0).toLocaleString('en-IN')}
                           </td>

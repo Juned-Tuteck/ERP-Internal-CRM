@@ -43,6 +43,7 @@ export const BOM_TEMPLATE_DETAIL_KEY_MAP = {
   required_quantity: 'quantity',
   item_code: 'itemCode',
   item_name: 'itemName',
+  material_type: 'materialType',
   latest_lowest_basic_supply_rate: 'supplyRate',
   latest_lowest_basic_installation_rate: 'installationRate',
   latest_lowest_net_rate: 'netRate'
