@@ -7,8 +7,18 @@ interface QuotationStep3Props {
 
 const QuotationStep3: React.FC<QuotationStep3Props> = ({ formData, setFormData }) => {
   // Get values from previous steps
-  const ownSupply = formData.items?.reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0), 0) || 0;
-  const ownLabour = formData.items?.reduce((sum: number, item: any) => sum + (item.finalInstallationAmount || 0), 0) || 0;
+  const ownSupply = formData.specs ? 
+    formData.specs.reduce((sum: number, spec: any) => 
+      sum + spec.items.reduce((itemSum: number, item: any) => 
+        itemSum + (item.finalSupplyAmount || 0), 0), 0) :
+    (formData.items?.reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0), 0) || 0);
+  
+  const ownLabour = formData.specs ? 
+    formData.specs.reduce((sum: number, spec: any) => 
+      sum + spec.items.reduce((itemSum: number, item: any) => 
+        itemSum + (item.finalInstallationAmount || 0), 0), 0) :
+    (formData.items?.reduce((sum: number, item: any) => sum + (item.finalInstallationAmount || 0), 0) || 0);
+  
   const totalOverheads = formData.totalOverheadsCost || 0;
   const totalOwn = ownSupply + ownLabour;
 

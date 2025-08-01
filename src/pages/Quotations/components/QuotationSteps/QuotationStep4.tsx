@@ -22,7 +22,11 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({ formData, setFormData }
 
   // Categorize items for display
   const categorizeItems = () => {
-    const items = formData.items || [];
+    // Get items from specs structure or fallback to items array
+    const items = formData.specs ? 
+      formData.specs.flatMap((spec: any) => spec.items || []) :
+      (formData.items || []);
+    
     const categorizedItems = [];
 
     items.forEach((item: any) => {

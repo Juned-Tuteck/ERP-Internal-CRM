@@ -30,7 +30,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     quotationDate: new Date().toISOString().split('T')[0],
     expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
     bomId: '',
-    items: [],
+    specs: [],
+    items: [], // Keep for backward compatibility
     note: '',
     // Step 2: POC
     projectCosts: [],
@@ -112,7 +113,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         ...initialData,
         leadId: leadId || '',
         bomId: initialData.bomId || '',
-        items: initialData.items || [],
+        specs: initialData.specs || [],
+        items: initialData.items || [], // Keep for backward compatibility
         // Step 2: POC
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
@@ -178,7 +180,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         ...initialData,
         leadId: leadId || '',
         bomId: initialData.bomId || '',
-        items: initialData.items || [],
+        specs: initialData.specs || [],
+        items: initialData.items || [], // Keep for backward compatibility
         // Step 2: POC
         projectCosts: initialData.projectCosts || [],
         supervisionCosts: initialData.supervisionCosts || [],
@@ -243,7 +246,11 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   };
   
   // Calculate total items cost for Step 2
-  const totalItemsCost = (formData.items || []).reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0) + (item.finalInstallationAmount || 0), 0);
+  const totalItemsCost = formData.specs ? 
+    formData.specs.reduce((sum: number, spec: any) => 
+      sum + spec.items.reduce((itemSum: number, item: any) => 
+        itemSum + (item.finalSupplyAmount || 0) + (item.finalInstallationAmount || 0), 0), 0) :
+    (formData.items || []).reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0) + (item.finalInstallationAmount || 0), 0);
 
   if (!isOpen) return null;
 

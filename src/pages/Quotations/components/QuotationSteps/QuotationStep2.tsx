@@ -73,8 +73,18 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData, 
   const totalOverheadsCost = totalProjectCost + totalSupervisionCost + totalFinanceCost + totalContingencyCost;
 
   // Calculate summary values
-  const materialCost = formData.materialCost || (formData.items?.reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0), 0) || 0);
-  const labourCost = formData.labourCost || (formData.items?.reduce((sum: number, item: any) => sum + (item.finalInstallationAmount || 0), 0) || 0);
+  const materialCost = formData.materialCost || (formData.specs ? 
+    formData.specs.reduce((sum: number, spec: any) => 
+      sum + spec.items.reduce((itemSum: number, item: any) => 
+        itemSum + (item.finalSupplyAmount || 0), 0), 0) :
+    (formData.items?.reduce((sum: number, item: any) => sum + (item.finalSupplyAmount || 0), 0) || 0));
+  
+  const labourCost = formData.labourCost || (formData.specs ? 
+    formData.specs.reduce((sum: number, spec: any) => 
+      sum + spec.items.reduce((itemSum: number, item: any) => 
+        itemSum + (item.finalInstallationAmount || 0), 0), 0) :
+    (formData.items?.reduce((sum: number, item: any) => sum + (item.finalInstallationAmount || 0), 0) || 0));
+  
   const totalOwnCost = materialCost + labourCost;
   const contractValue = formData.contractValue || (totalOwnCost + totalOverheadsCost);
 
