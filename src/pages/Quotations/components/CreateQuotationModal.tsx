@@ -5,7 +5,15 @@ import QuotationStep2 from './QuotationSteps/QuotationStep2';
 import QuotationStep3 from './QuotationSteps/QuotationStep3';
 import QuotationStep4 from './QuotationSteps/QuotationStep4';
 import QuotationStep5 from './QuotationSteps/QuotationStep5';
-import { leads } from './QuotationSteps/QuotationStep1';
+import { 
+  createQuotation, 
+  createQuotationSpecs, 
+  createQuotationItemDetails,
+  createPOCExpenses,
+  updateQuotation,
+  createCostMargins,
+  createQuotationComment
+} from '../../../utils/quotationApi';
 
 interface CreateQuotationModalProps {
   isOpen: boolean;
@@ -21,6 +29,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   initialData 
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdQuotationId, setCreatedQuotationId] = useState<string | null>(null);
   
   const getDefaultFormData = () => ({
     // Step 1: Costing Sheet
@@ -101,12 +111,6 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     if (initialData) {
       // Find the lead ID based on the lead name if it's not provided
       let leadId = initialData.leadId;
-      if (!leadId && initialData.leadName) {
-        const lead = leads?.find(l => l.name === initialData.leadName);
-        if (lead) {
-          leadId = lead.id;
-        }
-      }
       
       return {
         ...defaultData,
@@ -166,14 +170,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     if (initialData) {
       const defaultData = getDefaultFormData();
       
-      // Find the lead ID based on the lead name if it's not provided
       let leadId = initialData.leadId;
-      if (!leadId && initialData.leadName) {
-        const lead = leads?.find(l => l.name === initialData.leadName);
-        if (lead) {
-          leadId = lead.id;
-        }
-      }
       
       setFormData({
         ...defaultData,
@@ -220,10 +217,334 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     }
   }, [initialData]);
 
-  const handleNext = () => {
-    if (currentStep < 5) {
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      await handleStep1Submit();
+    } else if (currentStep === 2) {
+      await handleStep2Submit();
+    } else if (currentStep === 3) {
+      await handleStep3Submit();
+    } else if (currentStep === 4) {
+      await handleStep4Submit();
+    } else if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
+  };
+
+  // Step 1: Create quotation, specs, and item details
+  const handleStep1Submit = async () => {
+    if (!formData.leadId || !formData.bomId) {
+      alert('Please select a lead and ensure BOM is loaded');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Calculate totals
+      const totals = calculateTotals();
+      
+      // Step 1: Create quotation
+      const quotationPayload = {
+        lead_id: formData.leadId,
+        quotation_date: formData.quotationDate,
+        expiry_date: formData.expiryDate,
+        note: formData.note || '',
+        bom_id: formData.bomId,
+        total_installation_own_cost: totals.totalInstallationOwnAmount,
+        total_supply_own_cost: totals.totalSupplyOwnAmount
+      };
+      
+      const quotationResponse = await createQuotation(quotationPayload);
+      const quotationId = quotationResponse.data?.id;
+      
+      if (!quotationId) {
+        throw new Error('Quotation ID not received from API');
+      }
+      
+      setCreatedQuotationId(quotationId);
+      
+      // Step 2: Create specs
+      const specsPayload = formData.specs.map((spec: any) => ({
+        customer_quotation_id: quotationId,
+        spec_description: spec.name,
+        spec_price: spec.items.reduce((sum: number, item: any) => 
+          sum + (item.supplyOwnAmount || 0) + (item.installationOwnAmount || 0), 0)
+      }));
+      
+      const specsResponse = await createQuotationSpecs(specsPayload);
+      const createdSpecs = specsResponse.data || [];
+      
+      // Step 3: Create item details
+      const itemDetailsPayload: any[] = [];
+      formData.specs.forEach((spec: any, specIndex: number) => {
+        const specId = createdSpecs[specIndex]?.id;
+        if (specId) {
+          spec.items.forEach((item: any) => {
+            const costDetails = item.costDetails || {};
+            itemDetailsPayload.push({
+              customer_quotation_id: quotationId,
+              spec_id: specId,
+              item_id: item.itemId,
+              uom_id: item.uomId,
+              required_qty: item.quantity,
+              base_rate: item.netRate || 0,
+              cost_price: item.unitPrice || 0,
+              conversion_uom_id: null,
+              conversion_qty: item.uomValue || 1,
+              supply_rate: item.supplyRate,
+              installation_rate: item.installationRate,
+              supply_price: item.supplyOwnAmount,
+              installation_price: item.installationOwnAmount,
+              parent_item_id: null,
+              supply_wastage_amt: costDetails.supplyWastageAmount || 0,
+              supply_transportation_amt: costDetails.supplyTransportationAmount || 0,
+              supply_contingency_amt: costDetails.supplyContingencyAmount || 0,
+              supply_miscellaneous_amt: costDetails.supplyMiscellaneousAmount || 0,
+              supply_povariance_amt: costDetails.supplyPOVarianceAmount || 0,
+              supply_outstation_amt: costDetails.supplyOutstationAmount || 0,
+              supply_office_overhead_amt: costDetails.supplyOfficeOverheadAmount || 0,
+              supply_wastage_pct: costDetails.supplyWastage || 0,
+              supply_transportation_pct: costDetails.supplyTransportation || 0,
+              supply_contingency_pct: costDetails.supplyContingency || 0,
+              supply_miscellaneous_pct: costDetails.supplyMiscellaneous || 0,
+              supply_povariance_pct: costDetails.supplyPOVariance || 0,
+              supply_outstation_pct: costDetails.supplyOutstation || 0,
+              supply_office_overhead_pct: costDetails.supplyOfficeOverhead || 0,
+              installation_wastage_amt: costDetails.installationWastageAmount || 0,
+              installation_transportation_amt: costDetails.installationTransportationAmount || 0,
+              installation_contingency_amt: costDetails.installationContingencyAmount || 0,
+              installation_miscellaneous_amt: costDetails.installationMiscellaneousAmount || 0,
+              installation_povariance_amt: costDetails.installationPOVarianceAmount || 0,
+              installation_outstation_amt: costDetails.installationOutstationAmount || 0,
+              installation_office_overhead_amt: costDetails.installationOfficeOverheadAmount || 0,
+              installation_wastage_pct: costDetails.installationWastage || 0,
+              installation_transportation_pct: costDetails.installationTransportation || 0,
+              installation_contingency_pct: costDetails.installationContingency || 0,
+              installation_miscellaneous_pct: costDetails.installationMiscellaneous || 0,
+              installation_povariance_pct: costDetails.installationPOVariance || 0,
+              installation_outstation_pct: costDetails.installationOutstation || 0,
+              installation_office_overhead_pct: costDetails.installationOfficeOverhead || 0,
+              total_supply_amt: item.supplyOwnAmount || 0,
+              total_installation_amt: item.installationOwnAmount || 0,
+              spec_discount: 0,
+              basic_supply_rate: item.basicSupplyRate || 0,
+              basic_installation_rate: item.basicInstallationRate || 0
+            });
+          });
+        }
+      });
+      
+      if (itemDetailsPayload.length > 0) {
+        await createQuotationItemDetails(itemDetailsPayload);
+      }
+      
+      // Move to next step
+      setCurrentStep(2);
+    } catch (error) {
+      console.error('Error in Step 1:', error);
+      alert('Failed to create quotation. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Step 2: Create POC expenses
+  const handleStep2Submit = async () => {
+    if (!createdQuotationId) {
+      alert('Quotation not created yet. Please try again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Combine all POC expenses
+      const allPOCExpenses = [
+        ...(formData.projectCosts || []).map((cost: any) => ({
+          customer_quotation_id: createdQuotationId,
+          description: cost.description,
+          measurement_unit_type: cost.nosPercentage,
+          monthly_expense: cost.monthlyExpense,
+          months: cost.months,
+          diversity: cost.diversity,
+          total: cost.total,
+          poc_type: 'PROJECT'
+        })),
+        ...(formData.supervisionCosts || []).map((cost: any) => ({
+          customer_quotation_id: createdQuotationId,
+          description: cost.description,
+          measurement_unit_type: cost.nosPercentage,
+          monthly_expense: cost.monthlyExpense,
+          months: cost.months,
+          diversity: cost.diversity,
+          total: cost.total,
+          poc_type: 'SUPERVISION'
+        })),
+        ...(formData.financeCosts || []).map((cost: any) => ({
+          customer_quotation_id: createdQuotationId,
+          description: cost.description,
+          measurement_unit_type: cost.nosPercentage,
+          monthly_expense: cost.monthlyExpense,
+          months: cost.months,
+          diversity: cost.diversity,
+          total: cost.total,
+          poc_type: 'FINANCE'
+        })),
+        ...(formData.contingencyCosts || []).map((cost: any) => ({
+          customer_quotation_id: createdQuotationId,
+          description: cost.description,
+          measurement_unit_type: cost.nosPercentage,
+          monthly_expense: cost.monthlyExpense,
+          months: cost.months,
+          diversity: cost.diversity,
+          total: cost.total,
+          poc_type: 'CONTINGENCY'
+        }))
+      ];
+      
+      if (allPOCExpenses.length > 0) {
+        await createPOCExpenses(allPOCExpenses);
+      }
+      
+      // Update quotation with total POC overheads cost
+      const totalPOCCost = formData.totalOverheadsCost || 0;
+      await updateQuotation(createdQuotationId, {
+        total_poc_overheads_cost: totalPOCCost
+      });
+      
+      // Move to next step
+      setCurrentStep(3);
+    } catch (error) {
+      console.error('Error in Step 2:', error);
+      alert('Failed to save POC expenses. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Step 3: Create cost margins
+  const handleStep3Submit = async () => {
+    if (!createdQuotationId) {
+      alert('Quotation not created yet. Please try again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const marginsPayload = [
+        {
+          customer_quotation_id: createdQuotationId,
+          margin: formData.supplySummary?.marginPercentage || 0,
+          cost_type: 'SUPPLY'
+        },
+        {
+          customer_quotation_id: createdQuotationId,
+          margin: formData.labourSummary?.marginPercentage || 0,
+          cost_type: 'LABOUR'
+        },
+        {
+          customer_quotation_id: createdQuotationId,
+          margin: formData.sitcSummary?.marginPercentage || 0,
+          cost_type: 'SITC'
+        }
+      ];
+      
+      await createCostMargins(marginsPayload);
+      
+      // Move to next step
+      setCurrentStep(4);
+    } catch (error) {
+      console.error('Error in Step 3:', error);
+      alert('Failed to save cost margins. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Step 4: Update quotation with GST details
+  const handleStep4Submit = async () => {
+    if (!createdQuotationId) {
+      alert('Quotation not created yet. Please try again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const finalCosting = formData.finalCosting || {};
+      
+      const gstPayload = {
+        high_side_cost_without_gst: finalCosting.highSideAmount || 0,
+        high_side_gst_percentage: formData.gstRates?.highSideSupply || 18,
+        high_side_cost_with_gst: finalCosting.highSideWithGST || 0,
+        low_side_cost_without_gst: finalCosting.lowSideAmount || 0,
+        low_side_gst_percentage: formData.gstRates?.lowSideSupply || 18,
+        low_side_cost_with_gst: finalCosting.lowSideWithGST || 0,
+        installation_cost_without_gst: finalCosting.installationAmount || 0,
+        installation_gst_percentage: formData.gstRates?.installation || 18,
+        installation_cost_with_gst: finalCosting.installationWithGST || 0
+      };
+      
+      await updateQuotation(createdQuotationId, gstPayload);
+      
+      // Move to next step
+      setCurrentStep(5);
+    } catch (error) {
+      console.error('Error in Step 4:', error);
+      alert('Failed to save GST details. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Step 5: Add comment
+  const handleAddComment = async (comment: string) => {
+    if (!createdQuotationId || !comment.trim()) {
+      return;
+    }
+
+    try {
+      await createQuotationComment({
+        customer_quotation_id: createdQuotationId,
+        comment: comment.trim()
+      });
+      
+      // Add comment to local state for UI update
+      const newComment = {
+        id: Date.now().toString(),
+        text: comment,
+        author: 'Current User',
+        timestamp: new Date().toISOString()
+      };
+      setFormData(prev => ({
+        ...prev,
+        comments: [...prev.comments, newComment]
+      }));
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment. Please try again.');
+    }
+  };
+
+  // Calculate totals helper function
+  const calculateTotals = () => {
+    if (!formData.specs) return {
+      totalSupplyOwnAmount: 0,
+      totalInstallationOwnAmount: 0
+    };
+
+    let totalSupplyOwnAmount = 0;
+    let totalInstallationOwnAmount = 0;
+
+    formData.specs.forEach((spec: any) => {
+      spec.items.forEach((item: any) => {
+        totalSupplyOwnAmount += item.supplyOwnAmount || 0;
+        totalInstallationOwnAmount += item.installationOwnAmount || 0;
+      });
+    });
+
+    return {
+      totalSupplyOwnAmount,
+      totalInstallationOwnAmount
+    };
   };
 
   const handlePrevious = () => {
@@ -233,10 +554,13 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   };
 
   const handleSubmit = () => {
+    // Close modal with success message
+    alert('Quotation created successfully!');
     onSubmit(formData);
     
     // Reset form
     setCurrentStep(1);
+    setCreatedQuotationId(null);
     setFormData(getDefaultFormData());
   };
 
@@ -346,6 +670,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
             <QuotationStep5 
               formData={formData} 
               setFormData={setFormData} 
+              onAddComment={handleAddComment}
             />
           )}
         </div>
@@ -384,9 +709,10 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
               <button
                 type="button"
                 onClick={handleNext}
+                disabled={isSubmitting}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
-                Next
+                {isSubmitting ? 'Processing...' : 'Next'}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </button>
             ) : (

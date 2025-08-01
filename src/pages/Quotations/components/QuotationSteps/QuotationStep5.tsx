@@ -4,26 +4,41 @@ import { MessageSquare } from 'lucide-react';
 interface QuotationStep5Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
+  onAddComment?: (comment: string) => Promise<void>;
 }
 
-const QuotationStep5: React.FC<QuotationStep5Props> = ({ formData, setFormData }) => {
+const QuotationStep5: React.FC<QuotationStep5Props> = ({ formData, setFormData, onAddComment }) => {
   const [newComment, setNewComment] = useState('');
+  const [isAddingComment, setIsAddingComment] = useState(false);
 
-  const addComment = () => {
+  const addComment = async () => {
     if (newComment.trim()) {
-      const comment = {
-        id: Date.now().toString(),
-        text: newComment,
-        author: 'Current User',
-        timestamp: new Date().toISOString()
-      };
-      
-      setFormData({
-        ...formData,
-        comments: [...formData.comments, comment]
-      });
-      
-      setNewComment('');
+      if (onAddComment) {
+        setIsAddingComment(true);
+        try {
+          await onAddComment(newComment);
+          setNewComment('');
+        } catch (error) {
+          console.error('Error adding comment:', error);
+        } finally {
+          setIsAddingComment(false);
+        }
+      } else {
+        // Fallback for local comment addition (when not connected to API)
+        const comment = {
+          id: Date.now().toString(),
+          text: newComment,
+          author: 'Current User',
+          timestamp: new Date().toISOString()
+        };
+        
+        setFormData({
+          ...formData,
+          comments: [...formData.comments, comment]
+        });
+        
+        setNewComment('');
+      }
     }
   };
 
@@ -46,10 +61,14 @@ const QuotationStep5: React.FC<QuotationStep5Props> = ({ formData, setFormData }
           <button
             type="button"
             onClick={addComment}
-            disabled={!newComment.trim()}
+            disabled={!newComment.trim() || isAddingComment}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            <MessageSquare className="h-4 w-4" />
+            {isAddingComment ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <MessageSquare className="h-4 w-4" />
+            )}
           </button>
         </div>
 
