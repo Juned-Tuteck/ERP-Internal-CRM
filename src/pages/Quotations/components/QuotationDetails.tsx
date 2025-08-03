@@ -31,7 +31,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
           leadName: apiQuotation.lead_name || quotation.leadName,
           businessName: apiQuotation.business_name || quotation.businessName,
           workType: apiQuotation.work_type || quotation.workType,
-          totalValue: `₹${(apiQuotation.total_cost || 0).toLocaleString('en-IN')}`,
+          totalValue: `₹${(parseFloat(apiQuotation.high_side_cost_with_gst || 0) + parseFloat(apiQuotation.low_side_cost_with_gst || 0) + parseFloat(apiQuotation.installation_cost_with_gst || 0)).toLocaleString('en-IN')}`,
           createdBy: apiQuotation.created_by || quotation.createdBy,
           createdDate: apiQuotation.quotation_date || quotation.createdDate,
           expiryDate: apiQuotation.expiry_date || quotation.expiryDate,
@@ -39,20 +39,20 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
           note: apiQuotation.note || '',
           bomId: apiQuotation.bom_id || '',
           leadId: apiQuotation.lead_id || '',
-          totalSupplyOwnCost: apiQuotation.total_supply_own_cost || 0,
-          totalInstallationOwnCost: apiQuotation.total_installation_own_cost || 0,
-          totalPocOverheadsCost: apiQuotation.total_poc_overheads_cost || 0,
-          highSideCostWithoutGst: apiQuotation.high_side_cost_without_gst || 0,
-          highSideGstPercentage: apiQuotation.high_side_gst_percentage || 18,
-          highSideCostWithGst: apiQuotation.high_side_cost_with_gst || 0,
-          lowSideCostWithoutGst: apiQuotation.low_side_cost_without_gst || 0,
-          lowSideGstPercentage: apiQuotation.low_side_gst_percentage || 18,
-          lowSideCostWithGst: apiQuotation.low_side_cost_with_gst || 0,
-          installationCostWithoutGst: apiQuotation.installation_cost_without_gst || 0,
-          installationGstPercentage: apiQuotation.installation_gst_percentage || 18,
-          installationCostWithGst: apiQuotation.installation_cost_with_gst || 0,
-          specs: apiQuotation.specs || [],
-          pocExpenses: apiQuotation.poc_expenses || [],
+          totalSupplyOwnCost: parseFloat(apiQuotation.total_supply_own_cost || 0),
+          totalInstallationOwnCost: parseFloat(apiQuotation.total_installation_own_cost || 0),
+          totalPocOverheadsCost: parseFloat(apiQuotation.total_poc_overheads_cost || 0),
+          highSideCostWithoutGst: parseFloat(apiQuotation.high_side_cost_without_gst || 0),
+          highSideGstPercentage: parseFloat(apiQuotation.high_side_gst_percentage || 18),
+          highSideCostWithGst: parseFloat(apiQuotation.high_side_cost_with_gst || 0),
+          lowSideCostWithoutGst: parseFloat(apiQuotation.low_side_cost_without_gst || 0),
+          lowSideGstPercentage: parseFloat(apiQuotation.low_side_gst_percentage || 18),
+          lowSideCostWithGst: parseFloat(apiQuotation.low_side_cost_with_gst || 0),
+          installationCostWithoutGst: parseFloat(apiQuotation.installation_cost_without_gst || 0),
+          installationGstPercentage: parseFloat(apiQuotation.installation_gst_percentage || 18),
+          installationCostWithGst: parseFloat(apiQuotation.installation_cost_with_gst || 0),
+          specs: apiQuotation.bom_specs || [],
+          pocExpenses: apiQuotation.poc_expenses || {},
           costMargins: apiQuotation.cost_margins || [],
           comments: apiQuotation.comments || []
         };
@@ -96,25 +96,35 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
   // Use detailed quotation data if available, otherwise fallback to prop data
   const displayQuotation = quotationDetails || quotation;
 
-  // Mock data for quotation details
-  const quotationItems = [
-    { id: 1, itemCode: 'FAN-001', itemName: 'Industrial Exhaust Fan', uomName: 'Nos', supplyRate: 12500, installationRate: 2500, quantity: 4, supplyPrice: 50000, installationPrice: 10000 },
-    { id: 2, itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', supplyRate: 850, installationRate: 350, quantity: 120, supplyPrice: 102000, installationPrice: 42000 },
-    { id: 3, itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', supplyRate: 3200, installationRate: 800, quantity: 6, supplyPrice: 19200, installationPrice: 4800 },
-    { id: 4, itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', supplyRate: 1800, installationRate: 400, quantity: 8, supplyPrice: 14400, installationPrice: 3200 },
-  ];
+  // Extract quotation items from API data
+  const quotationItems = displayQuotation.specs?.reduce((items: any[], spec: any) => {
+    const specItems = spec.items?.map((item: any) => ({
+      id: item.id,
+      itemCode: item.item_code,
+      itemName: item.item_name,
+      uomName: item.uom_value || 'Nos',
+      supplyRate: parseFloat(item.supply_rate || 0),
+      installationRate: parseFloat(item.installation_rate || 0),
+      quantity: parseFloat(item.required_qty || 0),
+      supplyPrice: parseFloat(item.supply_price || 0),
+      installationPrice: parseFloat(item.installation_price || 0),
+    })) || [];
+    return [...items, ...specItems];
+  }, []) || [];
 
   const costingSummary = {
-    supplySubtotal: 185600,
-    supplyMargin: 15,
-    supplySellingAmount: 213440,
-    installationSubtotal: 60000,
-    installationMargin: 20,
-    installationSellingAmount: 72000,
-    totalSellingAmount: 285440,
-    gstRate: 18,
-    gstAmount: 51379.2,
-    grandTotal: 336819.2
+    supplySubtotal: displayQuotation.totalSupplyOwnCost || 0,
+    supplyMargin: displayQuotation.costMargins?.find((margin: any) => margin.cost_type === 'supply')?.margin || 0,
+    supplySellingAmount: displayQuotation.highSideCostWithoutGst + displayQuotation.lowSideCostWithoutGst || 0,
+    installationSubtotal: displayQuotation.totalInstallationOwnCost || 0,
+    installationMargin: displayQuotation.costMargins?.find((margin: any) => margin.cost_type === 'installation')?.margin || 0,
+    installationSellingAmount: displayQuotation.installationCostWithoutGst || 0,
+    totalSellingAmount: (displayQuotation.highSideCostWithoutGst || 0) + (displayQuotation.lowSideCostWithoutGst || 0) + (displayQuotation.installationCostWithoutGst || 0),
+    gstRate: 18, // Can be calculated as weighted average if needed
+    gstAmount: (displayQuotation.highSideCostWithGst - displayQuotation.highSideCostWithoutGst) + 
+               (displayQuotation.lowSideCostWithGst - displayQuotation.lowSideCostWithoutGst) + 
+               (displayQuotation.installationCostWithGst - displayQuotation.installationCostWithoutGst),
+    grandTotal: displayQuotation.highSideCostWithGst + displayQuotation.lowSideCostWithGst + displayQuotation.installationCostWithGst
   };
 
   const getStatusColor = (status: string) => {
@@ -339,7 +349,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {quotationItems.map((item) => (
+                    {quotationItems.map((item: any) => (
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
@@ -355,9 +365,9 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                   <tfoot className="bg-gray-50">
                     <tr>
                       <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total:</td>
-                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum, item) => sum + item.supplyPrice, 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum: number, item: any) => sum + item.supplyPrice, 0).toLocaleString('en-IN')}</td>
                       <td></td>
-                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum, item) => sum + item.installationPrice, 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum: number, item: any) => sum + item.installationPrice, 0).toLocaleString('en-IN')}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -373,90 +383,172 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
               <p className="text-sm text-gray-600">Detailed breakdown of costs for this quotation.</p>
             </div>
             
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-md font-medium text-gray-900 mb-3">Supply Cost Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply Discount:</span>
-                    <span className="text-sm font-medium">5% (₹9,280)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply Wastage:</span>
-                    <span className="text-sm font-medium">2% (₹3,712)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply Transportation:</span>
-                    <span className="text-sm font-medium">3% (₹5,568)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply Contingency:</span>
-                    <span className="text-sm font-medium">2% (₹3,712)</span>
+            {/* Render costing details organized by spec groups */}
+            {displayQuotation.specs?.map((spec: any, specIndex: number) => (
+              <div key={spec.id || specIndex} className="border-2 border-blue-200 rounded-lg p-6 bg-blue-50">
+                {/* Spec Header */}
+                <div className="mb-6 border-b border-blue-300 pb-4">
+                  <h3 className="text-xl font-semibold text-blue-900">{spec.spec_description}</h3>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm text-blue-700">Spec ID: {spec.id}</span>
+                    <span className="text-lg font-bold text-blue-800">₹{parseFloat(spec.spec_price || 0).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply Miscellaneous:</span>
-                    <span className="text-sm font-medium">1% (₹1,856)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply Outstation:</span>
-                    <span className="text-sm font-medium">0% (₹0)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply Office Overhead:</span>
-                    <span className="text-sm font-medium">3% (₹5,568)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Supply PO-variance:</span>
-                    <span className="text-sm font-medium">1% (₹1,856)</span>
+
+                {/* Items within this spec */}
+                <div className="space-y-4">
+                  {spec.items?.map((item: any, itemIndex: number) => (
+                    <div key={item.id || itemIndex} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                      {/* Item Header */}
+                      <div className="mb-4 border-b border-gray-100 pb-3">
+                        <h4 className="text-lg font-medium text-gray-900">{item.item_name}</h4>
+                        <div className="flex items-center space-x-3 mt-1">
+                          <span className="text-sm font-medium text-gray-700">{item.item_code}</span>
+                          <span className="text-xs text-gray-500">ID: {item.id}</span>
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">{item.material_type}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Supply Cost Details */}
+                        <div className="space-y-4">
+                          <h5 className="text-md font-medium text-gray-900">Supply Cost Breakdown</h5>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Base Supply Rate:</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.supply_rate || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Quantity:</span>
+                              <span className="text-sm font-medium">{parseFloat(item.required_qty || 0)} {item.uom_value || 'Nos'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Supply Wastage ({item.supply_wastage_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.supply_wastage_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Supply Transportation ({item.supply_transportation_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.supply_transportation_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Supply Contingency ({item.supply_contingency_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.supply_contingency_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Supply Miscellaneous ({item.supply_miscellaneous_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.supply_miscellaneous_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Supply Office Overhead ({item.supply_office_overhead_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.supply_office_overhead_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Supply PO-variance ({item.supply_povariance_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.supply_povariance_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="border-t border-gray-200 pt-2">
+                              <div className="flex justify-between font-medium">
+                                <span className="text-sm text-gray-900">Total Supply Cost:</span>
+                                <span className="text-sm text-gray-900">₹{parseFloat(item.total_supply_amt || 0).toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Installation Cost Details */}
+                        <div className="space-y-4">
+                          <h5 className="text-md font-medium text-gray-900">Installation Cost Breakdown</h5>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Base Installation Rate:</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.installation_rate || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Quantity:</span>
+                              <span className="text-sm font-medium">{parseFloat(item.required_qty || 0)} {item.uom_value || 'Nos'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Installation Wastage ({item.installation_wastage_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.installation_wastage_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Installation Transportation ({item.installation_transportation_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.installation_transportation_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Installation Contingency ({item.installation_contingency_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.installation_contingency_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Installation Miscellaneous ({item.installation_miscellaneous_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.installation_miscellaneous_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Installation Office Overhead ({item.installation_office_overhead_pct || 0}%):</span>
+                              <span className="text-sm font-medium">₹{parseFloat(item.installation_office_overhead_amt || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="border-t border-gray-200 pt-2">
+                              <div className="flex justify-between font-medium">
+                                <span className="text-sm text-gray-900">Total Installation Cost:</span>
+                                <span className="text-sm text-gray-900">₹{parseFloat(item.total_installation_amt || 0).toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Item Total */}
+                      <div className="mt-4 pt-4 border-t border-gray-200 bg-gray-50 -mx-4 -mb-4 px-4 pb-4 rounded-b-lg">
+                        <div className="flex justify-between font-semibold text-gray-900">
+                          <span>Total Item Cost (Supply + Installation):</span>
+                          <span>₹{(parseFloat(item.total_supply_amt || 0) + parseFloat(item.total_installation_amt || 0)).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )) || (
+                    <div className="text-center py-4 text-gray-500">
+                      <p>No items found for this specification.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Spec Total */}
+                <div className="mt-6 pt-4 border-t border-blue-300 bg-blue-100 -mx-6 -mb-6 px-6 pb-6 rounded-b-lg">
+                  <div className="flex justify-between font-bold text-blue-900">
+                    <span className="text-lg">Specification Total:</span>
+                    <span className="text-lg">₹{parseFloat(spec.spec_price || 0).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
-              <div className="border-t border-gray-200 pt-2 mb-4">
-                <div className="flex justify-between font-medium">
-                  <span className="text-sm text-gray-900">Total Supply Own Cost:</span>
-                  <span className="text-sm text-gray-900">₹185,600</span>
-                </div>
+            )) || (
+              <div className="text-center py-8 text-gray-500">
+                <p>No specifications found for this quotation.</p>
               </div>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-md font-medium text-gray-900 mb-3">Installation Cost Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            )}
+
+            {/* Overall Summary */}
+            <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Overall Costing Summary</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Installation Wastage:</span>
-                    <span className="text-sm font-medium">2% (₹1,200)</span>
+                    <span className="text-sm text-gray-600">Total Supply Own Cost:</span>
+                    <span className="text-sm font-medium">₹{displayQuotation.totalSupplyOwnCost.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Installation Transportation:</span>
-                    <span className="text-sm font-medium">3% (₹1,800)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Installation Contingency:</span>
-                    <span className="text-sm font-medium">2% (₹1,200)</span>
+                    <span className="text-sm text-gray-600">Total Installation Own Cost:</span>
+                    <span className="text-sm font-medium">₹{displayQuotation.totalInstallationOwnCost.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Installation Miscellaneous:</span>
-                    <span className="text-sm font-medium">1% (₹600)</span>
+                    <span className="text-sm text-gray-600">Total POC Overheads:</span>
+                    <span className="text-sm font-medium">₹{displayQuotation.totalPocOverheadsCost.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Installation Outstation:</span>
-                    <span className="text-sm font-medium">0% (₹0)</span>
+                  <div className="flex justify-between font-semibold text-gray-900">
+                    <span>Grand Total Cost:</span>
+                    <span>₹{(displayQuotation.totalSupplyOwnCost + displayQuotation.totalInstallationOwnCost + displayQuotation.totalPocOverheadsCost).toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Installation Office Overhead:</span>
-                    <span className="text-sm font-medium">3% (₹1,800)</span>
-                  </div>
-                </div>
-              </div>
-              <div className="border-t border-gray-200 pt-2 mb-4">
-                <div className="flex justify-between font-medium">
-                  <span className="text-sm text-gray-900">Total Installation Own Cost:</span>
-                  <span className="text-sm text-gray-900">₹60,000</span>
                 </div>
               </div>
             </div>
@@ -470,131 +562,64 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
               <p className="text-sm text-gray-600">Overhead costs associated with this project.</p>
             </div>
             
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-md font-medium text-gray-900 mb-3">Supervision Costs</h4>
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      NOS / %
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Monthly Expense
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Months
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Diversity
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Project Manager</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">1</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹60,000</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">3</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">50%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹90,000</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Site Engineer</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">2</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹35,000</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">3</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">100%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹210,000</td>
-                  </tr>
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr>
-                    <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total Supervision Cost:</td>
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">₹300,000</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-md font-medium text-gray-900 mb-3">Finance Costs</h4>
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      %
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Bank Guarantee</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">2%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹5,709</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Insurance</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">1%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹2,854</td>
-                  </tr>
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr>
-                    <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Finance Cost:</td>
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">₹8,563</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h4 className="text-md font-medium text-gray-900 mb-3">Contingencies</h4>
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      %
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Project Contingency</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">3%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹8,563</td>
-                  </tr>
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr>
-                    <td colSpan={2} className="px-4 py-2 text-sm font-medium text-right">Total Contingency:</td>
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">₹8,563</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+            {/* Render POC Expenses dynamically from API data */}
+            {displayQuotation.pocExpenses && Object.entries(displayQuotation.pocExpenses).map(([category, expenses]) => {
+              const expenseArray = Array.isArray(expenses) ? expenses : [];
+              return (
+              <div key={category} className="border border-gray-200 rounded-lg p-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">{category}</h4>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Measurement
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Monthly Expense
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Months
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Diversity
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {expenseArray.map((expense: any, index: number) => (
+                      <tr key={expense.id || index}>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{expense.description}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{expense.measurement}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{parseFloat(expense.monthly_expense || 0).toLocaleString('en-IN')}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{expense.months}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{expense.diversity}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{parseFloat(expense.total || 0).toLocaleString('en-IN')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50">
+                    <tr>
+                      <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Total {category}:</td>
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                        ₹{expenseArray.reduce((sum: number, expense: any) => sum + parseFloat(expense.total || 0), 0).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              );
+            })}
             
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between font-medium">
                 <span className="text-md text-gray-900">Total Overheads Cost:</span>
-                <span className="text-md text-gray-900">₹317,126</span>
+                <span className="text-md text-gray-900">₹{displayQuotation.totalPocOverheadsCost.toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>
@@ -640,7 +665,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {quotationItems.map((item) => (
+                    {quotationItems.map((item: any) => (
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
@@ -656,9 +681,9 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                   <tfoot className="bg-gray-50">
                     <tr>
                       <td colSpan={5} className="px-4 py-2 text-sm font-medium text-right">Subtotal:</td>
-                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum, item) => sum + item.supplyPrice, 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum: number, item: any) => sum + item.supplyPrice, 0).toLocaleString('en-IN')}</td>
                       <td></td>
-                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum, item) => sum + item.installationPrice, 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{quotationItems.reduce((sum: number, item: any) => sum + item.installationPrice, 0).toLocaleString('en-IN')}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -690,31 +715,31 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   <tr>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">High Side Supply</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹83,600</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">18%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹15,048</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹98,648</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{displayQuotation.highSideCostWithoutGst.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{displayQuotation.highSideGstPercentage}%</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{(displayQuotation.highSideCostWithGst - displayQuotation.highSideCostWithoutGst).toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{displayQuotation.highSideCostWithGst.toLocaleString('en-IN')}</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Low Side Supply</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹102,000</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">18%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹18,360</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹120,360</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{displayQuotation.lowSideCostWithoutGst.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{displayQuotation.lowSideGstPercentage}%</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{(displayQuotation.lowSideCostWithGst - displayQuotation.lowSideCostWithoutGst).toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{displayQuotation.lowSideCostWithGst.toLocaleString('en-IN')}</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">Installation</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹60,000</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">18%</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹10,800</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹70,800</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{displayQuotation.installationCostWithoutGst.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{displayQuotation.installationGstPercentage}%</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">₹{(displayQuotation.installationCostWithGst - displayQuotation.installationCostWithoutGst).toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{displayQuotation.installationCostWithGst.toLocaleString('en-IN')}</td>
                   </tr>
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
                     <td colSpan={3} className="px-4 py-2 text-sm font-medium text-right">Grand Total:</td>
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">₹44,208</td>
-                    <td className="px-4 py-2 text-sm font-medium text-green-600">₹289,808</td>
+                    <td className="px-4 py-2 text-sm font-medium text-gray-900">₹{costingSummary.gstAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 text-sm font-medium text-green-600">₹{costingSummary.grandTotal.toLocaleString('en-IN')}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -731,59 +756,35 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
             
             <div className="border border-gray-200 rounded-lg p-4">
               <div className="space-y-4">
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">RK</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-900">Rajesh Kumar</span>
-                      <span className="text-xs text-gray-500">2024-01-15 10:30 AM</span>
+                {displayQuotation.comments && displayQuotation.comments.length > 0 ? (
+                  displayQuotation.comments.map((comment: any, index: number) => (
+                    <div key={comment.id || index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-medium text-white">
+                          {comment.created_by ? comment.created_by.substring(0, 2).toUpperCase() : 'U'}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-md font-medium text-gray-900">
+                            {comment.comment}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {comment.created_at ? new Date(comment.created_at).toLocaleString('en-IN') : 'Unknown Date'}
+                          </span>
+                        </div>
+                        <p className="text-[0.6rem] text-gray-700">{comment.created_by || 'Unknown User'}</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-700">Initial quotation created based on client requirements. Adjusted margins to be competitive while maintaining profitability.</p>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No comments yet.</p>
                   </div>
-                </div>
-                
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">PS</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-900">Priya Sharma</span>
-                      <span className="text-xs text-gray-500">2024-01-16 02:15 PM</span>
-                    </div>
-                    <p className="text-sm text-gray-700">Reviewed the quotation. Please check the installation rates for the fire dampers - they seem a bit low considering the complexity of installation at this site.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">RK</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-900">Rajesh Kumar</span>
-                      <span className="text-xs text-gray-500">2024-01-16 04:45 PM</span>
-                    </div>
-                    <p className="text-sm text-gray-700">Adjusted the installation rates for fire dampers. Also added a note about the warranty period in the terms and conditions.</p>
-                  </div>
-                </div>
+                )}
               </div>
               
               <div className="mt-4 border-t border-gray-200 pt-4">
-                <div className="flex space-x-3">
-                  <div className="flex-1">
-                    <textarea
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Add a comment..."
-                    ></textarea>
-                  </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 self-end">
-                    Add Comment
-                  </button>
-                </div>
               </div>
             </div>
           </div>
