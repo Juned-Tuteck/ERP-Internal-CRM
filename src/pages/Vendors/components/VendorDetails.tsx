@@ -172,7 +172,9 @@ const VendorDetails: React.FC<
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 {vendor.name}
               </h2>
-              <div className="flex items-center mt-1 gap-2">
+             <div className="mt-1">
+               <p className="text-sm font-bold text-blue-600">Vendor #: {vendor.vendorNumber || vendor.vendor_number || '-'}</p>
+               <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-gray-600">{vendor.type}</span>
                 <span
                   className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
@@ -181,6 +183,7 @@ const VendorDetails: React.FC<
                 >
                   {vendor.status}
                 </span>
+               </div>
               </div>
             </div>
           </div>

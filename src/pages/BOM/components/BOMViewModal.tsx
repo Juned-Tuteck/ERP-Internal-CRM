@@ -59,6 +59,8 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
         const mappedBOM: BOMDetail = {
           id: apiBOM.id,
           name: apiBOM.name,
+         bomNumber: apiBOM.bom_number,
+         bomTemplateNumber: apiBOM.bom_template_number,
           workType: apiBOM.work_type || 'Unknown',
           description: apiBOM.description || '',
           totalPrice: apiBOM.total_price || 0,
@@ -178,7 +180,10 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                     <FileText className="h-8 w-8 text-blue-500" />
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">{bomDetail.name}</h2>
-                      <p className="text-sm text-gray-600">BOM Number: {bomDetail.bomNumber}</p>
+                     <div>
+                       <p className="text-sm font-bold text-blue-600">BOM #: {bomDetail.bomNumber || '-'}</p>
+                       <p className="text-sm font-bold text-green-600">Template #: {bomDetail.bomTemplateNumber || '-'}</p>
+                     </div>
                     </div>
                   </div>
                   <div className="text-right">

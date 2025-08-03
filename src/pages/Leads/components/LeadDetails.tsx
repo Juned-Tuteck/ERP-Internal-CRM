@@ -218,7 +218,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">{displayLead.projectName}</h2>
-              <p className="text-sm text-gray-600">{displayLead.businessName}</p>
+             <div>
+               <p className="text-sm text-gray-600">{displayLead.businessName}</p>
+               <div className="flex items-center space-x-4 mt-1">
+                 <p className="text-sm font-bold text-blue-600">Lead #: {displayLead.leadNumber || '-'}</p>
+                 <p className="text-sm font-bold text-green-600">Customer #: {displayLead.customerNumber || '-'}</p>
+               </div>
+             </div>
               <div className="flex items-center space-x-2 mt-1">
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStageColor(displayLead.leadStage)}`}>
                   {displayLead.leadStage}

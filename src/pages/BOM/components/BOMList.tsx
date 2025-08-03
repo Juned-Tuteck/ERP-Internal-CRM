@@ -42,6 +42,8 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
         const mappedBOMs: BOM[] = apiBOMs.map((apiBOM: any) => ({
           id: apiBOM.id,
           leadName: apiBOM.name,
+         bomNumber: apiBOM.bom_number,
+         bomTemplateNumber: apiBOM.bom_template_number,
           workType: apiBOM.work_type || 'Unknown',
           itemCount: apiBOM.specs?.reduce((sum: number, spec: any) => sum + (spec.details?.length || 0), 0) || 0,
           totalValue: `₹${(apiBOM.total_price || 0).toLocaleString('en-IN')}`,
@@ -277,6 +279,9 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                         <div className="text-xs text-gray-500">
                           Created: {new Date(bom.createdDate).toLocaleDateString('en-IN')}
                         </div>
+                       <div className="text-xs font-bold text-blue-600">
+                         BOM #: {bom.bomNumber || '-'}
+                       </div>
                       </div>
                     </div>
                   </td>

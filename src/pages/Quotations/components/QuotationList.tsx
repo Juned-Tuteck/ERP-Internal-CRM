@@ -36,6 +36,9 @@ const QuotationList: React.FC<QuotationListProps> = ({ selectedQuotation, onSele
         // Map API response to UI format
         const mappedQuotations: Quotation[] = apiQuotations.map((apiQuotation: any) => ({
           id: apiQuotation.id,
+         quotationNumber: apiQuotation.customer_quotation_number,
+         leadNumber: apiQuotation.lead_number,
+         bomNumber: apiQuotation.bom_number,
           leadName: apiQuotation.project_name || 'Unknown Lead',
           businessName: apiQuotation.business_name || 'Unknown Business',
           workType: apiQuotation.work_type || 'Unknown',
@@ -153,6 +156,12 @@ const QuotationList: React.FC<QuotationListProps> = ({ selectedQuotation, onSele
                 <div className="ml-4">
                   <div className="text-sm font-medium text-gray-900">{quotation.leadName}</div>
                   <div className="text-xs text-gray-500">{quotation.businessName}</div>
+                 <div className="text-xs font-bold text-blue-600">
+                   Quotation #: {quotation.quotationNumber || '-'}
+                 </div>
+                 <div className="text-xs font-bold text-green-600">
+                   Lead #: {quotation.leadNumber || '-'} | BOM #: {quotation.bomNumber || '-'}
+                 </div>
                   <div className="mt-1">
                     <span
                       className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getLeadTypeColor(

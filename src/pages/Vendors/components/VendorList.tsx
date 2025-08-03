@@ -104,6 +104,9 @@ const VendorList: React.FC<VendorListProps> = ({
                       {vendor.status}
                     </span>
                   </div>
+                  <p className="text-xs font-bold text-blue-600 truncate">
+                    Vendor #: {vendor.vendorNumber || '-'}
+                  </p>
                   <div className="flex items-center mt-1">
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-2 ${getCategoryColor(

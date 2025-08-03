@@ -53,6 +53,7 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
         const mappedTemplate: TemplateDetail = {
           [BOM_TEMPLATE_RESPONSE_KEY_MAP.id]: apiData.id,
           [BOM_TEMPLATE_RESPONSE_KEY_MAP.name]: apiData.name,
+         templateNumber: apiData.bom_template_number,
           [BOM_TEMPLATE_RESPONSE_KEY_MAP.work_type]: apiData.work_type,
           [BOM_TEMPLATE_RESPONSE_KEY_MAP.reason]: apiData.reason || '',
           specs: (apiData.specs || []).map((spec: any) => ({
@@ -149,7 +150,10 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
                     <FileText className="h-8 w-8 text-blue-500" />
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">{templateDetail.name}</h2>
-                      <p className="text-sm text-gray-600">Template ID: {templateDetail.id}</p>
+                     <div>
+                       <p className="text-sm text-gray-600">Template ID: {templateDetail.id}</p>
+                       <p className="text-sm font-bold text-blue-600">Template #: {templateDetail.templateNumber || '-'}</p>
+                     </div>
                     </div>
                   </div>
                   <div className="text-right">

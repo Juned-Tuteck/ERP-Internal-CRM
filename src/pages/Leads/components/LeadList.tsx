@@ -68,6 +68,8 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
         // Map API response to UI Lead interface
         const mappedLeads: Lead[] = apiLeads.map((apiLead: any) => ({
           id: apiLead.lead_id?.toString() || '',
+         leadNumber: apiLead.lead_number,
+         customerNumber: apiLead.customer_number,
           businessName: apiLead.business_name || '',
           avatar: 'LD', // Default avatar
           customerBranch: apiLead.customer_branch || null,
@@ -289,7 +291,9 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 truncate">{lead.businessName}</p>
-                <p className="text-xs text-gray-500 truncate"></p>
+               <p className="text-xs font-bold text-blue-600 truncate">
+                 Lead #: {lead.leadNumber || '-'}
+               </p>
 
                 <div className="flex items-center justify-between mt-2">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStageColor(lead.leadStage)}`}>

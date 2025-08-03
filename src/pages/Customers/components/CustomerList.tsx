@@ -38,6 +38,7 @@ const CustomerList: React.FC<CustomerListProps> = ({ selectedCustomer, onSelectC
   const customers = apiCustomerList.map((customer) => ({
     id: customer.customer_id,
     name: customer.business_name,
+    customerNumber: customer.customer_number,
     industry: customer.customer_type,
     location: `${customer.city}, ${customer.state}`,
     revenue: `${customer.currency} ${customer.customer_potential}`,
@@ -89,7 +90,10 @@ const CustomerList: React.FC<CustomerListProps> = ({ selectedCustomer, onSelectC
                     {customer.status}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 truncate">{customer.industry}</p>
+               <p className="text-sm text-gray-600 truncate">{customer.industry}</p>
+               <p className="text-xs font-bold text-blue-600 truncate">
+                 Customer #: {customer.customerNumber || '-'}
+               </p>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center text-xs text-gray-500">
                     <MapPin className="h-3 w-3 mr-1" />

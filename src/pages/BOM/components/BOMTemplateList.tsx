@@ -52,6 +52,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
         const mappedTemplates: BOMTemplate[] = apiTemplates.map((template: any) => ({
           id: template.id,
           name: template.name,
+         templateNumber: template.bom_template_number,
           workType: template.work_type,
           itemCount: 0, // Will be calculated from specs/details if needed
           createdBy: 'System', // Default value since not in API
@@ -199,6 +200,9 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
                         <div className="text-xs text-gray-500">
                           Created: {new Date(template.createdDate).toLocaleDateString('en-IN')}
                         </div>
+                       <div className="text-xs font-bold text-blue-600">
+                         Template #: {template.templateNumber || '-'}
+                       </div>
                       </div>
                     </div>
                   </td>
