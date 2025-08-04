@@ -3,7 +3,7 @@ import { Vendor } from "../pages/Vendors/components/VendorList";
 
 export const registerVendor = async (vendorData: any): Promise<Vendor> => {
   const response = await axios.post(
-    "http://localhost:3000/api/vendor",
+    `${import.meta.env.VITE_API_BASE_URL}/api/vendor`,
     vendorData,
     {
       headers: { "Content-Type": "application/json" },

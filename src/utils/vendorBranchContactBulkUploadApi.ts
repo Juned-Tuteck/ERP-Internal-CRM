@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const vendorBranchContactBulkUpload = async (payload: any[]) => {
   const response = await axios.post(
-    "http://localhost:3000/api/vendor-branch-contact/bulk",
+    `${import.meta.env.VITE_API_BASE_URL}/api/vendor-branch-contact/bulk`,
     payload,
     {
       headers: { "Content-Type": "application/json" },

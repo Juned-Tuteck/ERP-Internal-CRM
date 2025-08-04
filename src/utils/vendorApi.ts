@@ -1,6 +1,6 @@
 export const getVendorById = async (vendorId: string): Promise<any> => {
   const response = await axios.get(
-    `http://localhost:3000/api/vendor/${vendorId}`,
+    `${import.meta.env.VITE_API_BASE_URL}/api/vendor/${vendorId}`,
     {
       headers: { "Cache-Control": "no-cache" },
     }
@@ -83,7 +83,7 @@ import { Vendor } from "../pages/Vendors/components/VendorList";
 // Delete vendor by ID
 export const deleteVendor = async (vendorId: string): Promise<any> => {
   const response = await axios.delete(
-    `http://localhost:3000/api/vendor/${vendorId}`,
+    `${import.meta.env.VITE_API_BASE_URL}/api/vendor/${vendorId}`,
     {
       headers: { "Content-Type": "application/json" },
     }
@@ -94,7 +94,7 @@ export const deleteVendor = async (vendorId: string): Promise<any> => {
 // Deactivate vendor by ID (set is_active to false)
 export const deactivateVendor = async (vendorId: string): Promise<any> => {
   const response = await axios.put(
-    `http://localhost:3000/api/vendor/${vendorId}`,
+    `${import.meta.env.VITE_API_BASE_URL}/api/vendor/${vendorId}`,
     { is_active: false },
     {
       headers: { "Content-Type": "application/json" },
@@ -104,7 +104,7 @@ export const deactivateVendor = async (vendorId: string): Promise<any> => {
 };
 
 export const getAllVendors = async (): Promise<Vendor[]> => {
-  const response = await axios.get("http://localhost:3000/api/vendor", {
+  const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/vendor`, {
     headers: { "Cache-Control": "no-cache" },
   });
   // Map backend fields to frontend Vendor interface

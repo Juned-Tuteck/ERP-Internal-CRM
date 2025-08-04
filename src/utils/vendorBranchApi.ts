@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const getVendorBranchById = async (branchId: string): Promise<any> => {
   const response = await axios.get(
-    `http://localhost:3000/api/vendor-branch/${branchId}`,
+    `${import.meta.env.VITE_API_BASE_URL}/api/vendor-branch/${branchId}`,
     {
       headers: { "Cache-Control": "no-cache" },
     }
