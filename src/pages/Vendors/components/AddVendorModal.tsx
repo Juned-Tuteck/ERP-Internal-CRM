@@ -157,6 +157,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       "Salem",
     ],
     Gujarat: ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar"],
+    "West Bengal": [
+      "Kolkata",
+      "Howrah",
+      "Darjeeling",
+      "Siliguri",
+      "Durgapur",
+      "Asansol",
+      "Bardhaman",
+      "Kharagpur",
+      "Haldia",
+      "Malda",
+    ],
   };
   const cities = {
     Mumbai: ["Mumbai", "Navi Mumbai", "Thane", "Kalyan", "Vasai-Virar"],
@@ -168,6 +180,16 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       "Koramangala",
       "Indiranagar",
     ],
+    Kolkata: ["Kolkata", "Salt Lake", "New Town", "Behala", "Dumdum"],
+    Howrah: ["Howrah", "Bally", "Uluberia"],
+    Darjeeling: ["Darjeeling", "Kurseong", "Mirik"],
+    Siliguri: ["Siliguri", "Matigara", "Bagdogra"],
+    Durgapur: ["Durgapur", "Bidhannagar", "Muchipara"],
+    Asansol: ["Asansol", "Burnpur", "Kulti"],
+    Bardhaman: ["Bardhaman", "Kalna", "Katwa"],
+    Kharagpur: ["Kharagpur", "Hijli", "Midnapore"],
+    Haldia: ["Haldia", "Mahishadal", "Nandigram"],
+    Malda: ["Malda", "English Bazar", "Old Malda"],
   };
 
   useEffect(() => {
