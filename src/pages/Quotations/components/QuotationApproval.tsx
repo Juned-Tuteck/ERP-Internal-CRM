@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, Eye, Clock, AlertTriangle, FileSpreadsheet, Download, Building2 } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Clock, AlertTriangle, FileSpreadsheet, Download, Building2, Calendar } from 'lucide-react';
 
 interface QuotationApprovalProps {
   onApprovalAction: (quotationId: string, action: 'approve' | 'reject', reason?: string) => void;
@@ -31,9 +31,9 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({ onApprovalAction 
     },
     {
       id: '2',
-      leadName: 'Hospital Fire Safety System',
+      leadName: 'Hospital AMC System',
       businessName: 'Digital Solutions Enterprise',
-      workType: 'Fire Safety',
+      workType: 'AMC',
       totalValue: '₹32,80,000',
       createdBy: 'Amit Singh',
       createdDate: '2024-01-05',
@@ -47,16 +47,16 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({ onApprovalAction 
     },
     {
       id: '3',
-      leadName: 'Residential Complex Electrical',
+      leadName: 'Residential Complex Retrofit',
       businessName: 'Manufacturing Industries Co',
-      workType: 'Electrical',
+      workType: 'Retrofit',
       totalValue: '₹12,45,000',
       createdBy: 'Sneha Patel',
       createdDate: '2023-12-28',
       expiryDate: '2024-01-28',
       status: 'pending_approval',
       items: [
-        { id: '401', itemCode: 'CABLE-001', itemName: 'Electrical Cable', uomName: 'Meter', supplyRate: 120, installationRate: 40, quantity: 500, supplyPrice: 60000, installationPrice: 20000 },
+        { id: '401', itemCode: 'CABLE-001', itemName: 'Retrofit Cable', uomName: 'Meter', supplyRate: 120, installationRate: 40, quantity: 500, supplyPrice: 60000, installationPrice: 20000 },
         { id: '402', itemCode: 'PANEL-001', itemName: 'Distribution Panel', uomName: 'Nos', supplyRate: 18000, installationRate: 4000, quantity: 4, supplyPrice: 72000, installationPrice: 16000 },
         { id: '403', itemCode: 'SWITCH-001', itemName: 'MCB Switch', uomName: 'Nos', supplyRate: 350, installationRate: 150, quantity: 48, supplyPrice: 16800, installationPrice: 7200 },
       ]
@@ -69,11 +69,11 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({ onApprovalAction 
         return 'bg-blue-100 text-blue-800';
       case 'HVAC Systems':
         return 'bg-purple-100 text-purple-800';
-      case 'Fire Safety':
+      case 'AMC':
         return 'bg-red-100 text-red-800';
-      case 'Electrical':
+      case 'Retrofit':
         return 'bg-amber-100 text-amber-800';
-      case 'Plumbing':
+      case 'Chiller':
         return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';

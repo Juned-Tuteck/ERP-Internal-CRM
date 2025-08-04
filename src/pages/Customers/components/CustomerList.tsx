@@ -92,7 +92,7 @@ const CustomerList: React.FC<CustomerListProps> = ({ selectedCustomer, onSelectC
                 </div>
                <p className="text-sm text-gray-600 truncate">{customer.industry}</p>
                <p className="text-xs font-bold text-blue-600 truncate">
-                 Customer #: {customer.customerNumber || '-'}
+                 Customer : {customer.customerNumber || '-'}
                </p>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center text-xs text-gray-500">

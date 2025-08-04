@@ -10,6 +10,7 @@ import {
   Mail,
   MapPin,
   Tag,
+  FileText,
 } from "lucide-react";
 
 interface VendorApprovalProps {
@@ -325,13 +326,7 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setSelectedVendor(vendor)}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </button>
+                     
                       <button
                         onClick={() => handleApprovalClick(vendor, "approve")}
                         className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
@@ -355,274 +350,7 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
         </div>
       </div>
 
-      {/* Vendor Details Modal */}
-      {selectedVendor && !showReasonModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[80vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Vendor Registration Details
-              </h3>
-              <button
-                onClick={() => setSelectedVendor(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XCircle className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="space-y-6">
-                {/* Business Information */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    Business Information
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Business Name
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {selectedVendor.businessName}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Vendor Category
-                      </label>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getVendorCategoryColor(
-                          selectedVendor.vendorCategory
-                        )}`}
-                      >
-                        {selectedVendor.vendorCategory}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Vendor Type
-                      </label>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getVendorTypeColor(
-                          selectedVendor.vendorType
-                        )}`}
-                      >
-                        {selectedVendor.vendorType}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Contact Number
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {selectedVendor.contactNo}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Email
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {selectedVendor.email}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Location
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {selectedVendor.city}, {selectedVendor.state} -{" "}
-                        {selectedVendor.pincode}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bank Details */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    Bank Details
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        PAN Number
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {selectedVendor.panNumber}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        GST Number
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {selectedVendor.gstNumber}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Bank Name
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {selectedVendor.bankName}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Persons */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    Contact Persons
-                  </h4>
-                  <div className="space-y-3">
-                    {selectedVendor.contactPersons.map(
-                      (person: any, index: number) => (
-                        <div
-                          key={index}
-                          className="border border-gray-200 rounded-lg p-3"
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700">
-                                Name
-                              </label>
-                              <p className="text-sm text-gray-900">
-                                {person.name}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700">
-                                Phone
-                              </label>
-                              <p className="text-sm text-gray-900">
-                                {person.phone}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700">
-                                Email
-                              </label>
-                              <p className="text-sm text-gray-900">
-                                {person.email}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-
-                {/* Branches */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    Branch Information
-                  </h4>
-                  <div className="space-y-4">
-                    {selectedVendor.branches.map(
-                      (branch: any, index: number) => (
-                        <div
-                          key={index}
-                          className="border border-gray-200 rounded-lg p-4"
-                        >
-                          <h5 className="text-sm font-medium text-gray-900 mb-2">
-                            {branch.branchName}
-                          </h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700">
-                                Contact Number
-                              </label>
-                              <p className="text-sm text-gray-900">
-                                {branch.contactNumber}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700">
-                                Email
-                              </label>
-                              <p className="text-sm text-gray-900">
-                                {branch.email}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700">
-                                City
-                              </label>
-                              <p className="text-sm text-gray-900">
-                                {branch.city}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700">
-                                State
-                              </label>
-                              <p className="text-sm text-gray-900">
-                                {branch.state}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-
-                {/* Uploaded Files */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    Uploaded Documents
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {selectedVendor.uploadedFiles.map(
-                      (file: any, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center p-3 border border-gray-200 rounded-lg"
-                        >
-                          <FileText className="h-8 w-8 text-blue-600 mr-3" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {file.name}
-                            </p>
-                            <p className="text-xs text-gray-500">{file.size}</p>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-              <button
-                onClick={() => setSelectedVendor(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => handleApprovalClick(selectedVendor, "reject")}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Reject
-              </button>
-              <button
-                onClick={() => handleApprovalClick(selectedVendor, "approve")}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+     
 
       {/* Reason Modal */}
       {showReasonModal && (
@@ -653,8 +381,8 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                   </p>
                   <p className="text-sm text-gray-600">
                     {actionType === "approve"
-                      ? "Approve this vendor registration?"
-                      : "Reject this vendor registration?"}
+                      ? "Approve this vendor ?"
+                      : "Reject this vendor ?"}
                   </p>
                 </div>
               </div>

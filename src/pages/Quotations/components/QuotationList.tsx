@@ -13,6 +13,9 @@ interface Quotation {
   createdBy: string;
   createdDate: string;
   expiryDate: string;
+  leadNumber?: string;
+  bomNumber?: string;
+  quotationNumber?: string;
   status: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'expired';
 }
 
@@ -102,11 +105,11 @@ const QuotationList: React.FC<QuotationListProps> = ({ selectedQuotation, onSele
         return 'bg-blue-100 text-blue-800';
       case 'HVAC Systems':
         return 'bg-purple-100 text-purple-800';
-      case 'Fire Safety':
+      case 'AMC':
         return 'bg-red-100 text-red-800';
-      case 'Electrical':
+      case 'Retrofit':
         return 'bg-amber-100 text-amber-800';
-      case 'Plumbing':
+      case 'Chiller':
         return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -156,11 +159,14 @@ const QuotationList: React.FC<QuotationListProps> = ({ selectedQuotation, onSele
                 <div className="ml-4">
                   <div className="text-sm font-medium text-gray-900">{quotation.leadName}</div>
                   <div className="text-xs text-gray-500">{quotation.businessName}</div>
-                 <div className="text-xs font-bold text-blue-600">
-                   Quotation #: {quotation.quotationNumber || '-'}
+                 <div className="text-xs font-bold text-blue-700">
+                   Quotation : {quotation.quotationNumber || '-'}
                  </div>
-                 <div className="text-xs font-bold text-green-600">
-                   Lead #: {quotation.leadNumber || '-'} | BOM #: {quotation.bomNumber || '-'}
+                 <div className="text-xs font-bold text-blue-500">
+                   Lead : {quotation.leadNumber || '-'}
+                 </div>
+                 <div className="text-xs font-bold text-blue-400">
+                  BOM : {quotation.bomNumber || '-'}
                  </div>
                   <div className="mt-1">
                     <span

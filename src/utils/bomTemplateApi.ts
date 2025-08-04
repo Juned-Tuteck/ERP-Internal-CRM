@@ -21,7 +21,8 @@ export const BOM_TEMPLATE_DETAIL_KEY_MAP = {
   bomTemplateId: 'bom_template_id',
   bomTemplateSpecId: 'bom_template_spec_id',
   itemId: 'item_id',
-  quantity: 'required_quantity'
+  quantity: 'required_quantity',
+  materialType: 'material_type'
 };
 
 export const BOM_TEMPLATE_ITEM_KEY_MAP = {
@@ -72,7 +73,8 @@ export const createBOMTemplateDetails = async (details: any[]) => {
     [BOM_TEMPLATE_DETAIL_KEY_MAP.bomTemplateId]: detail.bomTemplateId,
     [BOM_TEMPLATE_DETAIL_KEY_MAP.bomTemplateSpecId]: detail.bomTemplateSpecId,
     [BOM_TEMPLATE_DETAIL_KEY_MAP.itemId]: detail.itemId,
-    [BOM_TEMPLATE_DETAIL_KEY_MAP.quantity]: detail.quantity
+    [BOM_TEMPLATE_DETAIL_KEY_MAP.quantity]: detail.quantity,
+    [BOM_TEMPLATE_DETAIL_KEY_MAP.materialType]: detail.materialType || 'HIGH SIDE SUPPLY' // Default value
   }));
   
   const response = await axios.post(`${API_BASE_URL}/bom-template-detail/bulk`, payload);
@@ -81,7 +83,7 @@ export const createBOMTemplateDetails = async (details: any[]) => {
 
 // Get BOM template items for dropdown
 export const getBOMTemplateItems = async () => {
-  const response = await axios.get(`${API_BASE_URL}/bom-template/items`);
+  const response = await axios.patch(`${API_BASE_URL}/bom-template/items/all`);
   
   // Map backend response to UI format
   const mappedItems = response.data.data?.map((item: any) => ({

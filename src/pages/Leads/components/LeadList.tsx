@@ -292,7 +292,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
                 </div>
                 <p className="text-sm text-gray-600 truncate">{lead.businessName}</p>
                <p className="text-xs font-bold text-blue-600 truncate">
-                 Lead #: {lead.leadNumber || '-'}
+                 Lead : {lead.leadNumber || '-'}
                </p>
 
                 <div className="flex items-center justify-between mt-2">

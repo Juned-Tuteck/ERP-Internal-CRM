@@ -14,6 +14,7 @@ interface BOMDetail {
   description: string;
   totalPrice: number;
   bomNumber: string;
+  bomTemplateNumber: string;
   approvalStatus: string;
   createdAt: string;
   createdBy: string;
@@ -59,7 +60,6 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
         const mappedBOM: BOMDetail = {
           id: apiBOM.id,
           name: apiBOM.name,
-         bomNumber: apiBOM.bom_number,
          bomTemplateNumber: apiBOM.bom_template_number,
           workType: apiBOM.work_type || 'Unknown',
           description: apiBOM.description || '',
@@ -106,11 +106,11 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
         return 'bg-blue-100 text-blue-800';
       case 'HVAC Systems':
         return 'bg-purple-100 text-purple-800';
-      case 'Fire Safety':
+      case 'AMC':
         return 'bg-red-100 text-red-800';
-      case 'Electrical':
+      case 'Retrofit':
         return 'bg-amber-100 text-amber-800';
-      case 'Plumbing':
+      case 'Chiller':
         return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -181,8 +181,8 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">{bomDetail.name}</h2>
                      <div>
-                       <p className="text-sm font-bold text-blue-600">BOM #: {bomDetail.bomNumber || '-'}</p>
-                       <p className="text-sm font-bold text-green-600">Template #: {bomDetail.bomTemplateNumber || '-'}</p>
+                       <p className="text-sm font-bold text-blue-600">BOM : {bomDetail.bomNumber || '-'}</p>
+                       <p className="text-sm font-bold text-green-600">Template : {bomDetail.bomTemplateNumber || '-'}</p>
                      </div>
                     </div>
                   </div>

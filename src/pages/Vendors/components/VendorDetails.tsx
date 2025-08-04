@@ -173,7 +173,7 @@ const VendorDetails: React.FC<
                 {vendor.name}
               </h2>
              <div className="mt-1">
-               <p className="text-sm font-bold text-blue-600">Vendor #: {vendor.vendorNumber || vendor.vendor_number || '-'}</p>
+               <p className="text-sm font-bold text-blue-600">Vendor : {vendor.vendorNumber || vendor.vendor_number || '-'}</p>
                <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-gray-600">{vendor.type}</span>
                 <span

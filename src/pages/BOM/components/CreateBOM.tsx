@@ -20,6 +20,7 @@ interface BOMItem {
   netRate: number;
   quantity: number;
   price: number;
+  materialType: string;
   specifications?: string;
 }
 
@@ -30,6 +31,8 @@ interface BOMSpec {
   isExpanded: boolean;
   price: number;
 }
+
+const MATERIAL_TYPES = ['HIGH SIDE SUPPLY', 'LOW SIDE SUPPLY', 'INSTALLATION'];
 
 const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
   const editMode = !!initialData;
@@ -185,6 +188,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
             id: detail.item_id, // Use direct property name for item ID
             itemCode: detail.item_code,
             itemName: detail.item_name,
+            materialType: detail.material_type || 'HIGH SIDE SUPPLY',
             uomName: '-',
             supplyRate: supplyRate,
             installationRate: installationRate,
@@ -255,6 +259,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       netRate: item.latest_lowest_net_rate || 0,
       quantity: 1,
       price: item.latest_lowest_net_rate || 0,
+      materialType: 'HIGH SIDE SUPPLY',
       specifications: ''
     };
 
@@ -393,7 +398,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
               required_quantity: item.quantity,
               supply_rate: item.supplyRate,
               installation_rate: item.installationRate,
-              net_rate: item.netRate
+              net_rate: item.netRate,
+              material_type: item.materialType || 'HIGH SIDE SUPPLY'
             });
           });
         }
@@ -771,13 +777,17 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
                                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Rate</th>
                                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
                                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material Type</th>
                                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                   </thead>
                                   <tbody className="bg-white divide-y divide-gray-200">
                                     {spec.items.map(item => (
                                       <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
+                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                                          {item.itemCode}
+                                          <div className="text-[0.7em] text-blue-500">{item.materialType}</div>
+                                        </td>
                                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>
                                         <td className="px-3 py-2 whitespace-nowrap">
                                           <input
@@ -819,6 +829,19 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
                                           />
                                         </td>
                                         <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td>
+                                        <td className="px-3 py-2 whitespace-nowrap">
+                                          <select
+                                            value={item.materialType}
+                                            onChange={(e) => updateSpecItemRates(spec.id, item.id, 'materialType', e.target.value)}
+                                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                          >
+                                            {MATERIAL_TYPES.map(type => (
+                                              <option key={type} value={type}>
+                                                {type}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </td>
                                         <td className="px-3 py-2 whitespace-nowrap">
                                           <button
                                             onClick={() => removeItemFromSpec(spec.id, item.id)}

@@ -105,7 +105,7 @@ const VendorList: React.FC<VendorListProps> = ({
                     </span>
                   </div>
                   <p className="text-xs font-bold text-blue-600 truncate">
-                    Vendor #: {vendor.vendorNumber || '-'}
+                    Vendor : {vendor.vendorNumber || '-'}
                   </p>
                   <div className="flex items-center mt-1">
                     <span

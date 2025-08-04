@@ -106,8 +106,8 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
     },
     {
       id: '3',
-      name: 'Fire Safety System - Residential',
-      workType: 'Fire Safety',
+      name: 'AMC System - Residential',
+      workType: 'AMC',
       items: [
         { id: '301', itemCode: 'ALARM-001', itemName: 'Fire Alarm Control Panel', uomName: 'Nos', rate: 35000, quantity: 1, price: 35000 },
         { id: '302', itemCode: 'SENSOR-002', itemName: 'Smoke Detector', uomName: 'Nos', rate: 1200, quantity: 24, price: 28800 },
@@ -152,11 +152,11 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
         return 'bg-blue-100 text-blue-800';
       case 'HVAC Systems':
         return 'bg-purple-100 text-purple-800';
-      case 'Fire Safety':
+      case 'AMC':
         return 'bg-red-100 text-red-800';
-      case 'Electrical':
+      case 'Retrofit':
         return 'bg-amber-100 text-amber-800';
-      case 'Plumbing':
+      case 'Chiller':
         return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -280,7 +280,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                           Created: {new Date(bom.createdDate).toLocaleDateString('en-IN')}
                         </div>
                        <div className="text-xs font-bold text-blue-600">
-                         BOM #: {bom.bomNumber || '-'}
+                         BOM : {bom.bomNumber || '-'}
                        </div>
                       </div>
                     </div>

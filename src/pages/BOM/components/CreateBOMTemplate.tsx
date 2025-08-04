@@ -11,6 +11,8 @@ interface CreateBOMTemplateProps {
     name: string;
     description: string;
     items: BOMItem[];
+    status?: string;
+    createdDate?: string;
     // add other fields as needed
   };
 }
@@ -24,6 +26,7 @@ interface BOMItem {
   quantity: number;
   price: number;
   specifications?: string;
+  materialType: string; // Add materialType
 }
 
 interface Spec {
@@ -60,7 +63,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   const [createdTemplateId, setCreatedTemplateId] = useState<string | null>(null);
 
   // Mock data for dropdowns
-  const workTypes = ['Basement Ventilation', 'HVAC Systems', 'Fire Safety', 'Electrical', 'Plumbing'];
+  const workTypes = ['Basement Ventilation', 'HVAC Systems', 'AMC', 'Retrofit', 'Chiller'];
   
   // Fetch items from API
   useEffect(() => {
@@ -85,7 +88,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
     { id: '2', itemCode: 'DUCT-001', itemName: 'Galvanized Steel Duct', uomName: 'Meter', brand: 'Tata Steel', rate: 850 },
     { id: '3', itemCode: 'DAMPER-001', itemName: 'Fire Damper', uomName: 'Nos', brand: 'Honeywell', rate: 3200 },
     { id: '4', itemCode: 'SENSOR-001', itemName: 'CO2 Sensor', uomName: 'Nos', brand: 'Siemens', rate: 1800 },
-    { id: '5', itemCode: 'CABLE-001', itemName: 'Electrical Cable', uomName: 'Meter', brand: 'Havells', rate: 120 },
+    { id: '5', itemCode: 'CABLE-001', itemName: 'Retrofit Cable', uomName: 'Meter', brand: 'Havells', rate: 120 },
     { id: '6', itemCode: 'PANEL-001', itemName: 'Control Panel', uomName: 'Nos', brand: 'Schneider', rate: 25000 },
     { id: '7', itemCode: 'FILTER-001', itemName: 'HEPA Filter', uomName: 'Nos', brand: '3M', rate: 4500 },
     { id: '8', itemCode: 'PIPE-001', itemName: 'PVC Pipe', uomName: 'Meter', brand: 'Supreme', rate: 350 },
@@ -131,7 +134,8 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
       rate: masterItem.rate,
       quantity: 1,
       price: masterItem.rate,
-      specifications: ''
+      specifications: '',
+      materialType: '' // Default value
     };
 
     setSpecs(prev => prev.map(spec => 
@@ -302,10 +306,36 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   };
 
   // Component for individual spec
+  const materialTypes = ["HIGH SIDE SUPPLY", "LOW SIDE SUPPLY", "INSTALLATION"]; // Hardcoded array
+
   const SpecSection: React.FC<{ spec: Spec }> = ({ spec }) => {
+    const [localSpecName, setLocalSpecName] = useState(spec.name);
     const hasItems = spec.items.length > 0;
     const totalValue = spec.items.reduce((sum, item) => sum + item.price, 0);
-    
+
+    const handleMaterialTypeChange = (specId: string, itemId: string, materialType: string) => {
+      setSpecs(prev =>
+        prev.map(spec =>
+          spec.id === specId
+            ? {
+                ...spec,
+                items: spec.items.map(item =>
+                  item.id === itemId ? { ...item, materialType } : item
+                ),
+              }
+            : spec
+        )
+      );
+    };
+
+    const handleSpecNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setLocalSpecName(e.target.value); // Update local state
+    };
+
+    const handleSpecNameBlur = () => {
+      updateSpecName(spec.id, localSpecName); // Update global state on blur
+    };
+
     return (
       <div className="border border-gray-200 rounded-lg mb-4">
         {/* Spec Header */}
@@ -367,12 +397,13 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={spec.name}
-                  onChange={(e) => updateSpecName(spec.id, e.target.value)}
+                  value={localSpecName} // Use local state
+                  onChange={handleSpecNameChange} // Update local state on change
+                  onBlur={handleSpecNameBlur} // Update global state on blur
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter spec name"
                 />
-                {!spec.name.trim() && (
+                {!localSpecName.trim() && (
                   <p className="text-xs text-red-500 mt-1">Spec name is required</p>
                 )}
               </div>
@@ -394,9 +425,9 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Code</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th>
+                        {/* <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (₹)</th> */}
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                        {/* <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₹)</th> */}
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material Type</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
@@ -415,7 +446,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                             </div>
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{item.uomName}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td>
+                          {/* <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">₹{item.rate.toLocaleString('en-IN')}</td> */}
                           <td className="px-3 py-2 whitespace-nowrap">
                             <input
                               type="number"
@@ -425,7 +456,19 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                               className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           </td>
-                          {/* <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">₹{item.price.toLocaleString('en-IN')}</td> */}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <select
+                              value={item.materialType || "HIGH SIDE SUPPLY"} 
+                              onChange={(e) => handleMaterialTypeChange(spec.id, item.id, e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            >
+                              {materialTypes.map(type => (
+                                <option key={type} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
                               <button
@@ -503,7 +546,8 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
             uomName: 'Nos',
             rate: 12500,
             quantity: 4,
-            price: 50000
+            price: 50000,
+            materialType: 'HIGH SIDE SUPPLY' // Default value
           },
           {
             id: '102',
@@ -512,7 +556,8 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
             uomName: 'Meter',
             rate: 850,
             quantity: 120,
-            price: 102000
+            price: 102000,
+            materialType: 'HIGH SIDE SUPPLY' // Default value
           },
           {
             id: '103',
@@ -521,7 +566,8 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
             uomName: 'Nos',
             rate: 4500,
             quantity: 8,
-            price: 36000
+            price: 36000,
+            materialType: 'HIGH SIDE SUPPLY' // Default value
           }
         ]
       };
@@ -650,13 +696,15 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
               bomTemplateId: createdTemplateId,
               bomTemplateSpecId: specId,
               itemId: item.id,
-              quantity: item.quantity
+              quantity: item.quantity,
+              materialType: item.materialType || "HIGH SIDE SUPPLY", // Include materialType
             });
           });
         }
       });
 
       if (detailsPayload.length > 0) {
+        console.log('Creating BOM template details:', detailsPayload);
         await createBOMTemplateDetails(detailsPayload);
       }
 
@@ -670,9 +718,9 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         createdDate: new Date().toISOString(),
         status: 'active'
       };
-      
+
       onSubmit(templateData);
-      
+
       // Reset form
       setCurrentStep(1);
       setCreatedTemplateId(null);

@@ -65,7 +65,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
   ];
 
   const leadTypes = ['Government', 'Private', 'Corporate', 'SME', 'Startup'];
-  const workTypes = ['Basement Ventilation', 'HVAC Systems', 'Fire Safety', 'Electrical', 'Plumbing'];
+  const workTypes = ['Basement Ventilation', 'HVAC Systems', 'AMC', 'Retrofit', 'Chiller'];
   const leadCriticalities = ['Critical', 'High', 'Medium', 'Low'];
   const leadSources = ['Website', 'LinkedIn', 'Referral', 'Cold Call', 'Trade Show', 'Advertisement'];
   const leadStages = ['New Lead', 'Qualified', 'Meeting', 'Quotation Submitted', 'Won', 'Lost'];

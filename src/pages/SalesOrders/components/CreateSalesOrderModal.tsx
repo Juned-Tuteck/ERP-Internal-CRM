@@ -108,7 +108,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   };
 
   const projectCategories = ['Commercial', 'Residential', 'Industrial', 'Healthcare', 'Educational', 'Government'];
-  const projectTemplates = ['Standard Ventilation Project', 'Commercial HVAC Project', 'Healthcare Fire Safety Project', 'Residential Electrical Project', 'Commercial Plumbing Project'];
+  const projectTemplates = ['Standard Ventilation Project', 'Commercial HVAC Project', 'Healthcare AMC Project', 'Residential Retrofit Project', 'Commercial Chiller Project'];
   const termTypes = ['On Order', 'On Delivery', 'On Installation', 'After Commissioning', 'After Handover'];
   const purposes = ['Performance Guarantee', 'Advance Payment Guarantee', 'Retention Money Guarantee', 'Bid Bond'];
   const exemptionTypes = ['None', 'Partial', 'Full'];

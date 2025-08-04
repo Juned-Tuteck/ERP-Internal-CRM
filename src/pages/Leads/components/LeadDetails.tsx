@@ -221,8 +221,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
              <div>
                <p className="text-sm text-gray-600">{displayLead.businessName}</p>
                <div className="flex items-center space-x-4 mt-1">
-                 <p className="text-sm font-bold text-blue-600">Lead #: {displayLead.leadNumber || '-'}</p>
-                 <p className="text-sm font-bold text-green-600">Customer #: {displayLead.customerNumber || '-'}</p>
+                 <p className="text-sm font-bold text-blue-600">Lead : {displayLead.leadNumber || '-'}</p>
+                 <p className="text-sm font-bold text-green-600">Customer : {displayLead.customerNumber || '-'}</p>
                </div>
              </div>
               <div className="flex items-center space-x-2 mt-1">

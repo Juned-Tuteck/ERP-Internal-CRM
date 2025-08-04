@@ -92,11 +92,11 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
         return 'bg-blue-100 text-blue-800';
       case 'HVAC Systems':
         return 'bg-purple-100 text-purple-800';
-      case 'Fire Safety':
+      case 'AMC':
         return 'bg-red-100 text-red-800';
-      case 'Electrical':
+      case 'Retrofit':
         return 'bg-amber-100 text-amber-800';
-      case 'Plumbing':
+      case 'Chiller':
         return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -152,7 +152,7 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
                       <h2 className="text-xl font-bold text-gray-900">{templateDetail.name}</h2>
                      <div>
                        <p className="text-sm text-gray-600">Template ID: {templateDetail.id}</p>
-                       <p className="text-sm font-bold text-blue-600">Template #: {templateDetail.templateNumber || '-'}</p>
+                       <p className="text-sm font-bold text-blue-600">Template : {templateDetail.templateNumber || '-'}</p>
                      </div>
                     </div>
                   </div>

@@ -92,11 +92,11 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
         return 'bg-blue-100 text-blue-800';
       case 'HVAC Systems':
         return 'bg-purple-100 text-purple-800';
-      case 'Fire Safety':
+      case 'AMC':
         return 'bg-red-100 text-red-800';
-      case 'Electrical':
+      case 'Retrofit':
         return 'bg-amber-100 text-amber-800';
-      case 'Plumbing':
+      case 'Chiller':
         return 'bg-cyan-100 text-cyan-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -201,7 +201,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
                           Created: {new Date(template.createdDate).toLocaleDateString('en-IN')}
                         </div>
                        <div className="text-xs font-bold text-blue-600">
-                         Template #: {template.templateNumber || '-'}
+                         Template : {template.templateNumber || '-'}
                        </div>
                       </div>
                     </div>
