@@ -96,6 +96,8 @@ const VendorDetails: React.FC<
     vendorType: vendor.vendor_type || "",
     businessName: vendor.business_name || "",
     contactNo: vendor.contact_no || "",
+    email: vendor.email || "",
+    tanNumber: vendor.tan_number || vendor.tanNumber || "",
     country: vendor.country || "India",
     currency: vendor.currency || "INR",
     state: vendor.state || "",
@@ -109,8 +111,41 @@ const VendorDetails: React.FC<
     bankAccountNumber: vendor.bank_account_number || "",
     branchName: vendor.branch_name || "",
     ifscCode: vendor.ifsc_code || "",
-    contactPersons: vendor.contacts || [],
-    branches: vendor.branches || [],
+    // Ensure contactPersons have id, name, phone, email, designation, photo
+    contactPersons: (vendor.contacts || []).map((cp: any, idx: number) => ({
+      id: cp.id?.toString() || cp.contact_person_id?.toString() || `cp-${idx}`,
+      name: cp.name || "",
+      phone: cp.phone || "",
+      email: cp.email || "",
+      designation: cp.designation || "",
+      photo: cp.photo || "",
+    })),
+    // Ensure branches and their contactPersons have correct structure
+    branches: (vendor.branches || []).map((b: any, bidx: number) => ({
+      id: b.id?.toString() || b.branch_id?.toString() || `branch-${bidx}`,
+      branchName: b.branchName || b.branch_name || "",
+      contactNumber: b.contactNumber || b.contact_number || "",
+      email: b.email || b.email_id || "",
+      country: b.country || "",
+      currency: b.currency || "",
+      state: b.state || "",
+      district: b.district || "",
+      city: b.city || "",
+      pincode: b.pincode || "",
+      contactPersons: (b.contactPersons || b.branchContacts || []).map(
+        (cp: any, cidx: number) => ({
+          id:
+            cp.id?.toString() ||
+            cp.contact_person_id?.toString() ||
+            `b${bidx}-cp${cidx}`,
+          name: cp.name || "",
+          phone: cp.phone || "",
+          email: cp.email || "",
+          designation: cp.designation || "",
+          photo: cp.photo || "",
+        })
+      ),
+    })),
     uploadedFiles: vendor.files || [],
   });
 
@@ -172,18 +207,20 @@ const VendorDetails: React.FC<
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 {vendor.name}
               </h2>
-             <div className="mt-1">
-               <p className="text-sm font-bold text-blue-600">Vendor : {vendor.vendorNumber || vendor.vendor_number || '-'}</p>
-               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-gray-600">{vendor.type}</span>
-                <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                    vendor.status
-                  )}`}
-                >
-                  {vendor.status}
-                </span>
-               </div>
+              <div className="mt-1">
+                <p className="text-sm font-bold text-blue-600">
+                  Vendor : {vendor.vendorNumber || vendor.vendor_number || "-"}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-gray-600">{vendor.type}</span>
+                  <span
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      vendor.status
+                    )}`}
+                  >
+                    {vendor.status}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -239,11 +276,12 @@ const VendorDetails: React.FC<
                     setIsEditModalOpen(false);
                   }}
                   initialData={() => {
+                    // Use contacts and branches from the data prop, not vendor.contacts/branches
                     const formData = transformToFormData({
                       ...vendor,
-                      contactPersons: contacts,
+                      contacts: contacts,
                       branches: branches,
-                      uploadedFiles: files,
+                      files: files,
                     });
                     console.log("Initial data for modal:", formData);
                     return formData;

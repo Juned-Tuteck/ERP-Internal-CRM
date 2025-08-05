@@ -13,7 +13,11 @@ import {
   Trash2,
   Copy,
   Camera,
+  Edit2,
+  Check,
 } from "lucide-react";
+import { updateVendorContact } from "../../../utils/vendorContactApi";
+import { updateVendor } from "../../../utils/updateVendorApi";
 
 interface AddVendorModalProps {
   isOpen: boolean;
@@ -87,6 +91,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       vendorId: undefined,
     }
   );
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
@@ -240,20 +245,35 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   };
 
   const updateContactPerson = (id: string, field: string, value: string) => {
-    setFormData((prev: typeof formData) => ({
+    setFormData((prev: any) => ({
       ...prev,
-      contactPersons: prev.contactPersons.map((cp: ContactPerson) =>
+      contactPersons: prev.contactPersons.map((cp: any) =>
         cp.id === id ? { ...cp, [field]: value } : cp
       ),
     }));
   };
 
+  // Save contact person update
+  const saveContactPerson = async (person: any) => {
+    try {
+      await updateVendorContact(person.id, {
+        name: person.name,
+        phone: person.phone,
+        email: person.email,
+        designation: person.designation,
+        // photo: person.photo,
+      });
+      setEditingContactId(null);
+      if (typeof onRefresh === "function") await onRefresh();
+    } catch (err) {
+      alert("Failed to update contact person.");
+    }
+  };
+
   const removeContactPerson = (id: string) => {
-    setFormData((prev: typeof formData) => ({
+    setFormData((prev: any) => ({
       ...prev,
-      contactPersons: prev.contactPersons.filter(
-        (cp: ContactPerson) => cp.id !== id
-      ),
+      contactPersons: prev.contactPersons.filter((cp: any) => cp.id !== id),
     }));
   };
 
@@ -996,13 +1016,36 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           <h5 className="text-sm font-medium text-gray-900">
                             Contact Person {index + 1}
                           </h5>
-                          <button
-                            type="button"
-                            onClick={() => removeContactPerson(person.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {isEditMode ? (
+                              editingContactId === person.id ? (
+                                <button
+                                  type="button"
+                                  onClick={() => saveContactPerson(person)}
+                                  className="text-green-600 hover:text-green-800"
+                                  title="Save"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingContactId(person.id)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="Edit"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                              )
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => removeContactPerson(person.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           <div>
@@ -1021,6 +1064,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                               }
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Contact person name"
+                              disabled={
+                                isEditMode && editingContactId !== person.id
+                              }
                             />
                           </div>
                           <div>
@@ -1039,6 +1085,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                               }
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="+91 98765 43210"
+                              disabled={
+                                isEditMode && editingContactId !== person.id
+                              }
                             />
                           </div>
                           <div>
@@ -1057,6 +1106,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                               }
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="contact@company.com"
+                              disabled={
+                                isEditMode && editingContactId !== person.id
+                              }
                             />
                           </div>
                           <div>
@@ -1075,6 +1127,9 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                               }
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Designation"
+                              disabled={
+                                isEditMode && editingContactId !== person.id
+                              }
                             />
                           </div>
                         </div>
@@ -1481,7 +1536,19 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             {isEditMode ? (
               <button
                 type="submit"
-                onClick={handleSubmit}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await updateVendor(
+                      formData.id || formData.vendorId,
+                      formData
+                    );
+                    if (typeof onRefresh === "function") await onRefresh();
+                    onClose();
+                  } catch (err) {
+                    alert("Failed to update vendor.");
+                  }
+                }}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
