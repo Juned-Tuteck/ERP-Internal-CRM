@@ -12,6 +12,7 @@ const Customers: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
   const [customerInitialData, setCustomerInitialData] = useState(null);
+  const [screenRefresh, setScreenRefresh] = useState(0);
   const { addNotification } = useCRM();
 
   const handleAddCustomer = (customerData: any) => {
@@ -101,6 +102,7 @@ const Customers: React.FC = () => {
             <CustomerList
               selectedCustomer={selectedCustomer}
               onSelectCustomer={setSelectedCustomer}
+              screenRefresh={screenRefresh}
             />
           </div>
           <div className="lg:col-span-2">
@@ -113,7 +115,7 @@ const Customers: React.FC = () => {
 
       <AddCustomerModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {setIsAddModalOpen(false); setScreenRefresh(prev => prev + 1);}}
         onSubmit={handleAddCustomer}
       />
     </div>

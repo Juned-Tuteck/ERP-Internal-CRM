@@ -17,9 +17,10 @@ interface Customer {
 interface CustomerListProps {
   selectedCustomer: Customer | null;
   onSelectCustomer: (customer: Customer) => void;
+  screenRefresh: number;
 }
 
-const CustomerList: React.FC<CustomerListProps> = ({ selectedCustomer, onSelectCustomer }) => {
+const CustomerList: React.FC<CustomerListProps> = ({ selectedCustomer, onSelectCustomer, screenRefresh }) => {
   const [apiCustomerList, setApiCustomerList] = useState<any[]>([]);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ const CustomerList: React.FC<CustomerListProps> = ({ selectedCustomer, onSelectC
     };
 
     fetchCustomers();
-  }, []);
+  }, [screenRefresh]);
 
   const customers = apiCustomerList.map((customer) => ({
     id: customer.customer_id,

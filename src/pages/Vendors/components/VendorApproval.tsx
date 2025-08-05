@@ -1,17 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios"; // Ensure axios is installed and imported
 import {
   CheckCircle,
   XCircle,
-  Eye,
   Clock,
   AlertTriangle,
-  Truck,
   Phone,
   Mail,
   MapPin,
-  Tag,
-  FileText,
 } from "lucide-react";
+
+const baseURL = import.meta.env.VITE_API_BASE_URL; // Import the base URL from environment variables
 
 interface VendorApprovalProps {
   onApprovalAction: (
@@ -21,184 +20,61 @@ interface VendorApprovalProps {
   ) => void;
 }
 
-const VendorApproval: React.FC<VendorApprovalProps> = ({
-  onApprovalAction,
-}) => {
+const VendorApproval: React.FC<VendorApprovalProps> = ({ onApprovalAction }) => {
+  const [pendingVendors, setPendingVendors] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approve" | "reject">("approve");
   const [reason, setReason] = useState("");
 
-  // Mock data for pending vendors
-  const pendingVendors = [
-    {
-      id: "1",
-      businessName: "Bharat Electronics Ltd",
-      vendorCategory: "Electronics",
-      vendorType: "Manufacturer",
-      contactNo: "+91 98765 43210",
-      email: "contact@bel.co.in",
-      country: "India",
-      currency: "INR",
-      state: "Karnataka",
-      district: "Bangalore Urban",
-      city: "Bangalore",
-      pincode: "560001",
-      submittedBy: "Rajesh Kumar",
-      submittedDate: "2024-01-15",
-      panNumber: "ABCDE1234F",
-      gstNumber: "29ABCDE1234F1Z5",
-      bankName: "State Bank of India",
-      contactPersons: [
-        {
-          name: "Vikram Singh",
-          phone: "+91 98765 43211",
-          email: "vikram@bel.co.in",
-        },
-        {
-          name: "Priya Sharma",
-          phone: "+91 98765 43212",
-          email: "priya@bel.co.in",
-        },
-      ],
-      branches: [
-        {
-          branchName: "Bangalore Head Office",
-          contactNumber: "+91 98765 43210",
-          email: "bangalore@bel.co.in",
-          city: "Bangalore",
-          state: "Karnataka",
-        },
-        {
-          branchName: "Delhi Branch",
-          contactNumber: "+91 98765 43213",
-          email: "delhi@bel.co.in",
-          city: "Delhi",
-          state: "Delhi",
-        },
-      ],
-      uploadedFiles: [
-        { name: "Company_Profile.pdf", size: "3.2 MB" },
-        { name: "ISO_Certificate.pdf", size: "1.5 MB" },
-        { name: "GST_Registration.pdf", size: "0.8 MB" },
-      ],
-    },
-    {
-      id: "2",
-      businessName: "Tata Steel Supplies",
-      vendorCategory: "Raw Materials",
-      vendorType: "Distributor",
-      contactNo: "+91 87654 32109",
-      email: "info@tatasteel.com",
-      country: "India",
-      currency: "INR",
-      state: "Maharashtra",
-      district: "Mumbai",
-      city: "Mumbai",
-      pincode: "400001",
-      submittedBy: "Sneha Gupta",
-      submittedDate: "2024-01-14",
-      panNumber: "FGHIJ5678K",
-      gstNumber: "27FGHIJ5678K1A2",
-      bankName: "HDFC Bank",
-      contactPersons: [
-        {
-          name: "Amit Patel",
-          phone: "+91 87654 32110",
-          email: "amit@tatasteel.com",
-        },
-      ],
-      branches: [
-        {
-          branchName: "Mumbai Main Office",
-          contactNumber: "+91 87654 32109",
-          email: "mumbai@tatasteel.com",
-          city: "Mumbai",
-          state: "Maharashtra",
-        },
-      ],
-      uploadedFiles: [
-        { name: "Company_Certificate.pdf", size: "3.1 MB" },
-        { name: "Tax_Documents.pdf", size: "2.7 MB" },
-      ],
-    },
-    {
-      id: "3",
-      businessName: "Ashok Leyland Parts",
-      vendorCategory: "Automotive",
-      vendorType: "Manufacturer",
-      contactNo: "+91 76543 21098",
-      email: "contact@ashokleyland.com",
-      country: "India",
-      currency: "INR",
-      state: "Tamil Nadu",
-      district: "Chennai",
-      city: "Chennai",
-      pincode: "600001",
-      submittedBy: "Kavita Reddy",
-      submittedDate: "2024-01-13",
-      panNumber: "LMNOP9012Q",
-      gstNumber: "33LMNOP9012Q1B3",
-      bankName: "ICICI Bank",
-      contactPersons: [
-        {
-          name: "Arjun Mehta",
-          phone: "+91 76543 21099",
-          email: "arjun@ashokleyland.com",
-        },
-        {
-          name: "Deepika Joshi",
-          phone: "+91 76543 21100",
-          email: "deepika@ashokleyland.com",
-        },
-      ],
-      branches: [
-        {
-          branchName: "Chennai Head Office",
-          contactNumber: "+91 76543 21098",
-          email: "chennai@ashokleyland.com",
-          city: "Chennai",
-          state: "Tamil Nadu",
-        },
-      ],
-      uploadedFiles: [
-        { name: "Manufacturing_License.pdf", size: "1.9 MB" },
-        { name: "Quality_Certification.pdf", size: "2.2 MB" },
-      ],
-    },
-  ];
+  // Fetch vendor data on component mount
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const response = await axios.get(`${baseURL}/vendor/`);
+        console.log("Fetched vendors:", response.data.data);
+        const filteredVendors = response.data.data?.filter(
+            (vendor: any) =>
+              !["APPROVED", "REJECTED"].includes(vendor.approval_status)
+          );
+          
+        const vendors = filteredVendors?.map((vendor: any) => ({
+          id: vendor.vendor_id,
+          vendorNumber: vendor.vendor_number || "-",
+          vendorType: vendor.vendor_type || "-",
+          businessName: vendor.business_name || "-",
+          contactNo: vendor.contact_no || "-",
+          email: vendor.email || "-",
+          country: vendor.country || "-",
+          currency: vendor.currency || "-",
+          state: vendor.state || "-",
+          district: vendor.district || "-",
+          city: vendor.city || "-",
+          pincode: vendor.pincode || "-",
+          panNumber: vendor.pan_number || "-",
+          tanNumber: vendor.tan_number || "-",
+          gstNumber: vendor.gst_number || "-",
+          bankName: vendor.bank_name || "-",
+          bankAccountNumber: vendor.bank_account_number || "-",
+          branchName: vendor.branch_name || "-",
+          ifscCode: vendor.ifsc_code || "-",
+          approvalStatus: vendor.approval_status || "-",
+          approvedBy: vendor.approved_by || "-",
+          submittedDate: vendor.created_at || "-",
+          submittedBy: vendor.created_by || "-",
+          updatedAt: vendor.updated_at || "-",
+          updatedBy: vendor.updated_by || "-",
+          isActive: vendor.is_active,
+          isDeleted: vendor.is_deleted,
+        }));
+        setPendingVendors(vendors);
+      } catch (error) {
+        console.error("Error fetching vendors:", error);
+      }
+    };
 
-  const getVendorCategoryColor = (category: string) => {
-    switch (category) {
-      case "Electronics":
-        return "bg-blue-100 text-blue-800";
-      case "Raw Materials":
-        return "bg-gray-100 text-gray-800";
-      case "Automotive":
-        return "bg-red-100 text-red-800";
-      case "Chemicals":
-        return "bg-purple-100 text-purple-800";
-      case "Furniture":
-        return "bg-amber-100 text-amber-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getVendorTypeColor = (type: string) => {
-    switch (type) {
-      case "Manufacturer":
-        return "bg-green-100 text-green-800";
-      case "Distributor":
-        return "bg-blue-100 text-blue-800";
-      case "Supplier":
-        return "bg-purple-100 text-purple-800";
-      case "Service Provider":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+    fetchVendors();
+  }, []);
 
   const handleApprovalClick = (vendor: any, action: "approve" | "reject") => {
     setSelectedVendor(vendor);
@@ -206,12 +82,22 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
     setShowReasonModal(true);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (selectedVendor) {
-      onApprovalAction(selectedVendor.id, actionType, reason);
-      setShowReasonModal(false);
-      setReason("");
-      setSelectedVendor(null);
+      try {
+        const decision = actionType === "approve" ? "approved" : "rejected";
+        await axios.patch(`${baseURL}/vendor/${selectedVendor.id}/decision`, null, {
+          params: { status : decision },
+        });
+        setPendingVendors((prev) =>
+          prev.filter((vendor) => vendor.id !== selectedVendor.id)
+        );
+        setShowReasonModal(false);
+        setReason("");
+        setSelectedVendor(null);
+      } catch (error) {
+        console.error("Error updating vendor decision:", error);
+      }
     }
   };
 
@@ -249,7 +135,7 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                   Location & Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Submitted By
+                  Submitted
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -266,16 +152,12 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                       </p>
                       <div className="flex items-center space-x-2 mt-1">
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getVendorCategoryColor(
-                            vendor.vendorCategory
-                          )}`}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium`}
                         >
                           {vendor.vendorCategory}
                         </span>
                         <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getVendorTypeColor(
-                            vendor.vendorType
-                          )}`}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium`}
                         >
                           {vendor.vendorType}
                         </span>
@@ -295,9 +177,9 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                         <Mail className="h-4 w-4 mr-1 text-gray-400" />
                         {vendor.email}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
+                      {/* <p className="text-xs text-gray-500 mt-1">
                         {vendor.contactPersons.length} contact person(s)
-                      </p>
+                      </p> */}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -307,16 +189,16 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                         {vendor.city}, {vendor.state}
                       </div>
                       <p className="text-sm text-gray-600">{vendor.pincode}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      {/* <p className="text-xs text-gray-500 mt-1">
                         {vendor.branches.length} branch(es)
-                      </p>
+                      </p> */}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      {/* <p className="text-sm font-medium text-gray-900">
                         {vendor.submittedBy}
-                      </p>
+                      </p> */}
                       <p className="text-xs text-gray-500">
                         {new Date(vendor.submittedDate).toLocaleDateString(
                           "en-IN"
@@ -326,7 +208,6 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                     
                       <button
                         onClick={() => handleApprovalClick(vendor, "approve")}
                         className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
@@ -349,8 +230,6 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
           </table>
         </div>
       </div>
-
-     
 
       {/* Reason Modal */}
       {showReasonModal && (
@@ -381,8 +260,8 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                   </p>
                   <p className="text-sm text-gray-600">
                     {actionType === "approve"
-                      ? "Approve this vendor ?"
-                      : "Reject this vendor ?"}
+                      ? "Approve this vendor?"
+                      : "Reject this vendor?"}
                   </p>
                 </div>
               </div>
