@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { updateVendorContact } from "../../../utils/vendorContactApi";
 import { updateVendor } from "../../../utils/updateVendorApi";
+import { updateVendorBranchContact } from "../../../utils/updateVendorBranchContactApi";
+import { updateVendorBranch } from "../../../utils/updateVendorBranchApi";
 
 interface AddVendorModalProps {
   isOpen: boolean;
@@ -72,7 +74,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       district: "",
       city: "",
       pincode: "",
-      active: true,
+      is_active: true,
       // Bank Details
       panNumber: "",
       tanNumber: "",
@@ -865,8 +867,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       <label className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={formData.active}
-                          onChange={() => handleToggle("active")}
+                          checked={formData.is_active}
+                          onChange={() => handleToggle("is_active")}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <span className="ml-2 text-sm text-gray-700">
@@ -1367,74 +1369,122 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       </div>
 
                       {branch.contactPersons.map(
-                        (person: ContactPerson, personIndex: number) => (
-                          <div
-                            key={person.id}
-                            className="border border-gray-100 rounded p-3 mb-3"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-gray-700">
-                                Contact {personIndex + 1}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeBranchContactPerson(
-                                    branch.id,
-                                    person.id
-                                  )
-                                }
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
+                        (person: ContactPerson, personIndex: number) => {
+                          // Only show edit/save toggle in update mode
+                          const isEditing =
+                            isEditMode &&
+                            editingContactId === `${branch.id}-${person.id}`;
+                          const handleBranchContactSave = async () => {
+                            try {
+                              // Remove id/branchId if needed, send only updatable fields
+                              const { id, photo, ...rest } = person;
+                              await updateVendorBranchContact(person.id, rest);
+                              setEditingContactId(null);
+                              if (typeof onRefresh === "function")
+                                await onRefresh();
+                            } catch (err) {
+                              alert("Failed to update branch contact.");
+                            }
+                          };
+                          return (
+                            <div
+                              key={person.id}
+                              className="border border-gray-100 rounded p-3 mb-3"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-gray-700">
+                                  Contact {personIndex + 1}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {isEditMode ? (
+                                    isEditing ? (
+                                      <button
+                                        type="button"
+                                        onClick={handleBranchContactSave}
+                                        className="text-green-600 hover:text-green-800"
+                                        title="Save"
+                                      >
+                                        <Check className="h-4 w-4" />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setEditingContactId(
+                                            `${branch.id}-${person.id}`
+                                          )
+                                        }
+                                        className="text-blue-600 hover:text-blue-800"
+                                        title="Edit"
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </button>
+                                    )
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeBranchContactPerson(
+                                        branch.id,
+                                        person.id
+                                      )
+                                    }
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <input
+                                  type="text"
+                                  value={person.name}
+                                  onChange={(e) =>
+                                    updateBranchContactPerson(
+                                      branch.id,
+                                      person.id,
+                                      "name",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  placeholder="Name"
+                                  disabled={isEditMode && !isEditing}
+                                />
+                                <input
+                                  type="tel"
+                                  value={person.phone}
+                                  onChange={(e) =>
+                                    updateBranchContactPerson(
+                                      branch.id,
+                                      person.id,
+                                      "phone",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  placeholder="Phone"
+                                  disabled={isEditMode && !isEditing}
+                                />
+                                <input
+                                  type="email"
+                                  value={person.email}
+                                  onChange={(e) =>
+                                    updateBranchContactPerson(
+                                      branch.id,
+                                      person.id,
+                                      "email",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  placeholder="Email"
+                                  disabled={isEditMode && !isEditing}
+                                />
+                              </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                              <input
-                                type="text"
-                                value={person.name}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "name",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                placeholder="Name"
-                              />
-                              <input
-                                type="tel"
-                                value={person.phone}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "phone",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                placeholder="Phone"
-                              />
-                              <input
-                                type="email"
-                                value={person.email}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "email",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                placeholder="Email"
-                              />
-                            </div>
-                          </div>
-                        )
+                          );
+                        }
                       )}
                     </div>
                   </div>
@@ -1538,15 +1588,56 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 type="submit"
                 onClick={async (e) => {
                   e.preventDefault();
-                  try {
-                    await updateVendor(
-                      formData.id || formData.vendorId,
-                      formData
-                    );
-                    if (typeof onRefresh === "function") await onRefresh();
-                    onClose();
-                  } catch (err) {
-                    alert("Failed to update vendor.");
+                  if (currentStep === 1) {
+                    // General Info: update vendor
+                    const vendorId =
+                      formData.id || formData.vendorId || formData.vendor_id;
+                    if (!vendorId) {
+                      alert("Vendor ID is missing. Cannot update vendor.");
+                      return;
+                    }
+                    const {
+                      id,
+                      vendorId: _vendorId,
+                      vendor_id: _vendor_id,
+                      vendorCategory,
+                      active,
+                      branches,
+                      uploaded_files,
+                      contactPersons,
+                      uploadedFiles,
+                      ...rest
+                    } = formData;
+                    const payload = toSnakeCase(rest);
+                    try {
+                      await updateVendor(vendorId, payload);
+                      if (typeof onRefresh === "function") await onRefresh();
+                      onClose();
+                    } catch (err) {
+                      alert("Failed to update vendor.");
+                    }
+                  } else if (currentStep === 2) {
+                    // Branch Info: update all branches
+                    try {
+                      const updatePromises = formData.branches.map(
+                        async (branch: any) => {
+                          const { id, contactPersons, ...rest } = branch;
+                          // Map 'email' to 'email_id' for backend
+                          const branchPayload = { ...rest };
+                          if (branchPayload.email) {
+                            branchPayload.email_id = branchPayload.email;
+                            delete branchPayload.email;
+                          }
+                          const payload = toSnakeCase(branchPayload);
+                          return updateVendorBranch(branch.id, payload);
+                        }
+                      );
+                      await Promise.all(updatePromises);
+                      if (typeof onRefresh === "function") await onRefresh();
+                      alert("All branches updated successfully.");
+                    } catch (err) {
+                      alert("Failed to update one or more branches.");
+                    }
                   }
                 }}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
