@@ -41,6 +41,7 @@ interface BOMItem {
   price: number;
   materialType: string;
   specifications?: string;
+  isNew?: boolean; // PATCH: allow marking new items
 }
 
 interface BOMSpec {
@@ -54,6 +55,9 @@ interface BOMSpec {
 const MATERIAL_TYPES = ["HIGH SIDE SUPPLY", "LOW SIDE SUPPLY", "INSTALLATION"];
 
 const CreateBOM: React.FC<CreateBOMProps> = ({
+  // PATCH: Save item row for existing items (PUT with detail_id)
+  // Move inside component to access setEditingItem
+
   isOpen,
   onClose,
   onSubmit,
@@ -90,6 +94,44 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   const [bomTemplates, setBOMTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [allItems, setAllItems] = useState<any[]>([]);
+
+  // PATCH: Save item row for existing items (PUT with detail_id)
+  const saveItemRow = async (specId: string, itemId: string, item: any) => {
+    // Find detail_id for this item (should be present in item.detail_id or item.detailId)
+    const detailId = item.detail_id || item.detailId;
+    if (!detailId) {
+      alert("detail_id not found for this item");
+      return;
+    }
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/bom-detail/${detailId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            supply_rate: item.supplyRate,
+            installation_rate: item.installationRate,
+            net_rate: item.netRate,
+            required_quantity: item.quantity,
+            material_type: item.materialType,
+          }),
+        }
+      );
+      if (response.ok) {
+        setEditingItem(null);
+      } else {
+        let msg = "Failed to update item";
+        try {
+          const data = await response.json();
+          if (data && data.message) msg = data.message;
+        } catch {}
+        alert(msg);
+      }
+    } catch (err) {
+      alert("Failed to update item (network or JS error)");
+    }
+  };
 
   // Fetch leads when modal opens
   useEffect(() => {
@@ -175,9 +217,62 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     if (initialData) {
       setFormData(initialData);
       setSpecs(initialData.specs || []);
-      setCurrentStep(1);
+      // Only reset to step 1 if not already on step 2 (prevents navigation lock)
+      setCurrentStep((prevStep) => (prevStep === 2 ? 2 : 1));
+      // Prefill selected template if present in initialData
+      if (
+        initialData.bom_template_id ||
+        initialData.bomTemplateId ||
+        initialData.selectedTemplate
+      ) {
+        // Try to find the template in bomTemplates if already loaded
+        const templateId =
+          initialData.bom_template_id ||
+          initialData.bomTemplateId ||
+          initialData.selectedTemplate?.id;
+        if (templateId) {
+          // If bomTemplates are loaded, setSelectedTemplate from there, else fetch
+          const found = bomTemplates.find((t) => t.id === templateId);
+          if (found) {
+            setSelectedTemplate(found);
+          } else {
+            // Fallback: fetch template by id
+            getBOMTemplateById(templateId)
+              .then((response) => {
+                setSelectedTemplate(response.data);
+              })
+              .catch(() => {
+                setSelectedTemplate(null);
+              });
+          }
+        }
+      }
     }
-  }, [initialData]);
+  }, [initialData, bomTemplates]);
+
+  // Helper to reset all states to initial values
+  const resetAllStates = () => {
+    setCurrentStep(1);
+    setFormData({
+      leadId: "",
+      leadName: "",
+      workType: "",
+      date: new Date().toISOString().split("T")[0],
+      note: "",
+      status: "DRAFT",
+    });
+    setSpecs([]);
+    setEditingSpecId(null);
+    setEditingItem(null);
+    setNewSpecs([]);
+    setNewItems({});
+    setCreatedBOMId(null);
+    setIsSubmitting(false);
+    setSelectedTemplate(null);
+    setAllItems([]);
+    setLeads([]);
+    setBOMTemplates([]);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -279,6 +374,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   };
 
   // Spec management functions
+  // Add new spec and track in newSpecs for bulk API
   const addSpec = () => {
     const newSpec: BOMSpec = {
       id: Date.now().toString(),
@@ -288,10 +384,15 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       price: 0,
     };
     setSpecs((prev) => [...prev, newSpec]);
+    setNewSpecs((prev) => [...prev, newSpec]);
   };
 
   const updateSpecName = (specId: string, name: string) => {
     setSpecs((prev) =>
+      prev.map((spec) => (spec.id === specId ? { ...spec, name } : spec))
+    );
+    // Also update newSpecs if this is a new spec
+    setNewSpecs((prev) =>
       prev.map((spec) => (spec.id === specId ? { ...spec, name } : spec))
     );
   };
@@ -328,7 +429,12 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   };
 
   // Item management functions
+  // Add item to spec and track in newItems for bulk API if spec is new
   const addItemToSpec = (specId: string, item: any) => {
+    const isNewSpec =
+      !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        specId
+      );
     const newItem: BOMItem = {
       id: item.id,
       itemCode: item.item_code,
@@ -341,6 +447,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       price: item.latest_lowest_net_rate || 0,
       materialType: "HIGH SIDE SUPPLY",
       specifications: "",
+      isNew: true, // Mark as new for UI and bulk API
     };
 
     setSpecs((prev) =>
@@ -352,6 +459,63 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
               price:
                 spec.items.reduce((sum, item) => sum + item.price, 0) +
                 newItem.price,
+            }
+          : spec
+      )
+    );
+    // Track new items for bulk API (for new specs or new items in existing specs)
+    setNewItems((prev) => ({
+      ...prev,
+      [specId]: [...(prev[specId] || []), newItem],
+    }));
+    // Make new item immediately editable if added to existing spec
+    if (!isNewSpec) {
+      setEditingItem({ specId, itemId: newItem.id });
+    }
+  };
+
+  // PATCH: Provide a dummy updateSpecItemRates if not present to avoid errors
+  const updateSpecItemRates = (
+    specId: string,
+    itemId: string,
+    field: string,
+    value: any
+  ) => {
+    setSpecs((prev) =>
+      prev.map((spec) =>
+        spec.id === specId
+          ? {
+              ...spec,
+              items: spec.items.map((item) =>
+                item.id === itemId
+                  ? {
+                      ...item,
+                      [field]: value,
+                      price:
+                        field === "quantity" || field === "netRate"
+                          ? field === "quantity"
+                            ? value * item.netRate
+                            : item.quantity * value
+                          : item.price,
+                    }
+                  : item
+              ),
+              price: spec.items
+                .map((item) =>
+                  item.id === itemId
+                    ? {
+                        ...item,
+                        [field]: value,
+                        price:
+                          field === "quantity" || field === "netRate"
+                            ? field === "quantity"
+                              ? value * item.netRate
+                              : item.quantity * value
+                            : item.price,
+                      }
+                    : item
+                )
+                .reduce((sum, item) => sum + item.price, 0),
             }
           : spec
       )
@@ -398,66 +562,6 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                 .map((item) =>
                   item.id === itemId
                     ? { ...item, quantity, price: item.netRate * quantity }
-                    : item
-                )
-                .reduce((sum, item) => sum + item.price, 0),
-            }
-          : spec
-      )
-    );
-  };
-
-  // Save item row to API (edit mode)
-  const saveItemRow = async (specId: string, itemId: string) => {
-    const spec = specs.find((s) => s.id === specId);
-    if (!spec) return;
-    const item = spec.items.find((i) => i.id === itemId);
-    if (!item) return;
-    try {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom-detail/${itemId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          required_quantity: item.quantity,
-          supply_rate: item.supplyRate,
-          installation_rate: item.installationRate,
-          net_rate: item.netRate,
-          material_type: item.materialType,
-        }),
-      });
-      setEditingItem(null);
-    } catch (err) {
-      alert("Failed to update item");
-    }
-  };
-
-  const updateSpecItemRates = (
-    specId: string,
-    itemId: string,
-    field: "supplyRate" | "installationRate" | "netRate",
-    value: number
-  ) => {
-    setSpecs((prev) =>
-      prev.map((spec) =>
-        spec.id === specId
-          ? {
-              ...spec,
-              items: spec.items.map((item) =>
-                item.id === itemId
-                  ? {
-                      ...item,
-                      [field]: value,
-                      price:
-                        field === "netRate"
-                          ? value * item.quantity
-                          : item.price,
-                    }
-                  : item
-              ),
-              price: spec.items
-                .map((item) =>
-                  item.id === itemId && field === "netRate"
-                    ? { ...item, [field]: value, price: value * item.quantity }
                     : item
                 )
                 .reduce((sum, item) => sum + item.price, 0),
@@ -517,7 +621,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       // Step 1: Create specs
       const specsPayload = specs.map((spec) => ({
         bom_id: createdBOMId,
-        spec_description: spec.name,
+        spec_description:
+          spec.name && spec.name.trim() !== "" ? spec.name : "Unnamed Spec",
         spec_price: spec.price,
       }));
 
@@ -637,10 +742,9 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
               body: JSON.stringify({
                 name: formData.leadName,
                 lead_id: formData.leadId,
-                work_type: formData.workType,
+                work_type: "TYPE2", // Always pass TYPE2 as work_type
                 bom_date: formData.date,
                 description: formData.note,
-                status: formData.status,
               }),
             }
           );
@@ -650,13 +754,43 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         }
         return;
       }
-      // Save new specs/items in edit mode
-      if (newSpecs.length > 0) {
-        try {
+      // Always save new items in existing specs (bulk-details) before normal submit
+      try {
+        // Save new items for existing specs (specId is UUID)
+        for (const [specId, items] of Object.entries(newItems)) {
+          if (
+            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+              specId
+            ) &&
+            items.length > 0
+          ) {
+            const detailsPayload = items.map((item) => ({
+              bom_id: initialData.id,
+              bom_spec_id: specId,
+              item_id: item.id,
+              required_quantity: item.quantity,
+              supply_rate: item.supplyRate,
+              installation_rate: item.installationRate,
+              net_rate: item.netRate,
+              material_type: item.materialType,
+            }));
+            await fetch(
+              `${import.meta.env.VITE_API_BASE_URL}/bom-detail/bulk`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(detailsPayload),
+              }
+            );
+          }
+        }
+        // Save new specs and their items if any
+        if (newSpecs.length > 0) {
           // Save new specs
           const specsPayload = newSpecs.map((spec) => ({
             bom_id: initialData.id,
-            spec_description: spec.name,
+            spec_description:
+              spec.name && spec.name.trim() !== "" ? spec.name : "Unnamed Spec",
             spec_price: spec.price,
           }));
           const specsRes = await fetch(
@@ -695,11 +829,11 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
               );
             }
           }
-          setNewSpecs([]);
-          setNewItems({});
-        } catch (err) {
-          alert("Failed to save new specs/items");
         }
+        setNewSpecs([]);
+        setNewItems({});
+      } catch (err) {
+        alert("Failed to save new specs/items");
       }
       // Normal submit
       const bomData = {
@@ -804,6 +938,13 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       </div>
     );
   };
+
+  // If modal is closed, reset all states
+  useEffect(() => {
+    if (!isOpen) {
+      resetAllStates();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -1017,10 +1158,18 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   placeholder="Enter spec name"
                                   disabled={
-                                    editMode && editingSpecId !== spec.id
+                                    editMode &&
+                                    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+                                      spec.id
+                                    ) &&
+                                    editingSpecId !== spec.id
                                   }
                                 />
+                                {/* Only show edit/save toggles for existing specs (with real UUID) in edit mode */}
                                 {editMode &&
+                                  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+                                    spec.id
+                                  ) &&
                                   (editingSpecId === spec.id ? (
                                     <button
                                       type="button"
@@ -1206,7 +1355,9 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                             </select>
                                           </td>
                                           <td className="px-3 py-2 whitespace-nowrap flex items-center space-x-2">
+                                            {/* Only show edit/save toggles for existing items (with real UUID) in edit mode */}
                                             {editMode &&
+                                              !item.isNew &&
                                               (isEditing ? (
                                                 <button
                                                   type="button"
@@ -1215,7 +1366,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                                   onClick={() =>
                                                     saveItemRow(
                                                       spec.id,
-                                                      item.id
+                                                      item.id,
+                                                      item
                                                     )
                                                   }
                                                 >
@@ -1386,5 +1538,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     </div>
   );
 };
+
+// PATCH: Save item row for existing items (PUT with detail_id)
+// Move inside component to access setEditingItem
 
 export default CreateBOM;

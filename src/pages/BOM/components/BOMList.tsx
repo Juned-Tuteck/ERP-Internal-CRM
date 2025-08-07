@@ -363,6 +363,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
           price: (detail.required_quantity || 1) * (detail.net_rate || 0),
           materialType: detail.material_type || "HIGH SIDE SUPPLY",
           specifications: detail.specifications || "",
+          detail_id: detail.detail_id, // PATCH: include detail_id for PUT
         })),
       }));
       const editData = {
