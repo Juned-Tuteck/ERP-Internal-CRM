@@ -319,6 +319,16 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
     );
   };
 
+  // Helper function to check if an item was part of the initial data
+  const isItemFromInitialData = (itemId: string) => {
+    if (!initialData?.specs) return false;
+
+    return initialData.specs.some(
+      (spec: any) =>
+        spec.items && spec.items.some((item: any) => item.id === itemId)
+    );
+  };
+
   // Convert specs to items for backward compatibility
   const getAllItems = () => {
     return specs.flatMap((spec) => spec.items);
@@ -452,6 +462,8 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
 
   // --- Enhanced SpecSection with edit/save for spec name and item rows ---
   const SpecSection: React.FC<{ spec: Spec }> = ({ spec }) => {
+    console.log("Rendering SpecSection for spec:", spec);
+
     const [isEditingSpecName, setIsEditingSpecName] = useState(false);
     const [localSpecName, setLocalSpecName] = useState(spec.name);
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -501,7 +513,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         },
       }));
     };
-    const handleItemSave = async (item: BOMItem) => {
+    const handleItemSave = async (item: any) => {
       const editState = itemEditState[item.id];
       if (!editState) return;
       // In edit mode, if item has detailId, call API to update
@@ -510,6 +522,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
         // Prepare payload as per backend API
         const payload: any = {
           required_quantity: editState.quantity,
+          material_type: editState.materialType,
         };
         // Optionally add updated_by if you have user info
         // payload.updated_by = currentUserId;
@@ -517,7 +530,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
           console.log("Sending payload to API:", payload);
           const response = await axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/bom-template-detail/${
-              item.id
+              item.detailId
             }`,
             payload,
             {
@@ -721,6 +734,24 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                                 min="1"
                                 className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
                               />
+                            ) : isEditMode &&
+                              !isItemFromInitialData(item.id) ? (
+                              // New items in edit mode - quantity is directly editable
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const newQuantity =
+                                    parseInt(e.target.value) || 1;
+                                  updateSpecItemQuantity(
+                                    spec.id,
+                                    item.id,
+                                    newQuantity
+                                  );
+                                }}
+                                min="1"
+                                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
                             ) : (
                               item.quantity
                             )}
@@ -747,14 +778,48 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                                   </option>
                                 ))}
                               </select>
+                            ) : isEditMode &&
+                              !isItemFromInitialData(item.id) ? (
+                              // New items in edit mode - material type is directly editable
+                              <select
+                                value={item.materialType || "HIGH SIDE SUPPLY"}
+                                onChange={(e) => {
+                                  setSpecs((prevSpecs) =>
+                                    prevSpecs.map((s) =>
+                                      s.id === spec.id
+                                        ? {
+                                            ...s,
+                                            items: s.items.map((it) =>
+                                              it.id === item.id
+                                                ? {
+                                                    ...it,
+                                                    materialType:
+                                                      e.target.value,
+                                                  }
+                                                : it
+                                            ),
+                                          }
+                                        : s
+                                    )
+                                  );
+                                }}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              >
+                                {materialTypes.map((type) => (
+                                  <option key={type} value={type}>
+                                    {type}
+                                  </option>
+                                ))}
+                              </select>
                             ) : (
                               item.materialType || "HIGH SIDE SUPPLY"
                             )}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              {/* Only show Edit/Save toggle in edit mode */}
+                              {/* Only show Edit/Save toggle in edit mode for existing items */}
                               {isEditMode &&
+                                isItemFromInitialData(item.id) &&
                                 (editingItemId === item.id ? (
                                   <button
                                     onClick={() => handleItemSave(item)}

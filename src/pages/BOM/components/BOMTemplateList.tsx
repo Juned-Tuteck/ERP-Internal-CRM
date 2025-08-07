@@ -145,6 +145,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
         isExpanded: true,
         items: (spec.details || []).map((detail: any) => ({
           id: detail.item_id,
+          detailId: detail.detail_id,
           itemCode: detail.item_code,
           itemName: detail.item_name,
           uomName: detail.uom_value || "-",
