@@ -1,6 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { X, Save, ChevronLeft, ChevronRight, Upload, MessageSquare, Trash2 } from 'lucide-react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import {
+  X,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  MessageSquare,
+  Trash2,
+} from "lucide-react";
+import axios from "axios";
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -9,121 +17,274 @@ interface AddLeadModalProps {
   initialData?: any;
 }
 
-const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
+const AddLeadModal: React.FC<AddLeadModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData,
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(initialData || {
-    // Step 1: General Information
-    businessName: '',
-    avatar: '',
-    customerBranch: '',
-    currency: 'INR',
-    contactPerson: '',
-    contactNo: '',
-    leadGeneratedDate: new Date().toISOString().split('T')[0],
-    referencedBy: '',
-    projectName: '',
-    projectValue: '',
-    leadType: '',
-    workType: '',
-    leadCriticality: '',
-    leadSource: '',
-    leadStage: 'New Lead',
-    leadStagnation: '',
-    approximateResponseTime: '',
-    eta: '',
-    leadDetails: '',
-    involvedAssociates: [],
-    // Step 2: Upload Files
-    uploadedFiles: [],
-    // Step 3: Follow-up
-    followUpComments: []
-  });
+  const [formData, setFormData] = useState(
+    initialData || {
+      // Step 1: General Information
+      businessName: "",
+      avatar: "",
+      customerBranch: "",
+      currency: "INR",
+      contactPerson: "",
+      contactNo: "",
+      leadGeneratedDate: new Date().toISOString().split("T")[0],
+      referencedBy: "",
+      projectName: "",
+      projectValue: "",
+      leadType: "",
+      workType: "",
+      leadCriticality: "",
+      leadSource: "",
+      leadStage: "New Lead",
+      leadStagnation: "",
+      approximateResponseTime: "",
+      eta: "",
+      leadDetails: "",
+      involvedAssociates: [],
+      // Step 2: Upload Files
+      uploadedFiles: [],
+      // Step 3: Follow-up
+      followUpComments: [],
+    }
+  );
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const [showAssociateForm, setShowAssociateForm] = useState(false);
   const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [associateForm, setAssociateForm] = useState({
-    designation: '',
-    associateId: '',
-    otherInfo: ''
+    designation: "",
+    associateId: "",
+    otherInfo: "",
   });
 
   // State for API data
-  const [customers, setCustomers] = useState<Array<{id: string, name: string}>>([]);
-  const [customerBranches, setCustomerBranches] = useState<Array<{id: string, branch_name: string}>>([]);
-  const [contactPersons, setContactPersons] = useState<Array<{id: string, name: string}>>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [selectedBranchId, setSelectedBranchId] = useState('');
-  const [selectedContactId, setSelectedContactId] = useState('');
+  const [customers, setCustomers] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [customerBranches, setCustomerBranches] = useState<
+    Array<{ id: string; branch_name: string }>
+  >([]);
+  const [contactPersons, setContactPersons] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedBranchId, setSelectedBranchId] = useState("");
+  const [selectedContactId, setSelectedContactId] = useState("");
 
   const steps = [
-    { id: 1, name: 'General Information', description: 'Basic lead details' },
-    { id: 2, name: 'Upload Files', description: 'Supporting documents' },
-    { id: 3, name: 'Follow-up Leads', description: 'Communication log' }
+    { id: 1, name: "General Information", description: "Basic lead details" },
+    { id: 2, name: "Upload Files", description: "Supporting documents" },
+    { id: 3, name: "Follow-up Leads", description: "Communication log" },
   ];
 
-  const leadTypes = ['Government', 'Private', 'Corporate', 'SME', 'Startup'];
-  const workTypes = ['Basement Ventilation', 'HVAC Systems', 'AMC', 'Retrofit', 'Chiller'];
-  const leadCriticalities = ['Critical', 'High', 'Medium', 'Low'];
-  const leadSources = ['Website', 'LinkedIn', 'Referral', 'Cold Call', 'Trade Show', 'Advertisement'];
-  const leadStages = ['New Lead', 'Qualified', 'Meeting', 'Quotation Submitted', 'Won', 'Lost'];
+  const leadTypes = ["Government", "Private", "Corporate", "SME", "Startup"];
+  const workTypes = [
+    "Basement Ventilation",
+    "HVAC Systems",
+    "AMC",
+    "Retrofit",
+    "Chiller",
+  ];
+  const leadCriticalities = ["Critical", "High", "Medium", "Low"];
+  const leadSources = [
+    "Website",
+    "LinkedIn",
+    "Referral",
+    "Cold Call",
+    "Trade Show",
+    "Advertisement",
+  ];
+  const leadStages = [
+    "New Lead",
+    "Qualified",
+    "Meeting",
+    "Quotation Submitted",
+    "Won",
+    "Lost",
+  ];
 
   const associateDesignations = [
-    'Architect',
-    'Consultant',
-    'Engineer',
-    'Designer',
-    'Contractor',
-    'Other'
+    "Architect",
+    "Consultant",
+    "Engineer",
+    "Designer",
+    "Contractor",
+    "Other",
   ];
 
   // Replace this with your actual registered associates source
   const registeredAssociates = [
-    { id: '1', name: 'Architect A' },
-    { id: '2', name: 'Consultant B' },
-    { id: '3', name: 'Engineer C' },
-    { id: '4', name: 'Designer D' }
+    { id: "1", name: "Architect A" },
+    { id: "2", name: "Consultant B" },
+    { id: "3", name: "Engineer C" },
+    { id: "4", name: "Designer D" },
   ];
 
   useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
-      setUploadedFiles(formData.uploadedFiles || []);
-    }
-    // Fetch customers when modal opens
-    if (isOpen) {
-      fetchCustomers();
-    }
+    const fetchAllForEdit = async () => {
+      if (initialData) {
+        // Debug log for initialData
+        console.log("initialData received in AddLeadModal:", initialData);
+        // Normalize leadGeneratedDate to YYYY-MM-DD
+        let normalizedDate = "";
+        if (initialData.leadGeneratedDate) {
+          const dateObj = new Date(initialData.leadGeneratedDate);
+          if (!isNaN(dateObj.getTime())) {
+            normalizedDate = dateObj.toISOString().split("T")[0];
+          } else {
+            normalizedDate = new Date().toISOString().split("T")[0];
+          }
+        } else {
+          normalizedDate = new Date().toISOString().split("T")[0];
+        }
+        // Normalize eta
+        let normalizedEta = "";
+        if (initialData.eta) {
+          const etaObj = new Date(initialData.eta);
+          if (!isNaN(etaObj.getTime())) {
+            normalizedEta = etaObj.toISOString().split("T")[0];
+          } else {
+            normalizedEta = "";
+          }
+        } else {
+          normalizedEta = "";
+        }
+        setFormData({
+          ...initialData,
+          projectValue:
+            initialData.projectValue !== undefined &&
+            initialData.projectValue !== null
+              ? String(initialData.projectValue).replace(/[^\d.]/g, "")
+              : "",
+          leadGeneratedDate: normalizedDate,
+          eta: normalizedEta,
+          referencedBy:
+            initialData.referencedBy || initialData.referenced_by || "",
+          involvedAssociates:
+            initialData.involvedAssociates || initialData.lead_associates || [],
+        });
+        setUploadedFiles(initialData.uploadedFiles || []);
+        if (initialData.businessName && isOpen) {
+          // Fetch customers and use the response directly
+          try {
+            const response = await axios.get(
+              `${import.meta.env.VITE_API_BASE_URL}/customer`
+            );
+            const customerData = response.data.data.map((customer: any) => ({
+              id: customer.customer_id,
+              name: customer.business_name,
+            }));
+            setCustomers(customerData);
+            const selectedCustomer = customerData.find(
+              (customer: any) => customer.name === initialData.businessName
+            );
+            if (selectedCustomer) {
+              setSelectedCustomerId(selectedCustomer.id);
+              // Fetch branches for this customer
+              const branchResponse = await axios.get(
+                `${
+                  import.meta.env.VITE_API_BASE_URL
+                }/customer-branch?customer_id=${selectedCustomer.id}`
+              );
+              const branchData = branchResponse.data.data;
+              setCustomerBranches(branchData);
+              // Always set selected branch in edit mode if available
+              if (initialData.branch_name) {
+                const selectedBranch = branchData.find(
+                  (branch: any) =>
+                    branch.branch_name === initialData.branch_name
+                );
+                if (selectedBranch) {
+                  setSelectedBranchId(selectedBranch.id);
+                  // Always update formData.customerBranch to the exact branch name from fetched data
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    customerBranch: selectedBranch.branch_name,
+                  }));
+                  // Fetch contacts for this branch
+                  const contactResponse = await axios.get(
+                    `${
+                      import.meta.env.VITE_API_BASE_URL
+                    }/customer-branch-contact?customer_branch_id=${
+                      selectedBranch.id
+                    }`
+                  );
+                  const contactData = contactResponse.data.data;
+                  setContactPersons(contactData);
+                  if (initialData.contactPerson) {
+                    const selectedContact = contactData.find(
+                      (contact: any) =>
+                        contact.name === initialData.contactPerson
+                    );
+                    if (selectedContact) {
+                      setSelectedContactId(selectedContact.id);
+                    }
+                  }
+                } else {
+                  // If not found, clear the value to avoid mismatch
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    customerBranch: "",
+                  }));
+                  setSelectedBranchId("");
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching data for edit mode:", error);
+          }
+        }
+      } else if (isOpen) {
+        fetchCustomers();
+      }
+    };
+    fetchAllForEdit();
   }, [initialData, isOpen]);
 
   // Fetch customers from API
   const fetchCustomers = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer`);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/customer`
+      );
       const customerData = response.data.data;
-      setCustomers(customerData.map((customer: any) => ({
-        id: customer.customer_id,
-        name: customer.business_name
-      })));
+      setCustomers(
+        customerData.map((customer: any) => ({
+          id: customer.customer_id,
+          name: customer.business_name,
+        }))
+      );
     } catch (error) {
-      console.error('Error fetching customers:', error);
+      console.error("Error fetching customers:", error);
     }
   };
 
   // Fetch customer branches
   const fetchCustomerBranches = async (customerId: string) => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer-branch?customer_id=${customerId}`);
+      const response = await axios.get(
+        `${
+          import.meta.env.VITE_API_BASE_URL
+        }/customer-branch?customer_id=${customerId}`
+      );
+      console.log("Customer Branches:", response);
       const branchData = response.data.data;
+      console.log("Branch Data:-----", branchData);
       setCustomerBranches(branchData);
       // Reset dependent fields
       setContactPersons([]);
-      setSelectedBranchId('');
-      setSelectedContactId('');
+      setSelectedBranchId("");
+      setSelectedContactId("");
     } catch (error) {
-      console.error('Error fetching customer branches:', error);
+      console.error("Error fetching customer branches:", error);
       setCustomerBranches([]);
     }
   };
@@ -131,82 +292,98 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
   // Fetch branch contact persons
   const fetchContactPersons = async (branchId: string) => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact?customer_branch_id=${branchId}`);
+      const response = await axios.get(
+        `${
+          import.meta.env.VITE_API_BASE_URL
+        }/customer-branch-contact?customer_branch_id=${branchId}`
+      );
       const contactData = response.data.data;
-      console.log('Contact Data:', contactData);
+      console.log("Contact Data:", contactData);
       setContactPersons(contactData);
       // Reset contact selection
-      setSelectedContactId('');
+      setSelectedContactId("");
     } catch (error) {
-      console.error('Error fetching contact persons:', error);
+      console.error("Error fetching contact persons:", error);
       setContactPersons([]);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target;
 
     // Handle customer selection
-    if (name === 'businessName') {
-      const selectedCustomer = customers.find(customer => customer.name === value);
+    if (name === "businessName") {
+      const selectedCustomer = customers.find(
+        (customer) => customer.name === value
+      );
       if (selectedCustomer) {
         setSelectedCustomerId(selectedCustomer.id);
         fetchCustomerBranches(selectedCustomer.id);
       }
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         businessName: value,
-        customerBranch: '',
-        contactPerson: ''
+        customerBranch: "",
+        contactPerson: "",
       }));
       return;
     }
 
     // Handle branch selection
-    if (name === 'customerBranch') {
-      const selectedBranch = customerBranches.find(branch => branch.branch_name === value);
+    if (name === "customerBranch") {
+      const selectedBranch = customerBranches.find(
+        (branch) => branch.branch_name === value
+      );
       if (selectedBranch) {
         setSelectedBranchId(selectedBranch.id);
         fetchContactPersons(selectedBranch.id);
       }
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         customerBranch: value,
-        contactPerson: ''
+        contactPerson: "",
       }));
       return;
     }
 
     // Handle contact person selection
-    if (name === 'contactPerson') {
-      const selectedContact = contactPersons.find(contact => contact.name === value);
+    if (name === "contactPerson") {
+      const selectedContact = contactPersons.find(
+        (contact) => contact.name === value
+      );
       if (selectedContact) {
         setSelectedContactId(selectedContact.id);
       }
     }
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleMultiSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: prev[name as keyof typeof prev].includes(value)
-        ? (prev[name as keyof typeof prev] as string[]).filter((item: string) => item !== value)
-        : [...(prev[name as keyof typeof prev] as string[]), value]
+        ? (prev[name as keyof typeof prev] as string[]).filter(
+            (item: string) => item !== value
+          )
+        : [...(prev[name as keyof typeof prev] as string[]), value],
     }));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles(prev => [...prev, ...files]);
+    setUploadedFiles((prev) => [...prev, ...files]);
   };
 
   const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addComment = () => {
@@ -215,19 +392,98 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
         id: Date.now(),
         text: newComment,
         timestamp: new Date().toISOString(),
-        author: 'Current User'
+        author: "Current User",
       };
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        followUpComments: [...prev.followUpComments, comment]
+        followUpComments: [...prev.followUpComments, comment],
       }));
-      setNewComment('');
+      setNewComment("");
+    }
+  };
+
+  // Update lead API call
+  const handleUpdateLead = async () => {
+    setIsLoading(true);
+    try {
+      if (!initialData || !initialData.id) {
+        alert("No lead ID found for update.");
+        setIsLoading(false);
+        return;
+      }
+      // Map UI fields to backend keys
+      const leadPayload = {
+        business_name: formData.businessName,
+        customer_id: selectedCustomerId || null,
+        customer_branch_id: selectedBranchId || null,
+        contact_person: selectedContactId || null,
+        contact_no: formData.contactNo,
+        lead_date_generated_on: formData.leadGeneratedDate,
+        referenced_by: formData.referencedBy || null,
+        project_name: formData.projectName,
+        project_value: parseFloat(formData.projectValue) || 0,
+        lead_type: formData.leadType,
+        work_type: formData.workType || null,
+        lead_criticality: formData.leadCriticality,
+        lead_source: formData.leadSource,
+        lead_stage: formData.leadStage,
+        approximate_response_time_day:
+          parseInt(formData.approximateResponseTime) || 0,
+        eta: formData.eta || null,
+        lead_details: formData.leadDetails || null,
+      };
+
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/lead/${initialData.id}`,
+        leadPayload
+      );
+
+      // Optionally update associates, files, etc. here if needed
+
+      // Notify parent and close modal
+      onSubmit({ success: true, leadId: initialData.id });
+      setCurrentStep(1);
+      setCreatedLeadId(null);
+      setFormData({
+        businessName: "",
+        customerBranch: "",
+        currency: "INR",
+        contactPerson: "",
+        contactNo: "",
+        leadGeneratedDate: new Date().toISOString().split("T")[0],
+        referencedBy: "",
+        projectName: "",
+        projectValue: "",
+        leadType: "",
+        workType: "",
+        leadCriticality: "",
+        leadSource: "",
+        leadStage: "New Lead",
+        leadStagnation: "",
+        approximateResponseTime: "",
+        eta: "",
+        leadDetails: "",
+        involvedAssociates: [],
+        uploadedFiles: [],
+        followUpComments: [],
+      });
+      setUploadedFiles([]);
+      setNewComment("");
+    } catch (error) {
+      console.error("Error updating lead:", error);
+      alert("Failed to update lead. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleNext = () => {
     if (currentStep === 1) {
-      handleCreateLead();
+      if (isEditMode) {
+        handleUpdateLead();
+      } else {
+        handleCreateLead();
+      }
     } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -259,34 +515,46 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
         lead_criticality: formData.leadCriticality,
         lead_source: formData.leadSource,
         lead_stage: formData.leadStage,
-        approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
+        approximate_response_time_day:
+          parseInt(formData.approximateResponseTime) || 0,
         eta: formData.eta || null,
-        lead_details: formData.leadDetails || null
+        lead_details: formData.leadDetails || null,
       };
 
-      const leadResponse = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead`, leadPayload);
+      const leadResponse = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/lead`,
+        leadPayload
+      );
       const leadData = leadResponse.data.data;
       const leadId = leadData.lead_id;
-      
+
       setCreatedLeadId(leadId);
 
       // If there are associates, create lead-associate entries
-      if (formData.involvedAssociates && formData.involvedAssociates.length > 0) {
-        const associatePayload = formData.involvedAssociates.map((associate: any) => ({
-          lead_id: leadId,
-          associate_type: associate.designation,
-          associate_name: associate.associateName,
-          other_information: associate.otherInfo || null
-        }));
+      if (
+        formData.involvedAssociates &&
+        formData.involvedAssociates.length > 0
+      ) {
+        const associatePayload = formData.involvedAssociates.map(
+          (associate: any) => ({
+            lead_id: leadId,
+            associate_type: associate.designation,
+            associate_name: associate.associateName,
+            other_information: associate.otherInfo || null,
+          })
+        );
 
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead-associate/bulk`, associatePayload);
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/lead-associate/bulk`,
+          associatePayload
+        );
       }
 
       // Move to next step
       setCurrentStep(2);
     } catch (error) {
-      console.error('Error creating lead:', error);
-      alert('Failed to create lead. Please try again.');
+      console.error("Error creating lead:", error);
+      alert("Failed to create lead. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -299,26 +567,29 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
     try {
       const commentPayload = {
         lead_id: createdLeadId,
-        comment: newComment.trim()
+        comment: newComment.trim(),
       };
 
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/lead-follow-up`, commentPayload);
-      
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/lead-follow-up`,
+        commentPayload
+      );
+
       // Add comment to local state for UI update
       const comment = {
         id: Date.now(),
         text: newComment,
         timestamp: new Date().toISOString(),
-        author: 'Current User'
+        author: "Current User",
       };
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        followUpComments: [...prev.followUpComments, comment]
+        followUpComments: [...prev.followUpComments, comment],
       }));
-      setNewComment('');
+      setNewComment("");
     } catch (error) {
-      console.error('Error adding comment:', error);
-      alert('Failed to add comment. Please try again.');
+      console.error("Error adding comment:", error);
+      alert("Failed to add comment. Please try again.");
     }
   };
 
@@ -332,65 +603,69 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
           id: Date.now(),
           text: newComment,
           timestamp: new Date().toISOString(),
-          author: 'Current User'
+          author: "Current User",
         };
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          followUpComments: [...prev.followUpComments, comment]
+          followUpComments: [...prev.followUpComments, comment],
         }));
-        setNewComment('');
+        setNewComment("");
       }
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Close modal and notify parent component
     onSubmit({ success: true, leadId: createdLeadId });
-    
+
     // Reset form
     setCurrentStep(1);
     setCreatedLeadId(null);
     setFormData({
-      businessName: '',
-      customerBranch: '',
-      currency: 'INR',
-      contactPerson: '',
-      contactNo: '',
-      leadGeneratedDate: new Date().toISOString().split('T')[0],
-      referencedBy: '',
-      projectName: '',
-      projectValue: '',
-      leadType: '',
-      workType: '',
-      leadCriticality: '',
-      leadSource: '',
-      leadStage: 'New Lead',
-      leadStagnation: '',
-      approximateResponseTime: '',
-      eta: '',
-      leadDetails: '',
+      businessName: "",
+      customerBranch: "",
+      currency: "INR",
+      contactPerson: "",
+      contactNo: "",
+      leadGeneratedDate: new Date().toISOString().split("T")[0],
+      referencedBy: "",
+      projectName: "",
+      projectValue: "",
+      leadType: "",
+      workType: "",
+      leadCriticality: "",
+      leadSource: "",
+      leadStage: "New Lead",
+      leadStagnation: "",
+      approximateResponseTime: "",
+      eta: "",
+      leadDetails: "",
       involvedAssociates: [],
       uploadedFiles: [],
-      followUpComments: []
+      followUpComments: [],
     });
     setUploadedFiles([]);
-    setNewComment('');
+    setNewComment("");
   };
 
-  const handleAssociateFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleAssociateFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setAssociateForm(prev => ({
+    setAssociateForm((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const addAssociate = () => {
     if (!associateForm.designation || !associateForm.associateId) return;
-    const associateName = registeredAssociates.find(a => a.id === associateForm.associateId)?.name || '';
-    setFormData(prev => ({
+    const associateName =
+      registeredAssociates.find((a) => a.id === associateForm.associateId)
+        ?.name || "";
+    setFormData((prev) => ({
       ...prev,
       involvedAssociates: [
         ...prev.involvedAssociates,
@@ -398,18 +673,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
           designation: associateForm.designation,
           associateId: associateForm.associateId,
           associateName,
-          otherInfo: associateForm.otherInfo
-        }
-      ]
+          otherInfo: associateForm.otherInfo,
+        },
+      ],
     }));
-    setAssociateForm({ designation: '', associateId: '', otherInfo: '' });
+    setAssociateForm({ designation: "", associateId: "", otherInfo: "" });
     setShowAssociateForm(false);
   };
 
   const removeAssociate = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      involvedAssociates: prev.involvedAssociates.filter((_, i) => i !== index)
+      involvedAssociates: prev.involvedAssociates.filter((_, i) => i !== index),
     }));
   };
 
@@ -422,7 +697,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Create New Lead</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Create New Lead
+            </h3>
             <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
           </div>
           <button
@@ -442,14 +719,22 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                   type="button"
                   disabled={!isEditMode}
                   className={`flex items-center space-x-2 ${
-                    currentStep === step.id ? 'text-blue-600' : 
-                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                    currentStep === step.id
+                      ? "text-blue-600"
+                      : currentStep > step.id
+                      ? "text-green-600"
+                      : "text-gray-400"
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                    currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                  }`}>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      currentStep === step.id
+                        ? "bg-blue-100 text-blue-600"
+                        : currentStep > step.id
+                        ? "bg-green-100 text-green-600"
+                        : "bg-gray-100 text-gray-400"
+                    }`}
+                  >
                     {step.id}
                   </div>
                   <div>
@@ -483,8 +768,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Business</option>
-                      {customers.map(customer => (
-                        <option key={customer.id} value={customer.name}>{customer.name}</option>
+                      {customers.map((customer) => (
+                        <option key={customer.id} value={customer.name}>
+                          {customer.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -502,8 +789,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     >
                       <option value="">Select Branch</option>
-                      {customerBranches.map(branch => (
-                        <option key={branch.id} value={branch.branch_name}>{branch.branch_name}</option>
+                      {customerBranches.map((branch) => (
+                        <option key={branch.id} value={branch.branch_name}>
+                          {branch.branch_name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -538,8 +827,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     >
                       <option value="">Select Contact Person</option>
-                      {contactPersons.map(person => (
-                        <option key={person.id} value={person.name}>{person.name}</option>
+                      {contactPersons.map((person) => (
+                        <option key={person.id} value={person.name}>
+                          {person.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -609,7 +900,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                     <input
                       type="number"
                       name="projectValue"
-                      value={formData.projectValue}
+                      value={String(formData.projectValue ?? "")}
                       onChange={handleInputChange}
                       required
                       placeholder="Enter value in selected currency"
@@ -629,8 +920,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Lead Type</option>
-                      {leadTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                      {leadTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -646,8 +939,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Work Type</option>
-                      {workTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                      {workTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -664,8 +959,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Criticality</option>
-                      {leadCriticalities.map(criticality => (
-                        <option key={criticality} value={criticality}>{criticality}</option>
+                      {leadCriticalities.map((criticality) => (
+                        <option key={criticality} value={criticality}>
+                          {criticality}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -682,8 +979,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Source</option>
-                      {leadSources.map(source => (
-                        <option key={source} value={source}>{source}</option>
+                      {leadSources.map((source) => (
+                        <option key={source} value={source}>
+                          {source}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -699,8 +998,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      {leadStages.map(stage => (
-                        <option key={stage} value={stage}>{stage}</option>
+                      {leadStages.map((stage) => (
+                        <option key={stage} value={stage}>
+                          {stage}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -752,15 +1053,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Involved Associates
                   </label>
-                  {formData.involvedAssociates.length === 0 && !showAssociateForm && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAssociateForm(true)}
-                      className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
-                    >
-                      + Tag Associate
-                    </button>
-                  )}
+                  {formData.involvedAssociates.length === 0 &&
+                    !showAssociateForm && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAssociateForm(true)}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
+                      >
+                        + Tag Associate
+                      </button>
+                    )}
 
                   {showAssociateForm && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
@@ -772,8 +1074,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                           className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
                         >
                           <option value="">Select Designation</option>
-                          {associateDesignations.map(des => (
-                            <option key={des} value={des}>{des}</option>
+                          {associateDesignations.map((des) => (
+                            <option key={des} value={des}>
+                              {des}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -785,8 +1089,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                           className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
                         >
                           <option value="">Select Associate</option>
-                          {registeredAssociates.map(a => (
-                            <option key={a.id} value={a.id}>{a.name}</option>
+                          {registeredAssociates.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -805,7 +1111,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                           type="button"
                           onClick={addAssociate}
                           className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                          disabled={!associateForm.designation || !associateForm.associateId}
+                          disabled={
+                            !associateForm.designation ||
+                            !associateForm.associateId
+                          }
                         >
                           Add
                         </button>
@@ -823,18 +1132,29 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                   {formData.involvedAssociates.length > 0 && (
                     <div className="space-y-2">
                       {formData.involvedAssociates.map((a, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                        >
                           <div>
-                            <span className="font-thin text-sm">{a.designation}</span>{' '}
-                            <span className="text-gray-700 text-sm">{a.associateName}</span>
-                            {a.otherInfo && <span className="text-gray-500 ml-2 text-xs">({a.otherInfo})</span>}
+                            <span className="font-thin text-sm">
+                              {a.designation}
+                            </span>{" "}
+                            <span className="text-gray-700 text-sm">
+                              {a.associateName}
+                            </span>
+                            {a.otherInfo && (
+                              <span className="text-gray-500 ml-2 text-xs">
+                                ({a.otherInfo})
+                              </span>
+                            )}
                           </div>
                           <button
                             type="button"
                             onClick={() => removeAssociate(idx)}
                             className="text-red-600 hover:text-red-800 text-xs"
                           >
-                            <Trash2 className='h-5 w-5'/>
+                            <Trash2 className="h-5 w-5" />
                           </button>
                         </div>
                       ))}
@@ -861,10 +1181,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-sm text-gray-600 mb-2">
-                      Upload RFQ documents, technical drawings, site photos, etc.
+                      Upload RFQ documents, technical drawings, site photos,
+                      etc.
                     </p>
                     <p className="text-xs text-gray-500 mb-4">
-                      Supported formats: PDF, DOC, DOCX, JPG, PNG, DWG (Max 10MB per file)
+                      Supported formats: PDF, DOC, DOCX, JPG, PNG, DWG (Max 10MB
+                      per file)
                     </p>
                     <input
                       type="file"
@@ -885,12 +1207,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
 
                 {uploadedFiles.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Files</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Uploaded Files
+                    </h4>
                     <div className="space-y-2">
                       {uploadedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                        >
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {file.name}
+                            </p>
                             <p className="text-xs text-gray-500">
                               {(file.size / 1024 / 1024).toFixed(2)} MB
                             </p>
@@ -938,17 +1267,28 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
 
                 {formData.followUpComments.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Communication History</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Communication History
+                    </h4>
                     <div className="space-y-3 max-h-60 overflow-y-auto">
                       {formData.followUpComments.map((comment) => (
-                        <div key={comment.id} className="p-3 bg-gray-50 rounded-md">
+                        <div
+                          key={comment.id}
+                          className="p-3 bg-gray-50 rounded-md"
+                        >
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-900">{comment.author}</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {comment.author}
+                            </span>
                             <span className="text-xs text-gray-500">
-                              {new Date(comment.timestamp).toLocaleString('en-IN')}
+                              {new Date(comment.timestamp).toLocaleString(
+                                "en-IN"
+                              )}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-700">{comment.text}</p>
+                          <p className="text-sm text-gray-700">
+                            {comment.text}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -979,15 +1319,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
             >
               Cancel
             </button>
-            
+
             {isEditMode ? (
               <button
-                type="submit"
-                onClick={handleSubmit}
+                type="button"
+                onClick={handleUpdateLead}
+                disabled={isLoading}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save
+                {isLoading ? "Saving..." : "Save"}
               </button>
             ) : currentStep < 3 ? (
               <button
@@ -996,7 +1337,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose, onSubmit, 
                 disabled={isLoading}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
-                {isLoading ? 'Creating...' : 'Next'}
+                {isLoading ? "Creating..." : "Next"}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </button>
             ) : (

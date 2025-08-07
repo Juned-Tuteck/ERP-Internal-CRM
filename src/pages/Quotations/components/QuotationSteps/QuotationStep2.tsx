@@ -1,75 +1,117 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState } from "react";
+import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 interface QuotationStep2Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
 }
 
-const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }) => {
+const QuotationStep2: React.FC<QuotationStep2Props> = ({
+  formData,
+  setFormData,
+}) => {
   const [expandedSections, setExpandedSections] = useState({
     project: true,
     supervision: true,
     finance: true,
-    contingency: true
+    contingency: true,
   });
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section as keyof typeof prev]
+      [section]: !prev[section as keyof typeof prev],
     }));
   };
 
-  const addCostItem = (section: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts') => {
+  const addCostItem = (
+    section:
+      | "projectCosts"
+      | "supervisionCosts"
+      | "financeCosts"
+      | "contingencyCosts"
+  ) => {
     const newItem = {
       id: Date.now().toString(),
-      description: '',
+      description: "",
       nosPercentage: 0,
       monthlyExpense: 0,
       months: 0,
       diversity: 0,
-      total: 0
+      total: 0,
     };
 
     setFormData({
       ...formData,
-      [section]: [...(formData[section] || []), newItem]
+      [section]: [...(formData[section] || []), newItem],
     });
   };
 
-  const updateCostItem = (section: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts', index: number, field: string, value: any) => {
+  const updateCostItem = (
+    section:
+      | "projectCosts"
+      | "supervisionCosts"
+      | "financeCosts"
+      | "contingencyCosts",
+    index: number,
+    field: string,
+    value: any
+  ) => {
     const updatedItems = [...(formData[section] || [])];
     updatedItems[index][field] = value;
-    
+
     // Calculate total
-    if (field !== 'description') {
+    if (field !== "description") {
       const item = updatedItems[index];
-      item.total = (item.monthlyExpense * item.months) * item.diversity * item.nosPercentage;
+      item.total =
+        item.monthlyExpense * item.months * item.diversity * item.nosPercentage;
     }
-    
+
     setFormData({
       ...formData,
-      [section]: updatedItems
+      [section]: updatedItems,
     });
   };
 
-  const removeCostItem = (section: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts', index: number) => {
+  const removeCostItem = (
+    section:
+      | "projectCosts"
+      | "supervisionCosts"
+      | "financeCosts"
+      | "contingencyCosts",
+    index: number
+  ) => {
     const updatedItems = [...(formData[section] || [])];
     updatedItems.splice(index, 1);
-    
+
     setFormData({
       ...formData,
-      [section]: updatedItems
+      [section]: updatedItems,
     });
   };
 
   // Calculate section totals
-  const totalProjectCost = (formData.projectCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
-  const totalSupervisionCost = (formData.supervisionCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
-  const totalFinanceCost = (formData.financeCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
-  const totalContingencyCost = (formData.contingencyCosts || []).reduce((sum: number, item: any) => sum + (item.total || 0), 0);
-  const totalOverheadsCost = totalProjectCost + totalSupervisionCost + totalFinanceCost + totalContingencyCost;
+  const totalProjectCost = (formData.projectCosts || []).reduce(
+    (sum: number, item: any) => sum + (item.total || 0),
+    0
+  );
+  const totalSupervisionCost = (formData.supervisionCosts || []).reduce(
+    (sum: number, item: any) => sum + (item.total || 0),
+    0
+  );
+  const totalFinanceCost = (formData.financeCosts || []).reduce(
+    (sum: number, item: any) => sum + (item.total || 0),
+    0
+  );
+  const totalContingencyCost = (formData.contingencyCosts || []).reduce(
+    (sum: number, item: any) => sum + (item.total || 0),
+    0
+  );
+  const totalOverheadsCost =
+    totalProjectCost +
+    totalSupervisionCost +
+    totalFinanceCost +
+    totalContingencyCost;
 
   // Calculate summary values - material and labour costs from step 1 grand totals
   const materialCost = formData.materialCost || 0;
@@ -86,7 +128,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
       materialCost,
       labourCost,
       totalOverheadsCost,
-      contractValue: prev.contractValue || 0
+      contractValue: prev.contractValue || 0,
     }));
   }, [totalOwnCost, setFormData, materialCost, labourCost, totalOverheadsCost]);
 
@@ -94,21 +136,25 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
     const numValue = parseFloat(value) || 0;
     setFormData({
       ...formData,
-      [field]: numValue
+      [field]: numValue,
     });
   };
 
   const renderCostSection = (
     title: string,
-    sectionKey: 'projectCosts' | 'supervisionCosts' | 'financeCosts' | 'contingencyCosts',
-    expandKey: 'project' | 'supervision' | 'finance' | 'contingency',
+    sectionKey:
+      | "projectCosts"
+      | "supervisionCosts"
+      | "financeCosts"
+      | "contingencyCosts",
+    expandKey: "project" | "supervision" | "finance" | "contingency",
     total: number
   ) => {
     const items = formData[sectionKey] || [];
-    
+
     return (
       <div className="border border-gray-200 rounded-lg">
-        <div 
+        <div
           className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer"
           onClick={() => toggleSection(expandKey)}
         >
@@ -122,7 +168,11 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm font-medium text-green-600">
-              Total: ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              Total: ₹
+              {total.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </span>
             <button
               type="button"
@@ -137,20 +187,34 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
             </button>
           </div>
         </div>
-        
+
         {expandedSections[expandKey] && (
           <div className="p-4">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nos / % Age</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Expense</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Months</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diversity</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nos / % Age
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Monthly Expense
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Months
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Diversity
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -159,8 +223,15 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                       <td className="px-3 py-2">
                         <input
                           type="text"
-                          value={item.description || ''}
-                          onChange={(e) => updateCostItem(sectionKey, index, 'description', e.target.value)}
+                          value={item.description || ""}
+                          onChange={(e) =>
+                            updateCostItem(
+                              sectionKey,
+                              index,
+                              "description",
+                              e.target.value
+                            )
+                          }
                           className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                           placeholder="Enter description"
                         />
@@ -169,7 +240,14 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                         <input
                           type="number"
                           value={item.nosPercentage || 0}
-                          onChange={(e) => updateCostItem(sectionKey, index, 'nosPercentage', parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            updateCostItem(
+                              sectionKey,
+                              index,
+                              "nosPercentage",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
                           min="0"
                           step="0.01"
                           className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -179,7 +257,14 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                         <input
                           type="number"
                           value={item.monthlyExpense || 0}
-                          onChange={(e) => updateCostItem(sectionKey, index, 'monthlyExpense', parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            updateCostItem(
+                              sectionKey,
+                              index,
+                              "monthlyExpense",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
                           min="0"
                           step="0.01"
                           className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -189,7 +274,14 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                         <input
                           type="number"
                           value={item.months || 0}
-                          onChange={(e) => updateCostItem(sectionKey, index, 'months', parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            updateCostItem(
+                              sectionKey,
+                              index,
+                              "months",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
                           min="0"
                           step="0.01"
                           className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -199,14 +291,25 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                         <input
                           type="number"
                           value={item.diversity || 0}
-                          onChange={(e) => updateCostItem(sectionKey, index, 'diversity', parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            updateCostItem(
+                              sectionKey,
+                              index,
+                              "diversity",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
                           min="0"
                           step="0.01"
                           className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
                       <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                        ₹{(item.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹
+                        {(item.total || 0).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </td>
                       <td className="px-3 py-2">
                         <button
@@ -220,8 +323,12 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
                   ))}
                   {items.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-4 text-sm text-gray-500 text-center">
-                        No items added yet. Click "Add" to create the first item.
+                      <td
+                        colSpan={7}
+                        className="px-3 py-4 text-sm text-gray-500 text-center"
+                      >
+                        No items added yet. Click "Add" to create the first
+                        item.
                       </td>
                     </tr>
                   )}
@@ -237,37 +344,41 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Project Management & Site Establishment Cost</h3>
-        <p className="text-sm text-gray-600">Calculate overhead costs associated with this project.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Project Management & Site Establishment Cost
+        </h3>
+        <p className="text-sm text-gray-600">
+          Calculate overhead costs associated with this project.
+        </p>
       </div>
 
       {/* Four Cost Sections */}
       <div className="space-y-4">
         {renderCostSection(
-          'Project Management & Site Establishment Cost',
-          'projectCosts',
-          'project',
+          "Project Management & Site Establishment Cost",
+          "projectCosts",
+          "project",
           totalProjectCost
         )}
-        
+
         {renderCostSection(
-          'Supervision',
-          'supervisionCosts',
-          'supervision',
+          "Supervision",
+          "supervisionCosts",
+          "supervision",
           totalSupervisionCost
         )}
-        
+
         {renderCostSection(
-          'Finance Cost',
-          'financeCosts',
-          'finance',
+          "Finance Cost",
+          "financeCosts",
+          "finance",
           totalFinanceCost
         )}
-        
+
         {renderCostSection(
-          'Contingencies',
-          'contingencyCosts',
-          'contingency',
+          "Contingencies",
+          "contingencyCosts",
+          "contingency",
           totalContingencyCost
         )}
       </div>
@@ -281,37 +392,53 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
               Total Overheads Cost
             </label>
             <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
-              ₹{totalOverheadsCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹
+              {totalOverheadsCost.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Material Cost
             </label>
             <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
-              ₹{materialCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹
+              {materialCost.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Labour Cost
             </label>
             <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
-              ₹{labourCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹
+              {labourCost.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Total Own Cost
             </label>
             <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium text-gray-900">
-              ₹{totalOwnCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹
+              {totalOwnCost.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Contract Value
@@ -319,11 +446,15 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({ formData, setFormData }
             <input
               type="number"
               value={contractValue}
-              onChange={(e) => handleSummaryChange('contractValue', e.target.value)}
+              onChange={(e) =>
+                handleSummaryChange("contractValue", e.target.value)
+              }
               min="0"
               step="0.01"
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder={`Auto: ₹${(totalOwnCost + totalOverheadsCost).toLocaleString('en-IN')}`}
+              placeholder={`Auto: ₹${(
+                totalOwnCost + totalOverheadsCost
+              ).toLocaleString("en-IN")}`}
             />
           </div>
         </div>

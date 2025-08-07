@@ -92,6 +92,7 @@ const VendorDetails: React.FC<
   // Transform vendor data for edit modal (if needed)
   // Map all fields required by AddVendorModal's formData
   const transformToFormData = (vendor: any) => ({
+    id: vendor.id || vendor.vendor_id || vendor.vendorId || "",
     vendorCategory: vendor.vendor_type || "",
     vendorType: vendor.vendor_type || "",
     businessName: vendor.business_name || "",

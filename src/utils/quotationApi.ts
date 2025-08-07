@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
 // Get all quotations
 export const getQuotations = async () => {
@@ -23,7 +24,7 @@ export const getLeads = async () => {
 // Get BOM by lead ID
 export const getBOMByLeadId = async (leadId: string) => {
   const response = await axios.get(`${API_BASE_URL}/bom/`, {
-    params: { lead_id: leadId }
+    params: { lead_id: leadId },
   });
   return response.data;
 };
@@ -36,42 +37,140 @@ export const getBOMDetailsById = async (bomId: string) => {
 
 // Create quotation
 export const createQuotation = async (quotationData: any) => {
-  const response = await axios.post(`${API_BASE_URL}/customer-quotation/`, quotationData);
+  const response = await axios.post(
+    `${API_BASE_URL}/customer-quotation/`,
+    quotationData
+  );
   return response.data;
 };
 
 // Create quotation specs in bulk
 export const createQuotationSpecs = async (specsData: any[]) => {
-  const response = await axios.post(`${API_BASE_URL}/customer-quotation-bom-spec/bulk`, specsData);
+  const response = await axios.post(
+    `${API_BASE_URL}/customer-quotation-bom-spec/bulk`,
+    specsData
+  );
   return response.data;
 };
 
 // Create quotation item details in bulk
 export const createQuotationItemDetails = async (itemsData: any[]) => {
-  const response = await axios.post(`${API_BASE_URL}/customer-quotation-bom-item-details/bulk`, itemsData);
+  const response = await axios.post(
+    `${API_BASE_URL}/customer-quotation-bom-item-details/bulk`,
+    itemsData
+  );
   return response.data;
 };
 
 // Create POC expenses in bulk
 export const createPOCExpenses = async (pocData: any[]) => {
-  const response = await axios.post(`${API_BASE_URL}/customer-quotation-poc-expense/bulk`, pocData);
+  const response = await axios.post(
+    `${API_BASE_URL}/customer-quotation-poc-expense/bulk`,
+    pocData
+  );
   return response.data;
 };
 
 // Update quotation
 export const updateQuotation = async (id: string, updateData: any) => {
-  const response = await axios.put(`${API_BASE_URL}/customer-quotation/${id}`, updateData);
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation/${id}`,
+    updateData
+  );
   return response.data;
 };
 
 // Create cost margins in bulk
 export const createCostMargins = async (marginsData: any[]) => {
-  const response = await axios.post(`${API_BASE_URL}/customer-quotation-cost-margin/bulk`, marginsData);
+  const response = await axios.post(
+    `${API_BASE_URL}/customer-quotation-cost-margin/bulk`,
+    marginsData
+  );
   return response.data;
 };
 
 // Create quotation comment
 export const createQuotationComment = async (commentData: any) => {
-  const response = await axios.post(`${API_BASE_URL}/customer-quotation-comment/`, commentData);
+  const response = await axios.post(
+    `${API_BASE_URL}/customer-quotation-comment/`,
+    commentData
+  );
+  return response.data;
+};
+
+// Update customer quotation approval
+export const updateCustomerQuotationApproval = async (
+  id: string,
+  updates: Record<string, any>,
+  updatedBy: string
+) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation-approval/${id}`,
+    { ...updates, updated_by: updatedBy }
+  );
+  return response.data;
+};
+
+// Update customer quotation BOM item detail
+export const updateQuotationBOMItemDetail = async (
+  id: string,
+  updateData: Record<string, any>
+) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation-bom-item-details/${id}`,
+    updateData
+  );
+  return response.data;
+};
+
+// Update customer quotation BOM spec
+export const updateQuotationBOMSpec = async (
+  id: string,
+  updateData: Record<string, any>
+) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation-bom-spec/${id}`,
+    updateData
+  );
+  return response.data;
+};
+
+// Update customer quotation comment
+export const updateQuotationComment = async (
+  id: string,
+  updateData: Partial<{
+    customer_quotation_id: string;
+    comment: string;
+    updated_by: string;
+  }>
+) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation-comment/${id}`,
+    updateData
+  );
+  return response.data;
+};
+
+// Update customer quotation cost margin with dynamic fields
+export const updateQuotationCostMargin = async (
+  id: string,
+  updateData: Record<string, any>
+) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation-cost-margin/${id}`,
+    updateData
+  );
+  return response.data;
+};
+
+// Update customer quotation POC expense
+export const updateQuotationPOCExpense = async (
+  id: string,
+  updateData: Record<string, any>
+) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation-poc-expense/${id}`,
+    updateData
+  );
   return response.data;
 };
