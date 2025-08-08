@@ -73,8 +73,6 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
     name: "",
     description: "",
   });
-  const [items, setItems] = useState<BOMItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [specs, setSpecs] = useState<Spec[]>([]);
   const [specification, setSpecification] = useState<string>("");
   const [showSpecModal, setShowSpecModal] = useState(false);
@@ -334,12 +332,6 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
     return specs.flatMap((spec) => spec.items);
   };
 
-  const handleEditItem = (specId: string, item: BOMItem) => {
-    setEditingItemId(item.id);
-    setSpecification(item.specifications || "");
-    setShowSpecModal(true);
-  };
-
   const handleSaveSpecification = () => {
     if (editingItemId) {
       setSpecs((prev) =>
@@ -438,7 +430,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                 {filteredItems.length === 0 && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       className="px-3 py-2 text-sm text-gray-500 text-center"
                     >
                       No items found
@@ -700,6 +692,9 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                           Material Type
                         </th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Specifications
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
@@ -734,9 +729,10 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                                 min="1"
                                 className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
                               />
-                            ) : isEditMode &&
-                              !isItemFromInitialData(item.id) ? (
-                              // New items in edit mode - quantity is directly editable
+                            ) : !isEditMode ||
+                              (isEditMode &&
+                                !isItemFromInitialData(item.id)) ? (
+                              // New items in creation mode or edit mode - quantity is directly editable
                               <input
                                 type="number"
                                 value={item.quantity}
@@ -778,9 +774,10 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                                   </option>
                                 ))}
                               </select>
-                            ) : isEditMode &&
-                              !isItemFromInitialData(item.id) ? (
-                              // New items in edit mode - material type is directly editable
+                            ) : !isEditMode ||
+                              (isEditMode &&
+                                !isItemFromInitialData(item.id)) ? (
+                              // New items in creation mode or edit mode - material type is directly editable
                               <select
                                 value={item.materialType || "HIGH SIDE SUPPLY"}
                                 onChange={(e) => {
@@ -813,6 +810,61 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                               </select>
                             ) : (
                               item.materialType || "HIGH SIDE SUPPLY"
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            {editingItemId === item.id ? (
+                              <textarea
+                                value={
+                                  itemEditState[item.id]?.specifications ||
+                                  item.specifications ||
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  handleItemFieldChange(
+                                    item.id,
+                                    "specifications",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm resize-none"
+                                rows={1}
+                                placeholder="Enter specifications..."
+                              />
+                            ) : !isEditMode ||
+                              (isEditMode &&
+                                !isItemFromInitialData(item.id)) ? (
+                              // New items in creation mode or edit mode - specifications is directly editable
+                              <textarea
+                                value={item.specifications || ""}
+                                onChange={(e) => {
+                                  setSpecs((prevSpecs) =>
+                                    prevSpecs.map((s) =>
+                                      s.id === spec.id
+                                        ? {
+                                            ...s,
+                                            items: s.items.map((it) =>
+                                              it.id === item.id
+                                                ? {
+                                                    ...it,
+                                                    specifications:
+                                                      e.target.value,
+                                                  }
+                                                : it
+                                            ),
+                                          }
+                                        : s
+                                    )
+                                  );
+                                }}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm resize-none"
+                                rows={1}
+                                placeholder="Enter specifications..."
+                              />
+                            ) : (
+                              <span className="text-sm text-gray-500">
+                                {item.specifications || "No specifications"}
+                              </span>
                             )}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
@@ -854,7 +906,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                     <tfoot className="bg-gray-50">
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={6}
                           className="px-3 py-2 text-sm font-medium text-right"
                         >
                           Total:

@@ -10,6 +10,7 @@ import {
   Edit,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getLeads,
@@ -21,6 +22,15 @@ import {
   LEAD_KEY_MAP,
   BOM_TEMPLATE_RESPONSE_KEY_MAP,
 } from "../../../utils/bomApi";
+import {
+  validateBOMHeader,
+  validateBOMSpec,
+  validateBOMItem,
+  validateBOMComplete,
+  hasEmptySpecs,
+  getIncompleteSpecsCount,
+  ValidationErrors,
+} from "../../../utils/validationUtils";
 
 interface CreateBOMProps {
   isOpen: boolean;
@@ -94,6 +104,16 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   const [bomTemplates, setBOMTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [allItems, setAllItems] = useState<any[]>([]);
+
+  // Validation state
+  const [headerErrors, setHeaderErrors] = useState<ValidationErrors>({});
+  const [specErrors, setSpecErrors] = useState<{
+    [specId: string]: ValidationErrors;
+  }>({});
+  const [itemErrors, setItemErrors] = useState<{
+    [key: string]: ValidationErrors;
+  }>({});
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   // PATCH: Save item row for existing items (PUT with detail_id)
   const saveItemRow = async (specId: string, itemId: string, item: any) => {
@@ -272,6 +292,12 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     setAllItems([]);
     setLeads([]);
     setBOMTemplates([]);
+
+    // Reset validation states
+    setHeaderErrors({});
+    setSpecErrors({});
+    setItemErrors({});
+    setShowValidationErrors(false);
   };
 
   const handleInputChange = (
@@ -285,11 +311,16 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       [name]: value,
     }));
 
+    // Real-time validation for header fields
+    const updatedFormData = { ...formData, [name]: value };
+    const errors = validateBOMHeader(updatedFormData);
+    setHeaderErrors(errors);
+
     // If lead is selected, update lead name and work type
     if (name === "leadId") {
       const selectedLead = leads.find((lead) => lead.id === value);
       if (selectedLead) {
-        setFormData((prev) => ({
+        setFormData((prev: typeof formData) => ({
           ...prev,
           leadName: selectedLead.projectName,
           workType: selectedLead.workType,
@@ -395,6 +426,13 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     setNewSpecs((prev) =>
       prev.map((spec) => (spec.id === specId ? { ...spec, name } : spec))
     );
+
+    // Real-time validation for spec name
+    const specErrors = validateBOMSpec({ name, items: [] });
+    setSpecErrors((prev) => ({
+      ...prev,
+      [specId]: specErrors,
+    }));
   };
 
   // Save spec name to API (edit mode)
@@ -468,6 +506,29 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       ...prev,
       [specId]: [...(prev[specId] || []), newItem],
     }));
+
+    // Validate the new item
+    const itemKey = `${specId}_${newItem.id}`;
+    const itemErrors = validateBOMItem(newItem);
+    setItemErrors((prev) => ({
+      ...prev,
+      [itemKey]: itemErrors,
+    }));
+
+    // Update spec validation (now has items)
+    const currentSpec = specs.find((s) => s.id === specId);
+    if (currentSpec) {
+      const updatedSpec = {
+        ...currentSpec,
+        items: [...currentSpec.items, newItem],
+      };
+      const specErrors = validateBOMSpec(updatedSpec);
+      setSpecErrors((prev) => ({
+        ...prev,
+        [specId]: specErrors,
+      }));
+    }
+
     // Make new item immediately editable if added to existing spec
     if (!isNewSpec) {
       setEditingItem({ specId, itemId: newItem.id });
@@ -520,6 +581,21 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
           : spec
       )
     );
+
+    // Validate the updated item
+    const currentSpec = specs.find((s) => s.id === specId);
+    if (currentSpec) {
+      const currentItem = currentSpec.items.find((item) => item.id === itemId);
+      if (currentItem) {
+        const updatedItem = { ...currentItem, [field]: value };
+        const itemKey = `${specId}_${itemId}`;
+        const itemErrors = validateBOMItem(updatedItem);
+        setItemErrors((prev) => ({
+          ...prev,
+          [itemKey]: itemErrors,
+        }));
+      }
+    }
   };
 
   const removeItemFromSpec = (specId: string, itemId: string) => {
@@ -730,8 +806,44 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   };
 
   const handleSubmit = async () => {
+    // Comprehensive validation before saving
+    const bomData = {
+      ...formData,
+      specs: specs,
+    };
+
+    // Validate complete BOM
+    const completeErrors = validateBOMComplete(bomData);
+
+    if (Object.keys(completeErrors).length > 0) {
+      setShowValidationErrors(true);
+
+      // Show first error message
+      const firstError = Object.values(completeErrors)[0];
+      alert(`Please fix validation errors: ${firstError}`);
+      return;
+    }
+
+    // Check for empty specs
+    if (hasEmptySpecs(specs)) {
+      const incompleteCount = getIncompleteSpecsCount(specs);
+      alert(
+        `Please complete ${incompleteCount} empty specification(s) or remove them before saving. Each specification must have a name and at least one item.`
+      );
+      return;
+    }
+
     if (editMode) {
       if (currentStep === 1) {
+        // Validate header only for step 1
+        const headerErrors = validateBOMHeader(formData);
+        if (Object.keys(headerErrors).length > 0) {
+          setHeaderErrors(headerErrors);
+          const firstError = Object.values(headerErrors)[0];
+          alert(`Please fix header errors: ${firstError}`);
+          return;
+        }
+
         // Save BOM header
         try {
           await fetch(
@@ -1011,7 +1123,11 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   value={formData.leadId}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    headerErrors.leadId
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
+                  }`}
                 >
                   <option value="">Select Lead</option>
                   {leads.map((lead) => (
@@ -1020,6 +1136,11 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                     </option>
                   ))}
                 </select>
+                {headerErrors.leadId && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {headerErrors.leadId}
+                  </p>
+                )}
               </div>
 
               {formData.leadId && (
@@ -1050,7 +1171,31 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   value={formData.date}
                   onChange={handleInputChange}
                   required
+                  max={new Date().toISOString().split("T")[0]}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    headerErrors.date
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300"
+                  }`}
+                />
+                {headerErrors.date && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {headerErrors.date}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Note (Optional)
+                </label>
+                <textarea
+                  name="note"
+                  value={formData.note}
+                  onChange={handleInputChange}
+                  rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add any additional notes..."
                 />
               </div>
             </div>
@@ -1092,6 +1237,28 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   Add Spec
                 </button>
               </div>
+
+              {/* Validation Warning Banner */}
+              {showValidationErrors && hasEmptySpecs(specs) && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <AlertTriangle className="h-5 w-5 text-red-400" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        Incomplete Specifications
+                      </h3>
+                      <p className="text-sm text-red-700 mt-1">
+                        You have {getIncompleteSpecsCount(specs)} empty
+                        specification(s). Please provide a name and add at least
+                        one item to each specification, or remove the empty ones
+                        before saving.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Specs List */}
               {specs.length > 0 ? (
@@ -1155,7 +1322,11 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                   onChange={(e) =>
                                     updateSpecName(spec.id, e.target.value)
                                   }
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                    specErrors[spec.id]?.name
+                                      ? "border-red-300 bg-red-50"
+                                      : "border-gray-300"
+                                  }`}
                                   placeholder="Enter spec name"
                                   disabled={
                                     editMode &&
@@ -1190,6 +1361,16 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                     </button>
                                   ))}
                               </div>
+                              {specErrors[spec.id]?.name && (
+                                <p className="mt-1 text-sm text-red-600">
+                                  {specErrors[spec.id].name}
+                                </p>
+                              )}
+                              {specErrors[spec.id]?.items && (
+                                <p className="mt-1 text-sm text-red-600">
+                                  {specErrors[spec.id].items}
+                                </p>
+                              )}
                             </div>
 
                             {/* Add Item Dropdown */}
@@ -1504,12 +1685,29 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
             {editMode ? (
               <button
                 type="button"
-                onClick={handleSubmit}
+                onClick={() => {
+                  // Show validation warnings if there are empty specs
+                  if (currentStep === 2 && hasEmptySpecs(specs)) {
+                    setShowValidationErrors(true);
+                  }
+                  handleSubmit();
+                }}
                 disabled={currentStep === 2 && specs.length === 0}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
+                  currentStep === 2 && hasEmptySpecs(specs)
+                    ? "bg-yellow-600 hover:bg-yellow-700"
+                    : "bg-green-600 hover:bg-green-700"
+                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                title={
+                  currentStep === 2 && hasEmptySpecs(specs)
+                    ? "There are incomplete specifications that need attention"
+                    : ""
+                }
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save
+                {currentStep === 2 && hasEmptySpecs(specs)
+                  ? "Review & Save"
+                  : "Save"}
               </button>
             ) : currentStep < 2 ? (
               <button
@@ -1524,12 +1722,31 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={handleSubmit}
+                onClick={() => {
+                  // Show validation warnings if there are empty specs
+                  if (hasEmptySpecs(specs)) {
+                    setShowValidationErrors(true);
+                  }
+                  handleSubmit();
+                }}
                 disabled={specs.length === 0 || isSubmitting}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
+                  hasEmptySpecs(specs)
+                    ? "bg-yellow-600 hover:bg-yellow-700"
+                    : "bg-green-600 hover:bg-green-700"
+                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                title={
+                  hasEmptySpecs(specs)
+                    ? "There are incomplete specifications that need attention"
+                    : ""
+                }
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isSubmitting ? "Saving..." : "Save BOM"}
+                {isSubmitting
+                  ? "Saving..."
+                  : hasEmptySpecs(specs)
+                  ? "Review & Save"
+                  : "Save BOM"}
               </button>
             )}
           </div>

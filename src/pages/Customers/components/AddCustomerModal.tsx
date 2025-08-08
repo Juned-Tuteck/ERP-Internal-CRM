@@ -11,6 +11,15 @@ import {
   Edit,
 } from "lucide-react";
 import axios from "axios";
+import {
+  validateForm,
+  validateContactPerson,
+  validateBranch,
+  validationRules,
+  ValidationErrors,
+  hasErrors,
+  getFirstError,
+} from "../../../utils/validationUtils";
 
 interface AddCustomerModalProps {
   isOpen: boolean;
@@ -95,6 +104,65 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   );
   const [createdBranches, setCreatedBranches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+  const [contactPersonErrors, setContactPersonErrors] = useState<
+    Record<string, ValidationErrors>
+  >({});
+  const [branchErrors, setBranchErrors] = useState<
+    Record<string, ValidationErrors>
+  >({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Clear modal state function
+  const clearModalState = () => {
+    if (!isEditMode) {
+      setCurrentStep(1);
+      setFormData({
+        businessName: "",
+        contactNo: "",
+        email: "",
+        country: "India",
+        currency: "INR",
+        state: "",
+        district: "",
+        city: "",
+        customerType: "",
+        customerPotential: "",
+        pincode: "",
+        active: true,
+        panNumber: "",
+        tanNumber: "",
+        gstNumber: "",
+        bankName: "",
+        bankAccountNumber: "",
+        branchName: "",
+        ifscCode: "",
+        contactPersons: [],
+        branches: [],
+        uploadedFiles: [],
+      });
+      setUploadedFiles([]);
+      setInitialFiles([]);
+      setFieldChanges({});
+    }
+    setValidationErrors({});
+    setContactPersonErrors({});
+    setBranchErrors({});
+    setTouched({});
+    setActiveFileTab(0);
+    setIsLoading(false);
+  };
+
+  // Enhanced close handler
+  const handleClose = () => {
+    clearModalState();
+    onClose();
+  };
+
   const keymap = {
     businessName: "business_name",
     contactNo: "contact_number",
@@ -257,16 +325,53 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     >
   ) => {
     const { name, value, type } = e.target;
-    setFormData((prev: typeof formData) => ({
+    const newValue =
+      type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
+
+    setFormData((prev: typeof formData) => {
+      const updatedFormData = {
+        ...prev,
+        [name]: newValue,
+      };
+
+      // Handle cascade updates for location fields
+      if (name === "state") {
+        // When state changes, reset district and city
+        updatedFormData.district = "";
+        updatedFormData.city = "";
+      } else if (name === "district") {
+        // When district changes, reset city
+        updatedFormData.city = "";
+      }
+
+      return updatedFormData;
+    });
+
+    // Mark field as touched
+    setTouched((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+      [name]: true,
     }));
 
-    if (initialData && initialData[name] !== value) {
+    // Validate field
+    const rule = validationRules[name as keyof typeof validationRules];
+    if (rule) {
+      const fieldError = validateField(name, newValue, rule);
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        if (fieldError) {
+          newErrors[name] = fieldError;
+        } else {
+          delete newErrors[name];
+        }
+        return newErrors;
+      });
+    }
+
+    if (initialData && initialData[name] !== newValue) {
       setFieldChanges((prev) => ({
         ...prev,
-        [name]: value,
+        [name]: newValue,
       }));
     } else {
       setFieldChanges((prev) => {
@@ -275,6 +380,104 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         return updatedChanges;
       });
     }
+  };
+
+  // Add validateField function for single field validation
+  const validateField = (
+    fieldName: string,
+    value: any,
+    rule: any
+  ): string | null => {
+    // Handle required validation
+    if (
+      rule.required &&
+      (!value || (typeof value === "string" && value.trim() === ""))
+    ) {
+      return `${getFieldDisplayName(fieldName)} is required`;
+    }
+
+    // If field is empty and not required, skip other validations
+    if (!value || (typeof value === "string" && value.trim() === "")) {
+      return null;
+    }
+
+    // Handle string-based validations
+    if (typeof value === "string") {
+      // Min length validation
+      if (rule.minLength && value.length < rule.minLength) {
+        return `${getFieldDisplayName(fieldName)} must be at least ${
+          rule.minLength
+        } characters`;
+      }
+
+      // Max length validation
+      if (rule.maxLength && value.length > rule.maxLength) {
+        return `${getFieldDisplayName(fieldName)} must not exceed ${
+          rule.maxLength
+        } characters`;
+      }
+
+      // Pattern validation
+      if (rule.pattern && !rule.pattern.test(value)) {
+        return getPatternErrorMessage(fieldName);
+      }
+    }
+
+    // Custom validation
+    if (rule.custom) {
+      const customError = rule.custom(value);
+      if (customError) {
+        return customError;
+      }
+    }
+
+    return null;
+  };
+
+  // Helper function to get field display names
+  const getFieldDisplayName = (fieldName: string): string => {
+    const fieldNames: Record<string, string> = {
+      businessName: "Business Name",
+      contactNo: "Contact Number",
+      email: "Email",
+      country: "Country",
+      currency: "Currency",
+      state: "State",
+      district: "District",
+      city: "City",
+      customerType: "Customer Type",
+      customerPotential: "Customer Potential",
+      pincode: "Pincode",
+      panNumber: "PAN Number",
+      tanNumber: "TAN Number",
+      gstNumber: "GST Number",
+      bankName: "Bank Name",
+      bankAccountNumber: "Bank Account Number",
+      branchName: "Branch Name",
+      ifscCode: "IFSC Code",
+    };
+
+    return fieldNames[fieldName] || fieldName;
+  };
+
+  // Helper function to get pattern error messages
+  const getPatternErrorMessage = (fieldName: string): string => {
+    const patternMessages: Record<string, string> = {
+      contactNo: "Please enter a valid phone number",
+      email: "Please enter a valid email address",
+      panNumber: "Please enter a valid PAN number (e.g., ABCDE1234F)",
+      tanNumber: "Please enter a valid TAN number (e.g., ABCD12345E)",
+      gstNumber: "Please enter a valid GST number (e.g., 27ABCDE1234F1Z5)",
+      ifscCode: "Please enter a valid IFSC code (e.g., SBIN0001234)",
+      pincode: "Please enter a valid pincode (6 digits, not starting with 0)",
+      bankAccountNumber:
+        "Please enter a valid bank account number (6-18 digits)",
+    };
+
+    return (
+      patternMessages[fieldName] ||
+      `Please enter a valid ${getFieldDisplayName(fieldName)}`
+    );
   };
 
   const handleToggle = (name: string) => {
@@ -439,6 +642,38 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         cp.id === id ? { ...cp, [field]: value } : cp
       ),
     }));
+
+    // Validate contact person field
+    const fieldRules: Record<string, any> = {
+      name: validationRules.contactPersonName,
+      phone: validationRules.contactPersonPhone,
+      email: validationRules.contactPersonEmail,
+      designation: validationRules.contactPersonDesignation,
+    };
+
+    const rule = fieldRules[field];
+    if (rule) {
+      const fieldError = validateField(
+        `contactPerson${field.charAt(0).toUpperCase() + field.slice(1)}`,
+        value,
+        rule
+      );
+      setContactPersonErrors((prev) => {
+        const newErrors = { ...prev };
+        if (!newErrors[id]) {
+          newErrors[id] = {};
+        }
+        if (fieldError) {
+          newErrors[id][field] = fieldError;
+        } else {
+          delete newErrors[id][field];
+          if (Object.keys(newErrors[id]).length === 0) {
+            delete newErrors[id];
+          }
+        }
+        return newErrors;
+      });
+    }
   };
 
   const removeContactPerson = async (id: string) => {
@@ -550,10 +785,62 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const updateBranch = (id: string, field: string, value: string) => {
     setFormData((prev: typeof formData) => ({
       ...prev,
-      branches: prev.branches.map((branch: Branch) =>
-        branch.id === id ? { ...branch, [field]: value } : branch
-      ),
+      branches: prev.branches.map((branch: Branch) => {
+        if (branch.id === id) {
+          const updatedBranch = { ...branch, [field]: value };
+
+          // Handle cascade updates
+          if (field === "state") {
+            // When state changes, reset district and city
+            updatedBranch.district = "";
+            updatedBranch.city = "";
+          } else if (field === "district") {
+            // When district changes, reset city
+            updatedBranch.city = "";
+          }
+
+          return updatedBranch;
+        }
+        return branch;
+      }),
     }));
+
+    // Validate branch field
+    const fieldRules: Record<string, any> = {
+      branchName: validationRules.branchBranchName,
+      contactNumber: validationRules.branchContactNumber,
+      email: validationRules.branchEmail,
+      country: validationRules.branchCountry,
+      currency: validationRules.branchCurrency,
+      state: validationRules.branchState,
+      district: validationRules.branchDistrict,
+      city: validationRules.branchCity,
+      pincode: validationRules.branchPincode,
+    };
+
+    const rule = fieldRules[field];
+    if (rule) {
+      const fieldError = validateField(
+        `branch${field.charAt(0).toUpperCase() + field.slice(1)}`,
+        value,
+        rule
+      );
+      setBranchErrors((prev) => {
+        const newErrors = { ...prev };
+        if (!newErrors[id]) {
+          newErrors[id] = {};
+        }
+        if (fieldError) {
+          newErrors[id][field] = fieldError;
+        } else {
+          delete newErrors[id][field];
+          if (Object.keys(newErrors[id]).length === 0) {
+            delete newErrors[id];
+          }
+        }
+        return newErrors;
+      });
+    }
   };
 
   const removeBranch = async (id: string) => {
@@ -935,6 +1222,39 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           : branch
       ),
     }));
+
+    // Validate branch contact person field
+    const fieldRules: Record<string, any> = {
+      name: validationRules.contactPersonName,
+      phone: validationRules.contactPersonPhone,
+      email: validationRules.contactPersonEmail,
+      designation: validationRules.contactPersonDesignation,
+    };
+
+    const rule = fieldRules[field];
+    if (rule) {
+      const fieldError = validateField(
+        `contactPerson${field.charAt(0).toUpperCase() + field.slice(1)}`,
+        value,
+        rule
+      );
+      setBranchErrors((prev) => {
+        const newErrors = { ...prev };
+        if (!newErrors[branchId]) {
+          newErrors[branchId] = {};
+        }
+        const contactKey = `contactPerson_${contactId}_${field}`;
+        if (fieldError) {
+          newErrors[branchId][contactKey] = fieldError;
+        } else {
+          delete newErrors[branchId][contactKey];
+          if (Object.keys(newErrors[branchId]).length === 0) {
+            delete newErrors[branchId];
+          }
+        }
+        return newErrors;
+      });
+    }
   };
 
   const removeBranchContactPerson = async (
@@ -1041,6 +1361,120 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const isEditMode = Boolean(initialData);
 
   const handleNext = async () => {
+    // Validate current step before proceeding
+    if (currentStep === 1) {
+      // Validate main form fields
+      const currentErrors: ValidationErrors = {};
+
+      // Validate required fields for step 1
+      const step1Fields = [
+        "businessName",
+        "contactNo",
+        "email",
+        "country",
+        "currency",
+        "state",
+        "district",
+        "city",
+        "customerType",
+        "customerPotential",
+        "pincode",
+      ];
+
+      step1Fields.forEach((fieldName) => {
+        const rule = validationRules[fieldName as keyof typeof validationRules];
+        if (rule) {
+          const error = validateField(
+            fieldName,
+            formData[fieldName as keyof typeof formData],
+            rule
+          );
+          if (error) {
+            currentErrors[fieldName] = error;
+          }
+        }
+      });
+
+      // Validate optional bank fields if provided
+      const bankFields = [
+        "panNumber",
+        "tanNumber",
+        "gstNumber",
+        "bankName",
+        "bankAccountNumber",
+        "branchName",
+        "ifscCode",
+      ];
+      bankFields.forEach((fieldName) => {
+        const rule = validationRules[fieldName as keyof typeof validationRules];
+        const value = formData[fieldName as keyof typeof formData];
+        if (rule && value) {
+          // Only validate if value is provided
+          const error = validateField(fieldName, value, rule);
+          if (error) {
+            currentErrors[fieldName] = error;
+          }
+        }
+      });
+
+      // Validate contact persons
+      const contactPersonValidationErrors: Record<string, ValidationErrors> =
+        {};
+      formData.contactPersons.forEach((contactPerson: ContactPerson) => {
+        const contactErrors = validateContactPerson(contactPerson);
+        if (hasErrors(contactErrors)) {
+          contactPersonValidationErrors[contactPerson.id] = contactErrors;
+        }
+      });
+
+      // Update validation state
+      setValidationErrors(currentErrors);
+      setContactPersonErrors(contactPersonValidationErrors);
+
+      // Check if there are any validation errors
+      if (
+        hasErrors(currentErrors) ||
+        Object.keys(contactPersonValidationErrors).length > 0
+      ) {
+        const firstError =
+          getFirstError(currentErrors) ||
+          (Object.keys(contactPersonValidationErrors).length > 0
+            ? "Please fix contact person validation errors"
+            : null);
+
+        if (firstError) {
+          alert(`Validation Error: ${firstError}`);
+        }
+        return;
+      }
+    } else if (currentStep === 2) {
+      // Validate branches
+      const branchValidationErrors: Record<string, ValidationErrors> = {};
+      formData.branches.forEach((branch: Branch) => {
+        const branchFieldErrors = validateBranch(branch);
+
+        // Validate branch contact persons
+        branch.contactPersons.forEach((contactPerson: ContactPerson) => {
+          const contactErrors = validateContactPerson(contactPerson);
+          Object.keys(contactErrors).forEach((field) => {
+            const contactKey = `contactPerson_${contactPerson.id}_${field}`;
+            branchFieldErrors[contactKey] = contactErrors[field];
+          });
+        });
+
+        if (hasErrors(branchFieldErrors)) {
+          branchValidationErrors[branch.id] = branchFieldErrors;
+        }
+      });
+
+      setBranchErrors(branchValidationErrors);
+
+      if (Object.keys(branchValidationErrors).length > 0) {
+        alert("Please fix branch validation errors before proceeding");
+        return;
+      }
+    }
+
     // If we're in register mode (not edit mode) and on step 1
     if (!isEditMode && currentStep === 1) {
       setIsLoading(true);
@@ -1300,7 +1734,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       }
 
       console.log("Customer updated successfully:", response.data);
-      onClose();
+      handleClose();
     } catch (error) {
       console.error("Error updating customer:", error);
     }
@@ -1308,6 +1742,80 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Perform final validation before submission
+    const currentErrors: ValidationErrors = {};
+
+    // Validate all main form fields
+    Object.keys(validationRules).forEach((fieldName) => {
+      const rule = validationRules[fieldName as keyof typeof validationRules];
+      const value = formData[fieldName as keyof typeof formData];
+
+      // Skip contact person and branch specific validations here as they're handled separately
+      if (
+        !fieldName.startsWith("contactPerson") &&
+        !fieldName.startsWith("branch")
+      ) {
+        const error = validateField(fieldName, value, rule);
+        if (error) {
+          currentErrors[fieldName] = error;
+        }
+      }
+    });
+
+    // Validate contact persons
+    const contactPersonValidationErrors: Record<string, ValidationErrors> = {};
+    formData.contactPersons.forEach((contactPerson: ContactPerson) => {
+      const contactErrors = validateContactPerson(contactPerson);
+      if (hasErrors(contactErrors)) {
+        contactPersonValidationErrors[contactPerson.id] = contactErrors;
+      }
+    });
+
+    // Validate branches
+    const branchValidationErrors: Record<string, ValidationErrors> = {};
+    formData.branches.forEach((branch: Branch) => {
+      const branchFieldErrors = validateBranch(branch);
+
+      // Validate branch contact persons
+      branch.contactPersons.forEach((contactPerson: ContactPerson) => {
+        const contactErrors = validateContactPerson(contactPerson);
+        Object.keys(contactErrors).forEach((field) => {
+          const contactKey = `contactPerson_${contactPerson.id}_${field}`;
+          branchFieldErrors[contactKey] = contactErrors[field];
+        });
+      });
+
+      if (hasErrors(branchFieldErrors)) {
+        branchValidationErrors[branch.id] = branchFieldErrors;
+      }
+    });
+
+    // Update validation states
+    setValidationErrors(currentErrors);
+    setContactPersonErrors(contactPersonValidationErrors);
+    setBranchErrors(branchValidationErrors);
+
+    // Check if there are any validation errors
+    const hasMainErrors = hasErrors(currentErrors);
+    const hasContactErrors =
+      Object.keys(contactPersonValidationErrors).length > 0;
+    const hasBranchErrors = Object.keys(branchValidationErrors).length > 0;
+
+    if (hasMainErrors || hasContactErrors || hasBranchErrors) {
+      const firstError =
+        getFirstError(currentErrors) ||
+        (hasContactErrors
+          ? "Please fix contact person validation errors"
+          : null) ||
+        (hasBranchErrors ? "Please fix branch validation errors" : null);
+
+      if (firstError) {
+        alert(`Validation Error: ${firstError}`);
+      }
+      return;
+    }
+
     const finalData = {
       ...formData,
       uploadedFiles: [
@@ -1368,7 +1876,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </div>
           <button
             onClick={() => {
-              onClose();
+              handleClose();
               setNewContactPersons([]);
             }}
             className="text-gray-400 hover:text-gray-600"
@@ -1445,9 +1953,18 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         value={formData.businessName}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          validationErrors.businessName
+                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                        }`}
                         placeholder="Enter business name"
                       />
+                      {validationErrors.businessName && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.businessName}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1460,9 +1977,18 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         value={formData.contactNo}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          validationErrors.contactNo
+                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                        }`}
                         placeholder="+91 98765 43210"
                       />
+                      {validationErrors.contactNo && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.contactNo}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1475,9 +2001,18 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         value={formData.email}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          validationErrors.email
+                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                        }`}
                         placeholder="business@company.com"
                       />
+                      {validationErrors.email && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.email}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1527,7 +2062,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         value={formData.state}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          validationErrors.state
+                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                        }`}
                       >
                         <option value="">Select State</option>
                         {states.map((state) => (
@@ -1536,6 +2075,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {validationErrors.state && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.state}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1636,9 +2180,18 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         value={formData.pincode}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          validationErrors.pincode
+                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                        }`}
                         placeholder="400001"
                       />
+                      {validationErrors.pincode && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.pincode}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center">
@@ -1672,9 +2225,18 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         name="panNumber"
                         value={formData.panNumber}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          validationErrors.panNumber
+                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                        }`}
                         placeholder="ABCDE1234F"
                       />
+                      {validationErrors.panNumber && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {validationErrors.panNumber}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -1835,13 +2397,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                                 )
                               }
                               disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                                 !person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed"
-                                  : ""
+                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                  : contactPersonErrors[person.id]?.name
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                               }`}
                               placeholder="Contact person name"
                             />
+                            {contactPersonErrors[person.id]?.name && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {contactPersonErrors[person.id].name}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1858,13 +2427,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                                 )
                               }
                               disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                                 !person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed"
-                                  : ""
+                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                  : contactPersonErrors[person.id]?.phone
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                               }`}
                               placeholder="+91 98765 43210"
                             />
+                            {contactPersonErrors[person.id]?.phone && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {contactPersonErrors[person.id].phone}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1881,13 +2457,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                                 )
                               }
                               disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                                 !person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed"
-                                  : ""
+                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                  : contactPersonErrors[person.id]?.email
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                               }`}
                               placeholder="contact@company.com"
                             />
+                            {contactPersonErrors[person.id]?.email && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {contactPersonErrors[person.id].email}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1904,13 +2487,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                                 )
                               }
                               disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                                 !person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed"
-                                  : ""
+                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                  : contactPersonErrors[person.id]?.designation
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                               }`}
                               placeholder="Manager, CEO, etc."
                             />
+                            {contactPersonErrors[person.id]?.designation && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {contactPersonErrors[person.id].designation}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2004,13 +2594,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           }
                           disabled={!branch.isEditing}
                           required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                             !branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                              : branchErrors[branch.id]?.branchName
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                           placeholder="Branch name"
                         />
+                        {branchErrors[branch.id]?.branchName && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {branchErrors[branch.id].branchName}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -2029,13 +2626,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           }
                           disabled={!branch.isEditing}
                           required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                             !branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                              : branchErrors[branch.id]?.contactNumber
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                           placeholder="+91 98765 43210"
                         />
+                        {branchErrors[branch.id]?.contactNumber && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {branchErrors[branch.id].contactNumber}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -2050,13 +2654,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           }
                           disabled={!branch.isEditing}
                           required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                             !branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                              : branchErrors[branch.id]?.email
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                           placeholder="branch@company.com"
                         />
+                        {branchErrors[branch.id]?.email && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {branchErrors[branch.id].email}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -2120,10 +2731,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           }
                           disabled={!branch.isEditing}
                           required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                             !branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                              : branchErrors[branch.id]?.state
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         >
                           <option value="">Select State</option>
@@ -2133,6 +2746,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             </option>
                           ))}
                         </select>
+                        {branchErrors[branch.id]?.state && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {branchErrors[branch.id].state}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -2146,10 +2764,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           }
                           required
                           disabled={!branch.state || !branch.isEditing}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                             !branch.state || !branch.isEditing
-                              ? "bg-gray-100 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-100 cursor-not-allowed border-gray-300"
+                              : branchErrors[branch.id]?.district
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         >
                           <option value="">Select District</option>
@@ -2162,6 +2782,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               </option>
                             ))}
                         </select>
+                        {branchErrors[branch.id]?.district && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {branchErrors[branch.id].district}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -2175,10 +2800,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           }
                           required
                           disabled={!branch.district || !branch.isEditing}
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                             !branch.district || !branch.isEditing
-                              ? "bg-gray-100 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-100 cursor-not-allowed border-gray-300"
+                              : branchErrors[branch.id]?.city
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         >
                           <option value="">Select City</option>
@@ -2191,6 +2818,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               )
                             )}
                         </select>
+                        {branchErrors[branch.id]?.city && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {branchErrors[branch.id].city}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -2205,13 +2837,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           }
                           disabled={!branch.isEditing}
                           required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                             !branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                              : branchErrors[branch.id]?.pincode
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                           placeholder="400001"
                         />
+                        {branchErrors[branch.id]?.pincode && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {branchErrors[branch.id].pincode}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -2290,63 +2929,114 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                              <input
-                                type="text"
-                                value={person.name}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "name",
-                                    e.target.value
-                                  )
-                                }
-                                disabled={!person.isEditing}
-                                className={`w-full px-2 py-1 border border-gray-300 rounded text-sm ${
-                                  !person.isEditing
-                                    ? "bg-gray-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                                placeholder="Name"
-                              />
-                              <input
-                                type="tel"
-                                value={person.phone}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "phone",
-                                    e.target.value
-                                  )
-                                }
-                                disabled={!person.isEditing}
-                                className={`w-full px-2 py-1 border border-gray-300 rounded text-sm ${
-                                  !person.isEditing
-                                    ? "bg-gray-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                                placeholder="Phone"
-                              />
-                              <input
-                                type="email"
-                                value={person.email}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "email",
-                                    e.target.value
-                                  )
-                                }
-                                disabled={!person.isEditing}
-                                className={`w-full px-2 py-1 border border-gray-300 rounded text-sm ${
-                                  !person.isEditing
-                                    ? "bg-gray-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                                placeholder="Email"
-                              />
+                              <div>
+                                <input
+                                  type="text"
+                                  value={person.name}
+                                  onChange={(e) =>
+                                    updateBranchContactPerson(
+                                      branch.id,
+                                      person.id,
+                                      "name",
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={!person.isEditing}
+                                  className={`w-full px-2 py-1 border rounded text-sm ${
+                                    !person.isEditing
+                                      ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                      : branchErrors[branch.id]?.[
+                                          `contactPerson_${person.id}_name`
+                                        ]
+                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                  }`}
+                                  placeholder="Name"
+                                />
+                                {branchErrors[branch.id]?.[
+                                  `contactPerson_${person.id}_name`
+                                ] && (
+                                  <p className="text-red-500 text-xs mt-1">
+                                    {
+                                      branchErrors[branch.id][
+                                        `contactPerson_${person.id}_name`
+                                      ]
+                                    }
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <input
+                                  type="tel"
+                                  value={person.phone}
+                                  onChange={(e) =>
+                                    updateBranchContactPerson(
+                                      branch.id,
+                                      person.id,
+                                      "phone",
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={!person.isEditing}
+                                  className={`w-full px-2 py-1 border rounded text-sm ${
+                                    !person.isEditing
+                                      ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                      : branchErrors[branch.id]?.[
+                                          `contactPerson_${person.id}_phone`
+                                        ]
+                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                  }`}
+                                  placeholder="Phone"
+                                />
+                                {branchErrors[branch.id]?.[
+                                  `contactPerson_${person.id}_phone`
+                                ] && (
+                                  <p className="text-red-500 text-xs mt-1">
+                                    {
+                                      branchErrors[branch.id][
+                                        `contactPerson_${person.id}_phone`
+                                      ]
+                                    }
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <input
+                                  type="email"
+                                  value={person.email}
+                                  onChange={(e) =>
+                                    updateBranchContactPerson(
+                                      branch.id,
+                                      person.id,
+                                      "email",
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={!person.isEditing}
+                                  className={`w-full px-2 py-1 border rounded text-sm ${
+                                    !person.isEditing
+                                      ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                      : branchErrors[branch.id]?.[
+                                          `contactPerson_${person.id}_email`
+                                        ]
+                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                  }`}
+                                  placeholder="Email"
+                                />
+                                {branchErrors[branch.id]?.[
+                                  `contactPerson_${person.id}_email`
+                                ] && (
+                                  <p className="text-red-500 text-xs mt-1">
+                                    {
+                                      branchErrors[branch.id][
+                                        `contactPerson_${person.id}_email`
+                                      ]
+                                    }
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         )
@@ -2525,7 +3215,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
@@ -2553,7 +3243,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
