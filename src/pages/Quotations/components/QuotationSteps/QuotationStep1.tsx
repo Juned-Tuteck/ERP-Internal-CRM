@@ -21,6 +21,9 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{
+    [key: string]: string;
+  }>({});
   const [costDetails, setCostDetails] = useState<any>({
     // Supply section
     supplyDiscount: 0,
@@ -40,6 +43,194 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
     installationOfficeOverhead: 0,
     installationPOVariance: 0,
   });
+
+  // Validation functions
+  const validateField = (
+    fieldName: string,
+    value: any,
+    fieldType: string = "text"
+  ): string => {
+    const errors: string[] = [];
+
+    // Required field validation
+    if (fieldName === "leadId" && (!value || value === "")) {
+      errors.push("Lead selection is required");
+    }
+
+    if (fieldName === "quotationDate" && (!value || value === "")) {
+      errors.push("Quotation date is required");
+    }
+
+    if (fieldName === "expiryDate" && (!value || value === "")) {
+      errors.push("Expiry date is required");
+    }
+
+    // Date validation
+    if (fieldType === "date" && value) {
+      const selectedDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time for comparison
+
+      if (fieldName === "quotationDate") {
+        // Quotation date should not be in future
+        if (selectedDate > today) {
+          errors.push("Quotation date cannot be in the future");
+        }
+      }
+
+      if (fieldName === "expiryDate") {
+        // Expiry date should be in future
+        if (selectedDate <= today) {
+          errors.push("Expiry date must be in the future");
+        }
+
+        // Expiry date should be after quotation date
+        if (
+          formData.quotationDate &&
+          selectedDate <= new Date(formData.quotationDate)
+        ) {
+          errors.push("Expiry date must be after quotation date");
+        }
+      }
+    }
+
+    // Number validation
+    if (
+      fieldType === "number" &&
+      value !== "" &&
+      value !== null &&
+      value !== undefined
+    ) {
+      const numValue = parseFloat(value);
+
+      if (isNaN(numValue)) {
+        errors.push("Please enter a valid number");
+      } else if (numValue < 0) {
+        errors.push("Value cannot be negative");
+      }
+
+      // Specific number validations
+      if (fieldName.includes("quantity") && numValue === 0) {
+        errors.push("Quantity must be greater than 0");
+      }
+
+      if (fieldName.includes("Rate") && numValue < 0) {
+        errors.push("Rate cannot be negative");
+      }
+    }
+
+    // Percentage validation
+    if (
+      fieldType === "percentage" &&
+      value !== "" &&
+      value !== null &&
+      value !== undefined
+    ) {
+      const numValue = parseFloat(value);
+
+      if (isNaN(numValue)) {
+        errors.push("Please enter a valid percentage");
+      } else if (numValue < 0 || numValue > 100) {
+        errors.push("Percentage must be between 0 and 100");
+      }
+    }
+
+    // Text length validation
+    if (
+      fieldType === "text" &&
+      fieldName === "note" &&
+      value &&
+      value.length > 1000
+    ) {
+      errors.push("Note cannot exceed 1000 characters");
+    }
+
+    return errors.join(", ");
+  };
+
+  const validateSpecItem = (
+    _specId: string,
+    _itemId: string,
+    field: string,
+    value: string
+  ): string => {
+    if (field === "quantity") {
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue <= 0) {
+        return "Quantity must be a positive number";
+      }
+      if (numValue > 999999) {
+        return "Quantity cannot exceed 999,999";
+      }
+    }
+
+    if (field === "basicSupplyRate" || field === "basicInstallationRate") {
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        return "Rate cannot be negative";
+      }
+      if (numValue > 9999999) {
+        return "Rate cannot exceed 9,999,999";
+      }
+    }
+
+    return "";
+  };
+
+  const clearFieldError = (fieldName: string) => {
+    if (validationErrors[fieldName]) {
+      setValidationErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[fieldName];
+        return updated;
+      });
+    }
+  };
+
+  const setFieldError = (fieldName: string, error: string) => {
+    if (error) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [fieldName]: error,
+      }));
+    } else {
+      clearFieldError(fieldName);
+    }
+  };
+
+  // Helper function to render error messages
+  const renderFieldError = (fieldName: string) => {
+    const error = validationErrors[fieldName];
+    if (!error) return null;
+
+    return (
+      <div className="mt-1 text-xs text-red-600 flex items-center">
+        <svg
+          className="h-3 w-3 mr-1 flex-shrink-0"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+        {error}
+      </div>
+    );
+  };
+
+  // Helper function to get input field class with error styling
+  const getInputClassName = (fieldName: string, baseClassName: string) => {
+    const hasError = validationErrors[fieldName];
+    return hasError
+      ? baseClassName
+          .replace("border-gray-300", "border-red-500")
+          .replace("focus:ring-blue-500", "focus:ring-red-500")
+          .replace("focus:border-blue-500", "focus:border-red-500")
+      : baseClassName;
+  };
 
   // Fetch leads on component mount
   useEffect(() => {
@@ -163,6 +354,11 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
 
   const handleLeadChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const leadId = e.target.value;
+
+    // Validate lead selection
+    const error = validateField("leadId", leadId);
+    setFieldError("leadId", error);
+
     const selectedLead = leads.find((lead) => lead.id === leadId);
 
     if (selectedLead) {
@@ -183,6 +379,18 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
       });
 
       setLoading(false);
+    } else {
+      // Clear dependent fields if no lead is selected
+      setFormData({
+        ...formData,
+        leadId: "",
+        leadName: "",
+        businessName: "",
+        workType: "",
+        bomId: null,
+        specs: [],
+        items: [],
+      });
     }
   };
 
@@ -192,6 +400,17 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
     >
   ) => {
     const { name, value } = e.target;
+
+    // Determine field type for validation
+    let fieldType = "text";
+    if (e.target.type === "date") fieldType = "date";
+    else if (e.target.type === "number") fieldType = "number";
+    else if (name === "note") fieldType = "text";
+
+    // Validate the field
+    const error = validateField(name, value, fieldType);
+    setFieldError(name, error);
+
     setFormData({
       ...formData,
       [name]: value,
@@ -214,6 +433,11 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
     field: string,
     value: string
   ) => {
+    // Validate the spec item field
+    const error = validateSpecItem(specId, itemId, field, value);
+    const errorKey = `${specId}-${itemId}-${field}`;
+    setFieldError(errorKey, error);
+
     const numValue = parseFloat(value) || 0;
 
     setFormData((prev: any) => ({
@@ -237,6 +461,8 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                     }
 
                     if (field === "basicSupplyRate") {
+                      // Always update supply rate when basic rate changes
+                      // If no cost details exist or all cost details are zero, use the basic rate directly
                       if (
                         !updatedItem.costDetails ||
                         Object.values(updatedItem.costDetails).every(
@@ -246,10 +472,57 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                         updatedItem.supplyRate = numValue;
                         updatedItem.supplyOwnAmount =
                           updatedItem.quantity * numValue;
+                      } else {
+                        // If cost details exist, recalculate based on the new basic rate
+                        // This ensures edit mode works properly
+                        const tempCostDetails = updatedItem.costDetails;
+
+                        // Apply discount first
+                        const supplyDiscountPercent =
+                          tempCostDetails.supplyDiscount || 0;
+                        const discountedBaseSupplyRate =
+                          numValue * (1 - supplyDiscountPercent / 100);
+
+                        // Recalculate supply costs with new basic rate
+                        const supplyWastageAmount =
+                          discountedBaseSupplyRate *
+                          (tempCostDetails.supplyWastage / 100);
+                        const supplyTransportationAmount =
+                          discountedBaseSupplyRate *
+                          (tempCostDetails.supplyTransportation / 100);
+                        const supplyContingencyAmount =
+                          discountedBaseSupplyRate *
+                          (tempCostDetails.supplyContingency / 100);
+                        const supplyMiscellaneousAmount =
+                          discountedBaseSupplyRate *
+                          (tempCostDetails.supplyMiscellaneous / 100);
+                        const supplyOutstationAmount =
+                          discountedBaseSupplyRate *
+                          (tempCostDetails.supplyOutstation / 100);
+                        const supplyOfficeOverheadAmount =
+                          discountedBaseSupplyRate *
+                          (tempCostDetails.supplyOfficeOverhead / 100);
+
+                        const totalSupplyCost =
+                          supplyWastageAmount +
+                          supplyTransportationAmount +
+                          supplyContingencyAmount +
+                          supplyMiscellaneousAmount +
+                          supplyOutstationAmount +
+                          supplyOfficeOverheadAmount;
+
+                        const totalSupplyOwnCost =
+                          discountedBaseSupplyRate + totalSupplyCost;
+
+                        updatedItem.supplyRate = totalSupplyOwnCost;
+                        updatedItem.supplyOwnAmount =
+                          updatedItem.quantity * totalSupplyOwnCost;
                       }
                     }
 
                     if (field === "basicInstallationRate") {
+                      // Always update installation rate when basic rate changes
+                      // If no cost details exist or all cost details are zero, use the basic rate directly
                       if (
                         !updatedItem.costDetails ||
                         Object.values(updatedItem.costDetails).every(
@@ -259,6 +532,45 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                         updatedItem.installationRate = numValue;
                         updatedItem.installationOwnAmount =
                           updatedItem.quantity * numValue;
+                      } else {
+                        // If cost details exist, recalculate based on the new basic rate
+                        // This ensures edit mode works properly
+                        const tempCostDetails = updatedItem.costDetails;
+
+                        // Recalculate installation costs with new basic rate
+                        const installationWastageAmount =
+                          numValue *
+                          (tempCostDetails.installationWastage / 100);
+                        const installationTransportationAmount =
+                          numValue *
+                          (tempCostDetails.installationTransportation / 100);
+                        const installationContingencyAmount =
+                          numValue *
+                          (tempCostDetails.installationContingency / 100);
+                        const installationMiscellaneousAmount =
+                          numValue *
+                          (tempCostDetails.installationMiscellaneous / 100);
+                        const installationOutstationAmount =
+                          numValue *
+                          (tempCostDetails.installationOutstation / 100);
+                        const installationOfficeOverheadAmount =
+                          numValue *
+                          (tempCostDetails.installationOfficeOverhead / 100);
+
+                        const totalInstallationCost =
+                          installationWastageAmount +
+                          installationTransportationAmount +
+                          installationContingencyAmount +
+                          installationMiscellaneousAmount +
+                          installationOutstationAmount +
+                          installationOfficeOverheadAmount;
+
+                        const totalInstallationOwnCost =
+                          numValue + totalInstallationCost;
+
+                        updatedItem.installationRate = totalInstallationOwnCost;
+                        updatedItem.installationOwnAmount =
+                          updatedItem.quantity * totalInstallationOwnCost;
                       }
                     }
 
@@ -297,6 +609,10 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
   };
 
   const handleCostDetailChange = (field: string, value: string) => {
+    // Validate percentage fields
+    const error = validateField(field, value, "percentage");
+    setFieldError(`costDetail-${field}`, error);
+
     const numValue = parseFloat(value) || 0;
     setCostDetails({
       ...costDetails,
@@ -480,6 +796,80 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
 
   const totals = calculateTotals();
 
+  // Function to validate all form data before submission
+  const validateAllFields = (): boolean => {
+    const errors: { [key: string]: string } = {};
+
+    // Validate main form fields
+    if (!formData.leadId) {
+      errors.leadId = validateField("leadId", formData.leadId);
+    }
+    if (!formData.quotationDate) {
+      errors.quotationDate = validateField(
+        "quotationDate",
+        formData.quotationDate,
+        "date"
+      );
+    }
+    if (!formData.expiryDate) {
+      errors.expiryDate = validateField(
+        "expiryDate",
+        formData.expiryDate,
+        "date"
+      );
+    }
+    if (formData.note) {
+      const noteError = validateField("note", formData.note, "text");
+      if (noteError) errors.note = noteError;
+    }
+
+    // Validate spec items
+    if (formData.specs && formData.specs.length > 0) {
+      formData.specs.forEach((spec: any) => {
+        spec.items.forEach((item: any) => {
+          const quantityError = validateSpecItem(
+            spec.id,
+            item.id,
+            "quantity",
+            item.quantity?.toString() || "0"
+          );
+          if (quantityError)
+            errors[`${spec.id}-${item.id}-quantity`] = quantityError;
+
+          const supplyRateError = validateSpecItem(
+            spec.id,
+            item.id,
+            "basicSupplyRate",
+            item.basicSupplyRate?.toString() || "0"
+          );
+          if (supplyRateError)
+            errors[`${spec.id}-${item.id}-basicSupplyRate`] = supplyRateError;
+
+          const installRateError = validateSpecItem(
+            spec.id,
+            item.id,
+            "basicInstallationRate",
+            item.basicInstallationRate?.toString() || "0"
+          );
+          if (installRateError)
+            errors[`${spec.id}-${item.id}-basicInstallationRate`] =
+              installRateError;
+        });
+      });
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Expose validation function to parent component if needed
+  React.useEffect(() => {
+    if (setFormData && typeof setFormData === "function") {
+      // Add validation function to formData for access by parent
+      (setFormData as any).validate = validateAllFields;
+    }
+  }, [formData, validateAllFields]);
+
   return (
     <div className="space-y-6">
       {/* Header Information */}
@@ -494,7 +884,10 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
             onChange={handleLeadChange}
             required
             disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+            className={getInputClassName(
+              "leadId",
+              "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+            )}
           >
             <option value="">Select Lead</option>
             {leads.map((lead) => (
@@ -506,6 +899,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
           {loading && (
             <p className="text-xs text-blue-500 mt-1">Loading leads...</p>
           )}
+          {renderFieldError("leadId")}
         </div>
 
         <div>
@@ -555,9 +949,13 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
             value={formData.quotationDate || ""}
             onChange={handleInputChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={getInputClassName(
+              "quotationDate",
+              "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            )}
             readOnly={!!isEditMode}
           />
+          {renderFieldError("quotationDate")}
         </div>
 
         <div>
@@ -570,8 +968,12 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
             value={formData.expiryDate || ""}
             onChange={handleInputChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={getInputClassName(
+              "expiryDate",
+              "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            )}
           />
+          {renderFieldError("expiryDate")}
         </div>
       </div>
 
@@ -705,21 +1107,30 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                value={item.quantity || 0}
-                                onChange={(e) =>
-                                  handleSpecItemChange(
-                                    spec.id,
-                                    item.id,
-                                    "quantity",
-                                    e.target.value
-                                  )
-                                }
-                                min="0"
-                                step="0.01"
-                                className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              />
+                              <div className="space-y-1">
+                                <input
+                                  type="number"
+                                  value={item.quantity || 0}
+                                  onChange={(e) =>
+                                    handleSpecItemChange(
+                                      spec.id,
+                                      item.id,
+                                      "quantity",
+                                      e.target.value
+                                    )
+                                  }
+                                  min="0"
+                                  max="999999"
+                                  step="0.01"
+                                  className={getInputClassName(
+                                    `${spec.id}-${item.id}-quantity`,
+                                    "w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  )}
+                                />
+                                {renderFieldError(
+                                  `${spec.id}-${item.id}-quantity`
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3">
                               <div className="text-sm text-gray-900">
@@ -727,38 +1138,56 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                value={item.basicSupplyRate || 0}
-                                onChange={(e) =>
-                                  handleSpecItemChange(
-                                    spec.id,
-                                    item.id,
-                                    "basicSupplyRate",
-                                    e.target.value
-                                  )
-                                }
-                                min="0"
-                                step="0.01"
-                                className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              />
+                              <div className="space-y-1">
+                                <input
+                                  type="number"
+                                  value={item.basicSupplyRate || 0}
+                                  onChange={(e) =>
+                                    handleSpecItemChange(
+                                      spec.id,
+                                      item.id,
+                                      "basicSupplyRate",
+                                      e.target.value
+                                    )
+                                  }
+                                  min="0"
+                                  max="9999999"
+                                  step="0.01"
+                                  className={getInputClassName(
+                                    `${spec.id}-${item.id}-basicSupplyRate`,
+                                    "w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  )}
+                                />
+                                {renderFieldError(
+                                  `${spec.id}-${item.id}-basicSupplyRate`
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                value={item.basicInstallationRate || 0}
-                                onChange={(e) =>
-                                  handleSpecItemChange(
-                                    spec.id,
-                                    item.id,
-                                    "basicInstallationRate",
-                                    e.target.value
-                                  )
-                                }
-                                min="0"
-                                step="0.01"
-                                className="w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              />
+                              <div className="space-y-1">
+                                <input
+                                  type="number"
+                                  value={item.basicInstallationRate || 0}
+                                  onChange={(e) =>
+                                    handleSpecItemChange(
+                                      spec.id,
+                                      item.id,
+                                      "basicInstallationRate",
+                                      e.target.value
+                                    )
+                                  }
+                                  min="0"
+                                  max="9999999"
+                                  step="0.01"
+                                  className={getInputClassName(
+                                    `${spec.id}-${item.id}-basicInstallationRate`,
+                                    "w-24 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  )}
+                                />
+                                {renderFieldError(
+                                  `${spec.id}-${item.id}-basicInstallationRate`
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-900">
                               ₹{(item.supplyRate || 0).toLocaleString("en-IN")}
@@ -916,6 +1345,50 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
         </div>
       )}
 
+      {/* Validation Summary */}
+      {Object.keys(validationErrors).length > 0 && (
+        <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Please fix the following validation errors:
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  {Object.entries(validationErrors).map(([field, error]) => (
+                    <li key={field}>
+                      <span className="font-medium">
+                        {field.includes("-")
+                          ? `Spec Item (${field.split("-")[2]})`
+                          : field
+                              .replace("costDetail-", "")
+                              .replace(/([A-Z])/g, " $1")
+                              .toLowerCase()}
+                        :
+                      </span>{" "}
+                      {error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {formData.leadId &&
         (!formData.specs || formData.specs.length === 0) &&
         !loading && (
@@ -936,9 +1409,19 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
           value={formData.note || ""}
           onChange={handleInputChange}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          maxLength={1000}
+          className={getInputClassName(
+            "note",
+            "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          )}
           placeholder="Enter any notes specific to this quotation..."
         />
+        <div className="flex justify-between items-center mt-1">
+          <div>{renderFieldError("note")}</div>
+          <div className="text-xs text-gray-500">
+            {(formData.note || "").length}/1000 characters
+          </div>
+        </div>
       </div>
 
       {/* Cost Details Modal */}
@@ -978,27 +1461,33 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                     </div>
 
                     {/* Supply Discount */}
-                    <div className="flex justify-between items-center">
-                      <label className="text-sm text-gray-600">
-                        Supply Discount %
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          value={costDetails.supplyDiscount || 0}
-                          onChange={(e) =>
-                            handleCostDetailChange(
-                              "supplyDiscount",
-                              e.target.value
-                            )
-                          }
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-600">%</span>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm text-gray-600">
+                          Supply Discount %
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            value={costDetails.supplyDiscount || 0}
+                            onChange={(e) =>
+                              handleCostDetailChange(
+                                "supplyDiscount",
+                                e.target.value
+                              )
+                            }
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            className={getInputClassName(
+                              "costDetail-supplyDiscount",
+                              "w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            )}
+                          />
+                          <span className="text-sm text-gray-600">%</span>
+                        </div>
                       </div>
+                      {renderFieldError("costDetail-supplyDiscount")}
                     </div>
 
                     {/* Discounted Base Supply Rate */}
@@ -1075,7 +1564,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                       const isReadOnly = key === "supplyOfficeOverhead";
 
                       return (
-                        <div key={key}>
+                        <div key={key} className="space-y-1">
                           <div className="flex justify-between items-center">
                             <label className="text-sm text-gray-600">
                               {percentageLabel}
@@ -1092,11 +1581,14 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                                 step="0.01"
                                 readOnly={isReadOnly}
                                 disabled={isReadOnly}
-                                className={`w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                  isReadOnly
-                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                    : ""
-                                }`}
+                                className={getInputClassName(
+                                  `costDetail-${key}`,
+                                  `w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                    isReadOnly
+                                      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                      : ""
+                                  }`
+                                )}
                               />
                               <span className="text-sm text-gray-600">%</span>
                             </div>
@@ -1109,6 +1601,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                               ₹{amount.toLocaleString("en-IN")}
                             </span>
                           </div>
+                          {!isReadOnly && renderFieldError(`costDetail-${key}`)}
                         </div>
                       );
                     })}
@@ -1141,7 +1634,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                     </div>
 
                     {/* Supply PO Variance */}
-                    <div>
+                    <div className="space-y-1">
                       <div className="flex justify-between items-center">
                         <label className="text-sm text-gray-600">
                           Supply PO - Variance %
@@ -1159,7 +1652,10 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                             min="0"
                             max="100"
                             step="0.01"
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className={getInputClassName(
+                              "costDetail-supplyPOVariance",
+                              "w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            )}
                           />
                           <span className="text-sm text-gray-600">%</span>
                         </div>
@@ -1175,6 +1671,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                           ).toLocaleString("en-IN")}
                         </span>
                       </div>
+                      {renderFieldError("costDetail-supplyPOVariance")}
                     </div>
 
                     <div className="border-t border-gray-200 pt-4 mt-4">
@@ -1278,7 +1775,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                       const isReadOnly = key === "installationOfficeOverhead";
 
                       return (
-                        <div key={key}>
+                        <div key={key} className="space-y-1">
                           <div className="flex justify-between items-center">
                             <label className="text-sm text-gray-600">
                               {percentageLabel}
@@ -1295,11 +1792,14 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                                 step="0.01"
                                 readOnly={isReadOnly}
                                 disabled={isReadOnly}
-                                className={`w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                  isReadOnly
-                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                    : ""
-                                }`}
+                                className={getInputClassName(
+                                  `costDetail-${key}`,
+                                  `w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                    isReadOnly
+                                      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                      : ""
+                                  }`
+                                )}
                               />
                               <span className="text-sm text-gray-600">%</span>
                             </div>
@@ -1312,6 +1812,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                               ₹{amount.toLocaleString("en-IN")}
                             </span>
                           </div>
+                          {!isReadOnly && renderFieldError(`costDetail-${key}`)}
                         </div>
                       );
                     })}
@@ -1344,10 +1845,10 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                     </div>
 
                     {/* Installation PO Variance */}
-                    <div>
+                    <div className="space-y-1">
                       <div className="flex justify-between items-center">
                         <label className="text-sm text-gray-600">
-                          Installation Povariance %
+                          Installation PO Variance %
                         </label>
                         <div className="flex items-center space-x-2">
                           <input
@@ -1362,14 +1863,17 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                             min="0"
                             max="100"
                             step="0.01"
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className={getInputClassName(
+                              "costDetail-installationPOVariance",
+                              "w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            )}
                           />
                           <span className="text-sm text-gray-600">%</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <label className="text-sm text-gray-600">
-                          Installation Povariance Amount
+                          Installation PO Variance Amount
                         </label>
                         <span className="text-sm text-gray-700">
                           ₹
@@ -1379,6 +1883,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                           ).toLocaleString("en-IN")}
                         </span>
                       </div>
+                      {renderFieldError("costDetail-installationPOVariance")}
                     </div>
 
                     <div className="border-t border-gray-200 pt-4 mt-4">

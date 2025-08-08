@@ -430,41 +430,41 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         ...(formData.projectCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement: cost.nosPercentage,
-          monthly_expense: cost.monthlyExpense,
-          months: cost.months,
-          diversity: cost.diversity,
-          total: cost.total,
+          measurement: parseFloat(cost.nosPercentage) || 0,
+          monthly_expense: parseFloat(cost.monthlyExpense) || 0,
+          months: parseFloat(cost.months) || 0,
+          diversity: parseFloat(cost.diversity) || 0,
+          total: parseFloat(cost.total) || 0,
           poc_type: "Project Management & Site Establishment Cost",
         })),
         ...(formData.supervisionCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement: cost.nosPercentage,
-          monthly_expense: cost.monthlyExpense,
-          months: cost.months,
-          diversity: cost.diversity,
-          total: cost.total,
+          measurement: parseFloat(cost.nosPercentage) || 0,
+          monthly_expense: parseFloat(cost.monthlyExpense) || 0,
+          months: parseFloat(cost.months) || 0,
+          diversity: parseFloat(cost.diversity) || 0,
+          total: parseFloat(cost.total) || 0,
           poc_type: "Supervision",
         })),
         ...(formData.financeCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement: cost.nosPercentage,
-          monthly_expense: cost.monthlyExpense,
-          months: cost.months,
-          diversity: cost.diversity,
-          total: cost.total,
+          measurement: parseFloat(cost.nosPercentage) || 0,
+          monthly_expense: parseFloat(cost.monthlyExpense) || 0,
+          months: parseFloat(cost.months) || 0,
+          diversity: parseFloat(cost.diversity) || 0,
+          total: parseFloat(cost.total) || 0,
           poc_type: "Finance Cost",
         })),
         ...(formData.contingencyCosts || []).map((cost: any) => ({
           customer_quotation_id: createdQuotationId,
           description: cost.description,
-          measurement: cost.nosPercentage,
-          monthly_expense: cost.monthlyExpense,
-          months: cost.months,
-          diversity: cost.diversity,
-          total: cost.total,
+          measurement: parseFloat(cost.nosPercentage) || 0,
+          monthly_expense: parseFloat(cost.monthlyExpense) || 0,
+          months: parseFloat(cost.months) || 0,
+          diversity: parseFloat(cost.diversity) || 0,
+          total: parseFloat(cost.total) || 0,
           poc_type: "Contingencies",
         })),
       ];
@@ -821,16 +821,31 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
           const initialCost = initialCosts[i];
 
           if (initialCost?.id) {
+            // Update existing cost
             const pocUpdatePayload = {
               description: cost.description,
-              measurement: cost.nosPercentage,
-              monthly_expense: cost.monthlyExpense,
-              months: cost.months,
-              diversity: cost.diversity,
-              total: cost.total,
+              measurement: parseFloat(cost.nosPercentage) || 0,
+              monthly_expense: parseFloat(cost.monthlyExpense) || 0,
+              months: parseFloat(cost.months) || 0,
+              diversity: parseFloat(cost.diversity) || 0,
+              total: parseFloat(cost.total) || 0,
               poc_type: category.type,
             };
             await updateQuotationPOCExpense(initialCost.id, pocUpdatePayload);
+          } else {
+            // Create new cost (no existing ID found)
+            console.log(`Creating new cost for ${category.key}:`, cost);
+            const pocCreatePayload = {
+              customer_quotation_id: initialData.id,
+              description: cost.description,
+              measurement: parseFloat(cost.nosPercentage) || 0,
+              monthly_expense: parseFloat(cost.monthlyExpense) || 0,
+              months: parseFloat(cost.months) || 0,
+              diversity: parseFloat(cost.diversity) || 0,
+              total: parseFloat(cost.total) || 0,
+              poc_type: category.type,
+            };
+            await createPOCExpenses([pocCreatePayload]);
           }
         }
       }
@@ -855,7 +870,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       alert("Quotation ID not found. Please try again.");
       return false;
     }
-    console.log("Updating Step 3 with formData:");
+    console.log("Updating Step 3 with formData:", formData);
 
     try {
       const marginCategories = [
@@ -867,9 +882,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       // Update cost margins if they exist in initialData
       for (const category of marginCategories) {
         const currentSummary = formData[category.key];
-        const initialMargin = initialData.costMargins?.find(
-          (margin: any) => margin.cost_type === category.type
-        );
+        const initialMargin = initialData[category.key];
 
         if (initialMargin?.id && currentSummary) {
           const marginUpdatePayload = {
@@ -1005,28 +1018,6 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     if (isEditMode) setCurrentStep(stepId);
   };
 
-  // Calculate total items cost for Step 2
-  const totalItemsCost = formData.specs
-    ? formData.specs.reduce(
-        (sum: number, spec: any) =>
-          sum +
-          spec.items.reduce(
-            (itemSum: number, item: any) =>
-              itemSum +
-              (item.finalSupplyAmount || 0) +
-              (item.finalInstallationAmount || 0),
-            0
-          ),
-        0
-      )
-    : (formData.items || []).reduce(
-        (sum: number, item: any) =>
-          sum +
-          (item.finalSupplyAmount || 0) +
-          (item.finalInstallationAmount || 0),
-        0
-      );
-
   if (!isOpen) return null;
 
   return (
@@ -1106,11 +1097,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
 
           {/* Step 2: POC */}
           {currentStep === 2 && (
-            <QuotationStep2
-              formData={formData}
-              setFormData={setFormData}
-              totalItemsCost={totalItemsCost}
-            />
+            <QuotationStep2 formData={formData} setFormData={setFormData} />
           )}
 
           {/* Step 3: Summary */}

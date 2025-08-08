@@ -54,6 +54,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   );
 
+  // Validation errors state
+  const [validationErrors, setValidationErrors] = useState<{
+    [key: string]: string;
+  }>({});
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
+
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [newComment, setNewComment] = useState("");
   const [showAssociateForm, setShowAssociateForm] = useState(false);
@@ -127,6 +133,235 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     { id: "3", name: "Engineer C" },
     { id: "4", name: "Designer D" },
   ];
+
+  // Validation functions
+  const validatePhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^(\+\d{1,3}[- ]?)?\d{10}$/;
+    return phoneRegex.test(phone.replace(/\s+/g, ""));
+  };
+
+  const validateProjectValue = (value: string): boolean => {
+    const numValue = parseFloat(value);
+    return !isNaN(numValue) && numValue > 0 && numValue <= 999999999;
+  };
+
+  const validateResponseTime = (days: string): boolean => {
+    const numDays = parseInt(days);
+    return !isNaN(numDays) && numDays > 0 && numDays <= 365;
+  };
+
+  const validateStringLength = (
+    str: string,
+    minLength: number = 0,
+    maxLength: number = 500
+  ): boolean => {
+    return str.length >= minLength && str.length <= maxLength;
+  };
+
+  const validateDate = (dateStr: string): boolean => {
+    if (!dateStr) return true; // Optional dates are valid when empty
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime());
+  };
+
+  const validateFutureDate = (dateStr: string): boolean => {
+    if (!dateStr) return true; // Optional dates are valid when empty
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date >= today;
+  };
+
+  const validateFileSize = (file: File): boolean => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    return file.size <= maxSize;
+  };
+
+  const validateFileType = (file: File): boolean => {
+    const allowedTypes = [
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".dwg",
+    ];
+    const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+    return allowedTypes.includes(fileExtension);
+  };
+
+  // Comprehensive validation function
+  const validateForm = (): boolean => {
+    const errors: { [key: string]: string } = {};
+
+    // Step 1 validations
+    if (currentStep === 1) {
+      // Required field validations
+      if (!formData.businessName?.trim()) {
+        errors.businessName = "Customer is required";
+      }
+
+      if (!formData.customerBranch?.trim()) {
+        errors.customerBranch = "Customer Branch is required";
+      }
+
+      if (!formData.contactPerson?.trim()) {
+        errors.contactPerson = "Contact Person is required";
+      }
+
+      if (!formData.contactNo?.trim()) {
+        errors.contactNo = "Contact Number is required";
+      } else if (!validatePhoneNumber(formData.contactNo)) {
+        errors.contactNo =
+          "Please enter a valid phone number (e.g., +91 9876543210)";
+      }
+
+      if (!formData.leadGeneratedDate) {
+        errors.leadGeneratedDate = "Lead Generated Date is required";
+      } else if (!validateDate(formData.leadGeneratedDate)) {
+        errors.leadGeneratedDate = "Please enter a valid date";
+      }
+
+      if (!formData.projectName?.trim()) {
+        errors.projectName = "Project Name is required";
+      } else if (!validateStringLength(formData.projectName.trim(), 2, 200)) {
+        errors.projectName =
+          "Project Name must be between 2 and 200 characters";
+      }
+
+      if (!formData.projectValue?.toString().trim()) {
+        errors.projectValue = "Project Value is required";
+      } else if (!validateProjectValue(formData.projectValue.toString())) {
+        errors.projectValue =
+          "Please enter a valid positive number (max 999,999,999)";
+      }
+
+      if (!formData.leadType?.trim()) {
+        errors.leadType = "Lead Type is required";
+      }
+
+      if (!formData.leadCriticality?.trim()) {
+        errors.leadCriticality = "Lead Criticality is required";
+      }
+
+      if (!formData.leadSource?.trim()) {
+        errors.leadSource = "Lead Source is required";
+      }
+
+      if (!formData.leadStage?.trim()) {
+        errors.leadStage = "Lead Stage is required";
+      }
+
+      if (!formData.approximateResponseTime?.toString().trim()) {
+        errors.approximateResponseTime =
+          "Approximate Response Time is required";
+      } else if (
+        !validateResponseTime(formData.approximateResponseTime.toString())
+      ) {
+        errors.approximateResponseTime =
+          "Please enter a valid number of days (1-365)";
+      }
+
+      // Optional field validations
+      if (
+        formData.referencedBy &&
+        !validateStringLength(formData.referencedBy.trim(), 0, 100)
+      ) {
+        errors.referencedBy = "Referenced By must not exceed 100 characters";
+      }
+
+      if (formData.eta && !validateDate(formData.eta)) {
+        errors.eta = "Please enter a valid ETA date";
+      } else if (formData.eta && !validateFutureDate(formData.eta)) {
+        errors.eta = "ETA must be today or a future date";
+      }
+
+      if (
+        formData.leadDetails &&
+        !validateStringLength(formData.leadDetails.trim(), 0, 1000)
+      ) {
+        errors.leadDetails = "Lead Details must not exceed 1000 characters";
+      }
+    }
+
+    // Step 3 validations
+    if (currentStep === 3) {
+      if (newComment && !validateStringLength(newComment.trim(), 0, 500)) {
+        errors.newComment = "Comment must not exceed 500 characters";
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Real-time validation for individual fields
+  const validateField = (fieldName: string, value: any): string => {
+    switch (fieldName) {
+      case "businessName":
+        return !value?.trim() ? "Customer is required" : "";
+
+      case "customerBranch":
+        return !value?.trim() ? "Customer Branch is required" : "";
+
+      case "contactPerson":
+        return !value?.trim() ? "Contact Person is required" : "";
+
+      case "contactNo":
+        if (!value?.trim()) return "Contact Number is required";
+        if (!validatePhoneNumber(value))
+          return "Please enter a valid phone number";
+        return "";
+
+      case "projectName":
+        if (!value?.trim()) return "Project Name is required";
+        if (!validateStringLength(value.trim(), 2, 200))
+          return "Project Name must be between 2 and 200 characters";
+        return "";
+
+      case "projectValue":
+        if (!value?.toString().trim()) return "Project Value is required";
+        if (!validateProjectValue(value.toString()))
+          return "Please enter a valid positive number";
+        return "";
+
+      case "leadType":
+        return !value?.trim() ? "Lead Type is required" : "";
+
+      case "leadCriticality":
+        return !value?.trim() ? "Lead Criticality is required" : "";
+
+      case "leadSource":
+        return !value?.trim() ? "Lead Source is required" : "";
+
+      case "approximateResponseTime":
+        if (!value?.toString().trim())
+          return "Approximate Response Time is required";
+        if (!validateResponseTime(value.toString()))
+          return "Please enter a valid number of days (1-365)";
+        return "";
+
+      case "eta":
+        if (value && !validateDate(value)) return "Please enter a valid date";
+        if (value && !validateFutureDate(value))
+          return "ETA must be today or a future date";
+        return "";
+
+      case "referencedBy":
+        if (value && !validateStringLength(value.trim(), 0, 100))
+          return "Must not exceed 100 characters";
+        return "";
+
+      case "leadDetails":
+        if (value && !validateStringLength(value.trim(), 0, 1000))
+          return "Must not exceed 1000 characters";
+        return "";
+
+      default:
+        return "";
+    }
+  };
 
   useEffect(() => {
     const fetchAllForEdit = async () => {
@@ -315,6 +550,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   ) => {
     const { name, value } = e.target;
 
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+
     // Handle customer selection
     if (name === "businessName") {
       const selectedCustomer = customers.find(
@@ -364,42 +608,55 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       ...prev,
       [name]: value,
     }));
-  };
 
-  const handleMultiSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: prev[name as keyof typeof prev].includes(value)
-        ? (prev[name as keyof typeof prev] as string[]).filter(
-            (item: string) => item !== value
-          )
-        : [...(prev[name as keyof typeof prev] as string[]), value],
-    }));
+    // Perform real-time validation for critical fields
+    if (
+      name === "contactNo" ||
+      name === "projectValue" ||
+      name === "approximateResponseTime" ||
+      name === "eta"
+    ) {
+      const errorMessage = validateField(name, value);
+      if (errorMessage) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          [name]: errorMessage,
+        }));
+      }
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles((prev) => [...prev, ...files]);
+    const newFileErrors: string[] = [];
+    const validFiles: File[] = [];
+
+    files.forEach((file) => {
+      // Validate file type
+      if (!validateFileType(file)) {
+        newFileErrors.push(
+          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG`
+        );
+        return;
+      }
+
+      // Validate file size
+      if (!validateFileSize(file)) {
+        newFileErrors.push(`${file.name}: File size exceeds 10MB limit`);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    setFileErrors(newFileErrors);
+    if (validFiles.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...validFiles]);
+    }
   };
 
   const removeFile = (index: number) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const addComment = () => {
-    if (newComment.trim()) {
-      const comment = {
-        id: Date.now(),
-        text: newComment,
-        timestamp: new Date().toISOString(),
-        author: "Current User",
-      };
-      setFormData((prev) => ({
-        ...prev,
-        followUpComments: [...prev.followUpComments, comment],
-      }));
-      setNewComment("");
-    }
   };
 
   // Update lead API call
@@ -478,6 +735,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   };
 
   const handleNext = () => {
+    // Validate current step before proceeding
+    if (!validateForm()) {
+      return; // Stop if validation fails
+    }
+
     if (currentStep === 1) {
       if (isEditMode) {
         handleUpdateLead();
@@ -594,6 +856,24 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   };
 
   const handleCommentSubmit = () => {
+    // Validate comment length
+    if (newComment.trim() && !validateStringLength(newComment.trim(), 0, 500)) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        newComment: "Comment must not exceed 500 characters",
+      }));
+      return;
+    }
+
+    // Clear any existing comment validation errors
+    if (validationErrors.newComment) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.newComment;
+        return newErrors;
+      });
+    }
+
     if (currentStep === 3 && createdLeadId) {
       handleAddComment();
     } else {
@@ -605,7 +885,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           timestamp: new Date().toISOString(),
           author: "Current User",
         };
-        setFormData((prev) => ({
+        setFormData((prev: any) => ({
           ...prev,
           followUpComments: [...prev.followUpComments, comment],
         }));
@@ -690,6 +970,24 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   const isEditMode = !!initialData;
 
+  // Clear validation errors when modal closes
+  const handleClose = () => {
+    setValidationErrors({});
+    setFileErrors([]);
+    onClose();
+  };
+
+  // Helper component for displaying validation errors
+  const ValidationError: React.FC<{ fieldName: string }> = ({ fieldName }) => {
+    const error = validationErrors[fieldName];
+    return error ? (
+      <p className="text-red-500 text-xs mt-1 flex items-center">
+        <span className="mr-1">⚠</span>
+        {error}
+      </p>
+    ) : null;
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -698,12 +996,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              Create New Lead
+              {isEditMode ? "Edit Lead" : "Create New Lead"}
             </h3>
-            <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
+            <p className="text-sm text-gray-500">
+              {isEditMode
+                ? "Update lead information"
+                : `Step ${currentStep} of 3`}
+            </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -751,6 +1053,23 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {/* Validation Summary */}
+          {Object.keys(validationErrors).length > 0 && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-center mb-2">
+                <span className="text-red-500 mr-2">⚠</span>
+                <h4 className="text-sm font-medium text-red-800">
+                  Please fix the following errors:
+                </h4>
+              </div>
+              <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                {Object.entries(validationErrors).map(([field, error]) => (
+                  <li key={field}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             {/* Step 1: General Information */}
             {currentStep === 1 && (
@@ -765,7 +1084,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.businessName}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.businessName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     >
                       <option value="">Select Business</option>
                       {customers.map((customer) => (
@@ -774,6 +1097,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <ValidationError fieldName="businessName" />
                   </div>
 
                   <div>
@@ -786,7 +1110,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       disabled={!formData.businessName}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
+                        validationErrors.customerBranch
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     >
                       <option value="">Select Branch</option>
                       {customerBranches.map((branch) => (
@@ -795,6 +1123,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <ValidationError fieldName="customerBranch" />
                   </div>
 
                   <div>
@@ -824,7 +1153,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       disabled={!formData.customerBranch}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
+                        validationErrors.contactPerson
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     >
                       <option value="">Select Contact Person</option>
                       {contactPersons.map((person) => (
@@ -833,6 +1166,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <ValidationError fieldName="contactPerson" />
                   </div>
 
                   <div>
@@ -846,8 +1180,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="+91 98765 43210"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.contactNo
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <ValidationError fieldName="contactNo" />
                   </div>
 
                   <div>
@@ -860,8 +1199,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadGeneratedDate}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.leadGeneratedDate
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <ValidationError fieldName="leadGeneratedDate" />
                   </div>
 
                   <div>
@@ -874,8 +1218,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.referencedBy}
                       onChange={handleInputChange}
                       placeholder="Enter reference source"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.referencedBy
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <ValidationError fieldName="referencedBy" />
                   </div>
 
                   <div>
@@ -889,8 +1238,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="Enter project name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.projectName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <ValidationError fieldName="projectName" />
                   </div>
 
                   <div>
@@ -904,8 +1258,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="Enter value in selected currency"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.projectValue
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <ValidationError fieldName="projectValue" />
                   </div>
 
                   <div>
@@ -917,7 +1276,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadType}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.leadType
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     >
                       <option value="">Select Lead Type</option>
                       {leadTypes.map((type) => (
@@ -926,6 +1289,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <ValidationError fieldName="leadType" />
                   </div>
 
                   <div>
@@ -956,7 +1320,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadCriticality}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.leadCriticality
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     >
                       <option value="">Select Criticality</option>
                       {leadCriticalities.map((criticality) => (
@@ -965,6 +1333,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <ValidationError fieldName="leadCriticality" />
                   </div>
 
                   <div>
@@ -976,7 +1345,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadSource}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.leadSource
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     >
                       <option value="">Select Source</option>
                       {leadSources.map((source) => (
@@ -985,6 +1358,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <ValidationError fieldName="leadSource" />
                   </div>
 
                   <div>
@@ -1017,8 +1391,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="Enter days"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.approximateResponseTime
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <ValidationError fieldName="approximateResponseTime" />
                   </div>
 
                   <div>
@@ -1030,8 +1409,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       name="eta"
                       value={formData.eta}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.eta
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <ValidationError fieldName="eta" />
                   </div>
                 </div>
 
@@ -1045,8 +1429,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     onChange={handleInputChange}
                     rows={4}
                     placeholder="Enter detailed description of the lead..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      validationErrors.leadDetails
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                   />
+                  <ValidationError fieldName="leadDetails" />
+                  {formData.leadDetails && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.leadDetails.length}/1000 characters
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1203,6 +1597,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       Choose Files
                     </label>
                   </div>
+
+                  {/* Display file validation errors */}
+                  {fileErrors.length > 0 && (
+                    <div className="mt-2">
+                      {fileErrors.map((error, index) => (
+                        <p
+                          key={index}
+                          className="text-red-500 text-xs mt-1 flex items-center"
+                        >
+                          <span className="mr-1">⚠</span>
+                          {error}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {uploadedFiles.length > 0 && (
@@ -1247,17 +1656,43 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     Add Follow-up Comment
                   </label>
                   <div className="flex space-x-2">
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      rows={3}
-                      placeholder="Enter follow-up notes, meeting details, customer feedback..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div className="flex-1">
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => {
+                          setNewComment(e.target.value);
+                          // Clear validation error when user starts typing
+                          if (validationErrors.newComment) {
+                            setValidationErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors.newComment;
+                              return newErrors;
+                            });
+                          }
+                        }}
+                        rows={3}
+                        placeholder="Enter follow-up notes, meeting details, customer feedback..."
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.newComment
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      />
+                      <ValidationError fieldName="newComment" />
+                      {newComment && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {newComment.length}/500 characters
+                        </p>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={handleCommentSubmit}
-                      disabled={!newComment.trim() || isLoading}
+                      disabled={
+                        !newComment.trim() ||
+                        isLoading ||
+                        !!validationErrors.newComment
+                      }
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       <MessageSquare className="h-4 w-4" />
@@ -1314,7 +1749,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel

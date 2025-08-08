@@ -28,6 +28,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
   const [quotationDetails, setQuotationDetails] = useState<any>(null);
   const [quotationDetailsForEdit, setQuotationDetailsForEdit] =
     useState<any>(null);
+  // const [reloadDtls, setReloadDtls] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Fetch detailed quotation information when quotation is selected
@@ -320,6 +321,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
 
           // Step 3: Summary - Reverse mapping from cost margins
           supplySummary: {
+            id:
+              apiQuotation.cost_margins?.find(
+                (margin: any) => margin.cost_type === "supply"
+              )?.id || NaN,
             ownAmount: parseFloat(apiQuotation.total_supply_own_cost || 0),
             overheadsPercentage: 0, // This would need calculation based on POC distribution
             overheadsAmount: 0, // This would need calculation based on POC distribution
@@ -335,6 +340,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
             mf: 0, // Would need calculation
           },
           labourSummary: {
+            id:
+              apiQuotation.cost_margins?.find(
+                (margin: any) => margin.cost_type === "labour"
+              )?.id || NaN,
             ownAmount: parseFloat(
               apiQuotation.total_installation_own_cost || 0
             ),
@@ -352,6 +361,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
             mf: 0, // Would need calculation
           },
           sitcSummary: {
+            id:
+              apiQuotation.cost_margins?.find(
+                (margin: any) => margin.cost_type === "sitc"
+              )?.id || NaN,
             ownAmount:
               parseFloat(apiQuotation.total_supply_own_cost || 0) +
               parseFloat(apiQuotation.total_installation_own_cost || 0),
@@ -457,7 +470,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
     };
 
     fetchQuotationDetails();
-  }, [quotation]);
+  }, [quotation, isEditModalOpen]);
 
   if (!quotation) {
     return (
@@ -1795,7 +1808,9 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
       {isEditModalOpen && (
         <CreateQuotationModal
           isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
+          onClose={() => {
+            setIsEditModalOpen(false);
+          }}
           onSubmit={(updatedQuotation) => {
             console.log("Updated quotation:", updatedQuotation);
             // In a real app, this would update the quotation in the database
