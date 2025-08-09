@@ -18,6 +18,15 @@ import {
 } from "lucide-react";
 import { updateVendorContact } from "../../../utils/vendorContactApi";
 import { updateVendor } from "../../../utils/updateVendorApi";
+import { updateVendorBranchContact } from "../../../utils/updateVendorBranchContactApi";
+import { updateVendorBranch } from "../../../utils/updateVendorBranchApi";
+import {
+  validateVendor,
+  validateContactPerson,
+  validateBranch,
+  ValidationErrors,
+  hasErrors,
+} from "../../../utils/validationUtils";
 
 interface AddVendorModalProps {
   isOpen: boolean;
@@ -72,7 +81,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       district: "",
       city: "",
       pincode: "",
-      active: true,
+      is_active: true,
       // Bank Details
       panNumber: "",
       tanNumber: "",
@@ -92,8 +101,21 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     }
   );
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
-
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+  const [contactPersonErrors, setContactPersonErrors] = useState<{
+    [key: string]: ValidationErrors;
+  }>({});
+  const [branchErrors, setBranchErrors] = useState<{
+    [key: string]: ValidationErrors;
+  }>({});
+  const [branchContactErrors, setBranchContactErrors] = useState<{
+    [key: string]: { [key: string]: ValidationErrors };
+  }>({});
 
   const steps = [
     {
@@ -206,7 +228,114 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
   const isEditMode = Boolean(initialData);
   const handleBreadcrumbClick = (stepId: number) => {
-    if (isEditMode) setCurrentStep(stepId);
+    if (isEditMode) {
+      // In edit mode, allow free navigation between steps
+      setCurrentStep(stepId);
+    } else {
+      // In create mode, validate current step before allowing forward navigation
+      if (stepId > currentStep) {
+        // Trying to go forward, validate current step first
+        if (currentStep === 1) {
+          const vendorValidationErrors = validateVendor(formData);
+          const contactPersonValidationErrors: {
+            [key: string]: ValidationErrors;
+          } = {};
+          let hasContactPersonErrors = false;
+
+          formData.contactPersons.forEach((cp: ContactPerson) => {
+            const cpErrors = validateContactPerson(cp);
+            if (Object.keys(cpErrors).length > 0) {
+              contactPersonValidationErrors[cp.id] = cpErrors;
+              hasContactPersonErrors = true;
+            }
+          });
+
+          setValidationErrors(vendorValidationErrors);
+          setContactPersonErrors(contactPersonValidationErrors);
+
+          if (hasErrors(vendorValidationErrors) || hasContactPersonErrors) {
+            alert(
+              "Please fix all validation errors in Step 1 before proceeding."
+            );
+            return;
+          }
+        } else if (currentStep === 2 && stepId === 3) {
+          const branchValidationErrors: { [key: string]: ValidationErrors } =
+            {};
+          const branchContactValidationErrors: {
+            [key: string]: { [key: string]: ValidationErrors };
+          } = {};
+          let hasBranchErrors = false;
+          let hasBranchContactErrors = false;
+
+          formData.branches.forEach((branch: Branch) => {
+            const branchErrors = validateBranch(branch);
+            if (Object.keys(branchErrors).length > 0) {
+              branchValidationErrors[branch.id] = branchErrors;
+              hasBranchErrors = true;
+            }
+
+            branch.contactPersons.forEach((cp: ContactPerson) => {
+              const cpErrors = validateContactPerson(cp);
+              if (Object.keys(cpErrors).length > 0) {
+                if (!branchContactValidationErrors[branch.id]) {
+                  branchContactValidationErrors[branch.id] = {};
+                }
+                branchContactValidationErrors[branch.id][cp.id] = cpErrors;
+                hasBranchContactErrors = true;
+              }
+            });
+          });
+
+          setBranchErrors(branchValidationErrors);
+          setBranchContactErrors(branchContactValidationErrors);
+
+          if (hasBranchErrors || hasBranchContactErrors) {
+            alert(
+              "Please fix all validation errors in Step 2 before proceeding."
+            );
+            return;
+          }
+        }
+      }
+      // If validation passed or going backward, allow navigation
+      setCurrentStep(stepId);
+    }
+  };
+
+  // Clear modal state function
+  const clearModalState = () => {
+    setFormData({
+      vendorCategory: "",
+      vendorType: "",
+      businessName: "",
+      contactNo: "",
+      email: "",
+      country: "India",
+      currency: "INR",
+      state: "",
+      district: "",
+      city: "",
+      pincode: "",
+      is_active: true,
+      panNumber: "",
+      tanNumber: "",
+      gstNumber: "",
+      bankName: "",
+      bankAccountNumber: "",
+      branchName: "",
+      ifscCode: "",
+      contactPersons: [],
+      branches: [],
+      uploadedFiles: [],
+      vendorId: undefined,
+    });
+    setValidationErrors({});
+    setContactPersonErrors({});
+    setBranchErrors({});
+    setBranchContactErrors({});
+    setUploadedFiles([]);
+    setCurrentStep(1);
   };
 
   const handleInputChange = (
@@ -215,11 +344,29 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     >
   ) => {
     const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    }));
+    const newValue =
+      type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
+
+    setFormData((prev: any) => {
+      const updated = {
+        ...prev,
+        [name]: newValue,
+      };
+
+      // Handle cascading dropdowns for location fields
+      if (name === "state") {
+        updated.district = "";
+        updated.city = "";
+      } else if (name === "district") {
+        updated.city = "";
+      }
+
+      return updated;
+    });
+
+    // Real-time validation
+    const vendorErrors = validateVendor({ ...formData, [name]: newValue });
+    setValidationErrors(vendorErrors);
   };
 
   const handleToggle = (name: string) => {
@@ -251,6 +398,19 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         cp.id === id ? { ...cp, [field]: value } : cp
       ),
     }));
+
+    // Validate contact person in real-time
+    const updatedContactPerson = formData.contactPersons.find(
+      (cp: any) => cp.id === id
+    );
+    if (updatedContactPerson) {
+      const contactPerson = { ...updatedContactPerson, [field]: value };
+      const errors = validateContactPerson(contactPerson);
+      setContactPersonErrors((prev) => ({
+        ...prev,
+        [id]: errors,
+      }));
+    }
   };
 
   // Save contact person update
@@ -321,12 +481,39 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   };
 
   const updateBranch = (id: string, field: string, value: string) => {
-    setFormData((prev: typeof formData) => ({
+    setFormData((prev: any) => ({
       ...prev,
       branches: prev.branches.map((branch: Branch) =>
-        branch.id === id ? { ...branch, [field]: value } : branch
+        branch.id === id
+          ? {
+              ...branch,
+              [field]: value,
+              // Handle cascading dropdowns for branch location fields
+              ...(field === "state" && { district: "", city: "" }),
+              ...(field === "district" && { city: "" }),
+            }
+          : branch
       ),
     }));
+
+    // Validate branch in real-time
+    const updatedBranch = formData.branches.find(
+      (branch: Branch) => branch.id === id
+    );
+    if (updatedBranch) {
+      const branch = {
+        ...updatedBranch,
+        [field]: value,
+        // Clear dependent fields for validation
+        ...(field === "state" && { district: "", city: "" }),
+        ...(field === "district" && { city: "" }),
+      };
+      const errors = validateBranch(branch);
+      setBranchErrors((prev) => ({
+        ...prev,
+        [id]: errors,
+      }));
+    }
   };
 
   const removeBranch = (id: string) => {
@@ -364,7 +551,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     field: string,
     value: string
   ) => {
-    setFormData((prev: typeof formData) => ({
+    setFormData((prev: any) => ({
       ...prev,
       branches: prev.branches.map((branch: Branch) =>
         branch.id === branchId
@@ -377,6 +564,27 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
           : branch
       ),
     }));
+
+    // Validate branch contact person in real-time
+    const branch = formData.branches.find(
+      (branch: Branch) => branch.id === branchId
+    );
+    if (branch) {
+      const updatedContactPerson = branch.contactPersons.find(
+        (cp: ContactPerson) => cp.id === contactId
+      );
+      if (updatedContactPerson) {
+        const contactPerson = { ...updatedContactPerson, [field]: value };
+        const errors = validateContactPerson(contactPerson);
+        setBranchContactErrors((prev) => ({
+          ...prev,
+          [branchId]: {
+            ...(prev[branchId] || {}),
+            [contactId]: errors,
+          },
+        }));
+      }
+    }
   };
 
   const removeBranchContactPerson = (branchId: string, contactId: string) => {
@@ -421,6 +629,34 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
   const handleNext = async () => {
     if (currentStep === 1) {
+      // Validate vendor form data before proceeding
+      const vendorValidationErrors = validateVendor(formData);
+
+      // Validate all contact persons
+      const contactPersonValidationErrors: { [key: string]: ValidationErrors } =
+        {};
+      let hasContactPersonErrors = false;
+
+      formData.contactPersons.forEach((cp: ContactPerson) => {
+        const cpErrors = validateContactPerson(cp);
+        if (Object.keys(cpErrors).length > 0) {
+          contactPersonValidationErrors[cp.id] = cpErrors;
+          hasContactPersonErrors = true;
+        }
+      });
+
+      // Update error states
+      setValidationErrors(vendorValidationErrors);
+      setContactPersonErrors(contactPersonValidationErrors);
+
+      // Check if there are any validation errors
+      if (hasErrors(vendorValidationErrors) || hasContactPersonErrors) {
+        alert(
+          "Please fix all validation errors before proceeding to the next step."
+        );
+        return;
+      }
+
       try {
         const vendorPayload = toSnakeCase(formData);
         const vendorRes = await registerVendor(vendorPayload);
@@ -447,6 +683,47 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         alert("Failed to create vendor or bulk upload. Please try again.");
       }
     } else if (currentStep === 2) {
+      // Validate all branches before proceeding
+      const branchValidationErrors: { [key: string]: ValidationErrors } = {};
+      const branchContactValidationErrors: {
+        [key: string]: { [key: string]: ValidationErrors };
+      } = {};
+      let hasBranchErrors = false;
+      let hasBranchContactErrors = false;
+
+      formData.branches.forEach((branch: Branch) => {
+        // Validate branch fields
+        const branchErrors = validateBranch(branch);
+        if (Object.keys(branchErrors).length > 0) {
+          branchValidationErrors[branch.id] = branchErrors;
+          hasBranchErrors = true;
+        }
+
+        // Validate branch contact persons
+        branch.contactPersons.forEach((cp: ContactPerson) => {
+          const cpErrors = validateContactPerson(cp);
+          if (Object.keys(cpErrors).length > 0) {
+            if (!branchContactValidationErrors[branch.id]) {
+              branchContactValidationErrors[branch.id] = {};
+            }
+            branchContactValidationErrors[branch.id][cp.id] = cpErrors;
+            hasBranchContactErrors = true;
+          }
+        });
+      });
+
+      // Update error states
+      setBranchErrors(branchValidationErrors);
+      setBranchContactErrors(branchContactValidationErrors);
+
+      // Check if there are any validation errors
+      if (hasBranchErrors || hasBranchContactErrors) {
+        alert(
+          "Please fix all validation errors in branches before proceeding to the next step."
+        );
+        return;
+      }
+
       try {
         // Register all branches with vendor_id (use backend field names)
         const vendorId = formData.vendorId || formData.id || formData.vendor_id;
@@ -516,38 +793,82 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Final validation before submission
+    const vendorValidationErrors = validateVendor(formData);
+    const contactPersonValidationErrors: { [key: string]: ValidationErrors } =
+      {};
+    const branchValidationErrors: { [key: string]: ValidationErrors } = {};
+    const branchContactValidationErrors: {
+      [key: string]: { [key: string]: ValidationErrors };
+    } = {};
+
+    let hasValidationErrors = false;
+
+    // Validate contact persons
+    formData.contactPersons.forEach((cp: ContactPerson) => {
+      const cpErrors = validateContactPerson(cp);
+      if (Object.keys(cpErrors).length > 0) {
+        contactPersonValidationErrors[cp.id] = cpErrors;
+        hasValidationErrors = true;
+      }
+    });
+
+    // Validate branches and their contact persons
+    formData.branches.forEach((branch: Branch) => {
+      const branchErrors = validateBranch(branch);
+      if (Object.keys(branchErrors).length > 0) {
+        branchValidationErrors[branch.id] = branchErrors;
+        hasValidationErrors = true;
+      }
+
+      branch.contactPersons.forEach((cp: ContactPerson) => {
+        const cpErrors = validateContactPerson(cp);
+        if (Object.keys(cpErrors).length > 0) {
+          if (!branchContactValidationErrors[branch.id]) {
+            branchContactValidationErrors[branch.id] = {};
+          }
+          branchContactValidationErrors[branch.id][cp.id] = cpErrors;
+          hasValidationErrors = true;
+        }
+      });
+    });
+
+    // Update all error states
+    setValidationErrors(vendorValidationErrors);
+    setContactPersonErrors(contactPersonValidationErrors);
+    setBranchErrors(branchValidationErrors);
+    setBranchContactErrors(branchContactValidationErrors);
+
+    // Check for validation errors
+    if (hasErrors(vendorValidationErrors) || hasValidationErrors) {
+      alert("Please fix all validation errors before submitting the form.");
+      // Navigate back to the first step with errors
+      if (
+        hasErrors(vendorValidationErrors) ||
+        Object.keys(contactPersonValidationErrors).length > 0
+      ) {
+        setCurrentStep(1);
+      } else if (
+        Object.keys(branchValidationErrors).length > 0 ||
+        Object.keys(branchContactValidationErrors).length > 0
+      ) {
+        setCurrentStep(2);
+      }
+      return;
+    }
+
     if (typeof onSubmit === "function") {
-      onRefresh(); // Only trigger fetchVendors in parent, do not send vendor data
+      if (onRefresh) onRefresh(); // Only trigger fetchVendors in parent, do not send vendor data
     }
     onClose();
+    clearModalState();
+  };
 
-    // Reset form
-    setCurrentStep(1);
-    setFormData({
-      vendorCategory: "",
-      vendorType: "",
-      businessName: "",
-      contactNo: "",
-      email: "",
-      country: "India",
-      currency: "INR",
-      state: "",
-      district: "",
-      city: "",
-      pincode: "",
-      active: true,
-      panNumber: "",
-      tanNumber: "",
-      gstNumber: "",
-      bankName: "",
-      bankAccountNumber: "",
-      branchName: "",
-      ifscCode: "",
-      contactPersons: [],
-      branches: [],
-      uploadedFiles: [],
-    });
-    setUploadedFiles([]);
+  // Handle modal close with state clearing
+  const handleClose = () => {
+    clearModalState();
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -563,7 +884,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -664,7 +985,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.vendorCategory}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.vendorCategory
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                       >
                         <option value="">Select Category</option>
                         {vendorCategories.map((category) => (
@@ -673,6 +998,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {validationErrors.vendorCategory && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.vendorCategory}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -684,7 +1014,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.vendorType}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.vendorType
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                       >
                         <option value="">Select Type</option>
                         {vendorTypes.map((type) => (
@@ -693,6 +1027,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {validationErrors.vendorType && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.vendorType}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -705,9 +1044,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.businessName}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.businessName
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="Enter business name"
                       />
+                      {validationErrors.businessName && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.businessName}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -720,9 +1068,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.contactNo}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.contactNo
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="+91 98765 43210"
                       />
+                      {validationErrors.contactNo && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.contactNo}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -735,9 +1092,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.email}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.email
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="business@company.com"
                       />
+                      {validationErrors.email && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.email}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -749,7 +1115,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.country}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.country
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                       >
                         {countries.map((country) => (
                           <option key={country} value={country}>
@@ -757,6 +1127,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {validationErrors.country && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.country}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -768,7 +1143,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.currency}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.currency
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                       >
                         {currencies.map((currency) => (
                           <option key={currency} value={currency}>
@@ -776,6 +1155,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {validationErrors.currency && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.currency}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -787,7 +1171,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.state}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.state
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                       >
                         <option value="">Select State</option>
                         {states.map((state) => (
@@ -796,6 +1184,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {validationErrors.state && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.state}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -808,7 +1201,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         onChange={handleInputChange}
                         required
                         disabled={!formData.state}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
+                          validationErrors.district
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                       >
                         <option value="">Select District</option>
                         {formData.state &&
@@ -820,6 +1217,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             </option>
                           ))}
                       </select>
+                      {validationErrors.district && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.district}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -832,7 +1234,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         onChange={handleInputChange}
                         required
                         disabled={!formData.district}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
+                          validationErrors.city
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                       >
                         <option value="">Select City</option>
                         {formData.district &&
@@ -844,6 +1250,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             )
                           )}
                       </select>
+                      {validationErrors.city && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.city}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -856,17 +1267,26 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.pincode}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.pincode
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="400001"
                       />
+                      {validationErrors.pincode && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.pincode}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center">
                       <label className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={formData.active}
-                          onChange={() => handleToggle("active")}
+                          checked={formData.is_active}
+                          onChange={() => handleToggle("is_active")}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <span className="ml-2 text-sm text-gray-700">
@@ -893,9 +1313,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.panNumber}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.panNumber
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="ABCDE1234F"
                       />
+                      {validationErrors.panNumber && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.panNumber}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -908,9 +1337,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.tanNumber}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.tanNumber
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="ABCD12345E"
                       />
+                      {validationErrors.tanNumber && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.tanNumber}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -923,9 +1361,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.gstNumber}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.gstNumber
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="27ABCDE1234F1Z5"
                       />
+                      {validationErrors.gstNumber && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.gstNumber}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -938,9 +1385,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.bankName}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.bankName
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="State Bank of India"
                       />
+                      {validationErrors.bankName && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.bankName}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -953,9 +1409,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.bankAccountNumber}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="1234567890123456"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.bankAccountNumber
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
+                        placeholder="123456789012345"
                       />
+                      {validationErrors.bankAccountNumber && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.bankAccountNumber}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -968,9 +1433,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.branchName}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.branchName
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="Mumbai Main Branch"
                       />
+                      {validationErrors.branchName && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.branchName}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -983,9 +1457,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         value={formData.ifscCode}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.ifscCode
+                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                            : "border-gray-300"
+                        }`}
                         placeholder="SBIN0001234"
                       />
+                      {validationErrors.ifscCode && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {validationErrors.ifscCode}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1062,12 +1545,21 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                                   e.target.value
                                 )
                               }
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                contactPersonErrors[person.id]?.name
+                                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300"
+                              }`}
                               placeholder="Contact person name"
                               disabled={
                                 isEditMode && editingContactId !== person.id
                               }
                             />
+                            {contactPersonErrors[person.id]?.name && (
+                              <p className="mt-1 text-sm text-red-600">
+                                {contactPersonErrors[person.id].name}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1083,12 +1575,21 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                                   e.target.value
                                 )
                               }
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                contactPersonErrors[person.id]?.phone
+                                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300"
+                              }`}
                               placeholder="+91 98765 43210"
                               disabled={
                                 isEditMode && editingContactId !== person.id
                               }
                             />
+                            {contactPersonErrors[person.id]?.phone && (
+                              <p className="mt-1 text-sm text-red-600">
+                                {contactPersonErrors[person.id].phone}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1104,12 +1605,21 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                                   e.target.value
                                 )
                               }
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                contactPersonErrors[person.id]?.email
+                                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300"
+                              }`}
                               placeholder="contact@company.com"
                               disabled={
                                 isEditMode && editingContactId !== person.id
                               }
                             />
+                            {contactPersonErrors[person.id]?.email && (
+                              <p className="mt-1 text-sm text-red-600">
+                                {contactPersonErrors[person.id].email}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1125,12 +1635,21 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                                   e.target.value
                                 )
                               }
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                contactPersonErrors[person.id]?.designation
+                                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300"
+                              }`}
                               placeholder="Designation"
                               disabled={
                                 isEditMode && editingContactId !== person.id
                               }
                             />
+                            {contactPersonErrors[person.id]?.designation && (
+                              <p className="mt-1 text-sm text-red-600">
+                                {contactPersonErrors[person.id].designation}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1201,9 +1720,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             )
                           }
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            branchErrors[branch.id]?.branchName
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                           placeholder="Branch name"
                         />
+                        {branchErrors[branch.id]?.branchName && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].branchName}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1221,9 +1749,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             )
                           }
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            branchErrors[branch.id]?.contactNumber
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                           placeholder="+91 98765 43210"
                         />
+                        {branchErrors[branch.id]?.contactNumber && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].contactNumber}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1237,9 +1774,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             updateBranch(branch.id, "email", e.target.value)
                           }
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            branchErrors[branch.id]?.email
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                           placeholder="branch@company.com"
                         />
+                        {branchErrors[branch.id]?.email && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].email}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1252,7 +1798,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             updateBranch(branch.id, "country", e.target.value)
                           }
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            branchErrors[branch.id]?.country
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                         >
                           {countries.map((country) => (
                             <option key={country} value={country}>
@@ -1260,6 +1810,40 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             </option>
                           ))}
                         </select>
+                        {branchErrors[branch.id]?.country && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].country}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Currency *
+                        </label>
+                        <select
+                          value={branch.currency}
+                          onChange={(e) =>
+                            updateBranch(branch.id, "currency", e.target.value)
+                          }
+                          required
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            branchErrors[branch.id]?.currency
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {currencies.map((currency) => (
+                            <option key={currency} value={currency}>
+                              {currency}
+                            </option>
+                          ))}
+                        </select>
+                        {branchErrors[branch.id]?.currency && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].currency}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1272,7 +1856,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             updateBranch(branch.id, "state", e.target.value)
                           }
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            branchErrors[branch.id]?.state
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                         >
                           <option value="">Select State</option>
                           {states.map((state) => (
@@ -1281,6 +1869,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             </option>
                           ))}
                         </select>
+                        {branchErrors[branch.id]?.state && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].state}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1294,7 +1887,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           }
                           required
                           disabled={!branch.state}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
+                            branchErrors[branch.id]?.district
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                         >
                           <option value="">Select District</option>
                           {branch.state &&
@@ -1306,6 +1903,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                               </option>
                             ))}
                         </select>
+                        {branchErrors[branch.id]?.district && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].district}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1319,7 +1921,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           }
                           required
                           disabled={!branch.district}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
+                            branchErrors[branch.id]?.city
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                         >
                           <option value="">Select City</option>
                           {branch.district &&
@@ -1331,6 +1937,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                               )
                             )}
                         </select>
+                        {branchErrors[branch.id]?.city && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].city}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1344,9 +1955,18 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                             updateBranch(branch.id, "pincode", e.target.value)
                           }
                           required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            branchErrors[branch.id]?.pincode
+                              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300"
+                          }`}
                           placeholder="400001"
                         />
+                        {branchErrors[branch.id]?.pincode && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {branchErrors[branch.id].pincode}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -1367,74 +1987,176 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       </div>
 
                       {branch.contactPersons.map(
-                        (person: ContactPerson, personIndex: number) => (
-                          <div
-                            key={person.id}
-                            className="border border-gray-100 rounded p-3 mb-3"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-gray-700">
-                                Contact {personIndex + 1}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeBranchContactPerson(
-                                    branch.id,
-                                    person.id
-                                  )
-                                }
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
+                        (person: ContactPerson, personIndex: number) => {
+                          // Only show edit/save toggle in update mode
+                          const isEditing =
+                            isEditMode &&
+                            editingContactId === `${branch.id}-${person.id}`;
+                          const handleBranchContactSave = async () => {
+                            try {
+                              // Remove id/branchId if needed, send only updatable fields
+                              const { id, photo, ...rest } = person;
+                              await updateVendorBranchContact(person.id, rest);
+                              setEditingContactId(null);
+                              if (typeof onRefresh === "function")
+                                await onRefresh();
+                            } catch (err) {
+                              alert("Failed to update branch contact.");
+                            }
+                          };
+                          return (
+                            <div
+                              key={person.id}
+                              className="border border-gray-100 rounded p-3 mb-3"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-gray-700">
+                                  Contact {personIndex + 1}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {isEditMode ? (
+                                    isEditing ? (
+                                      <button
+                                        type="button"
+                                        onClick={handleBranchContactSave}
+                                        className="text-green-600 hover:text-green-800"
+                                        title="Save"
+                                      >
+                                        <Check className="h-4 w-4" />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setEditingContactId(
+                                            `${branch.id}-${person.id}`
+                                          )
+                                        }
+                                        className="text-blue-600 hover:text-blue-800"
+                                        title="Edit"
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </button>
+                                    )
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeBranchContactPerson(
+                                        branch.id,
+                                        person.id
+                                      )
+                                    }
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <input
+                                    type="text"
+                                    value={person.name}
+                                    onChange={(e) =>
+                                      updateBranchContactPerson(
+                                        branch.id,
+                                        person.id,
+                                        "name",
+                                        e.target.value
+                                      )
+                                    }
+                                    className={`w-full px-2 py-1 border rounded text-sm ${
+                                      branchContactErrors[branch.id]?.[
+                                        person.id
+                                      ]?.name
+                                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                        : "border-gray-300"
+                                    }`}
+                                    placeholder="Name"
+                                    disabled={isEditMode && !isEditing}
+                                  />
+                                  {branchContactErrors[branch.id]?.[person.id]
+                                    ?.name && (
+                                    <p className="mt-1 text-xs text-red-600">
+                                      {
+                                        branchContactErrors[branch.id][
+                                          person.id
+                                        ].name
+                                      }
+                                    </p>
+                                  )}
+                                </div>
+                                <div>
+                                  <input
+                                    type="tel"
+                                    value={person.phone}
+                                    onChange={(e) =>
+                                      updateBranchContactPerson(
+                                        branch.id,
+                                        person.id,
+                                        "phone",
+                                        e.target.value
+                                      )
+                                    }
+                                    className={`w-full px-2 py-1 border rounded text-sm ${
+                                      branchContactErrors[branch.id]?.[
+                                        person.id
+                                      ]?.phone
+                                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                        : "border-gray-300"
+                                    }`}
+                                    placeholder="Phone"
+                                    disabled={isEditMode && !isEditing}
+                                  />
+                                  {branchContactErrors[branch.id]?.[person.id]
+                                    ?.phone && (
+                                    <p className="mt-1 text-xs text-red-600">
+                                      {
+                                        branchContactErrors[branch.id][
+                                          person.id
+                                        ].phone
+                                      }
+                                    </p>
+                                  )}
+                                </div>
+                                <div>
+                                  <input
+                                    type="email"
+                                    value={person.email}
+                                    onChange={(e) =>
+                                      updateBranchContactPerson(
+                                        branch.id,
+                                        person.id,
+                                        "email",
+                                        e.target.value
+                                      )
+                                    }
+                                    className={`w-full px-2 py-1 border rounded text-sm ${
+                                      branchContactErrors[branch.id]?.[
+                                        person.id
+                                      ]?.email
+                                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                        : "border-gray-300"
+                                    }`}
+                                    placeholder="Email"
+                                    disabled={isEditMode && !isEditing}
+                                  />
+                                  {branchContactErrors[branch.id]?.[person.id]
+                                    ?.email && (
+                                    <p className="mt-1 text-xs text-red-600">
+                                      {
+                                        branchContactErrors[branch.id][
+                                          person.id
+                                        ].email
+                                      }
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                              <input
-                                type="text"
-                                value={person.name}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "name",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                placeholder="Name"
-                              />
-                              <input
-                                type="tel"
-                                value={person.phone}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "phone",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                placeholder="Phone"
-                              />
-                              <input
-                                type="email"
-                                value={person.email}
-                                onChange={(e) =>
-                                  updateBranchContactPerson(
-                                    branch.id,
-                                    person.id,
-                                    "email",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                placeholder="Email"
-                              />
-                            </div>
-                          </div>
-                        )
+                          );
+                        }
                       )}
                     </div>
                   </div>
@@ -1538,15 +2260,56 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 type="submit"
                 onClick={async (e) => {
                   e.preventDefault();
-                  try {
-                    await updateVendor(
-                      formData.id || formData.vendorId,
-                      formData
-                    );
-                    if (typeof onRefresh === "function") await onRefresh();
-                    onClose();
-                  } catch (err) {
-                    alert("Failed to update vendor.");
+                  if (currentStep === 1) {
+                    // General Info: update vendor
+                    const vendorId =
+                      formData.id || formData.vendorId || formData.vendor_id;
+                    if (!vendorId) {
+                      alert("Vendor ID is missing. Cannot update vendor.");
+                      return;
+                    }
+                    const {
+                      id,
+                      vendorId: _vendorId,
+                      vendor_id: _vendor_id,
+                      vendorCategory,
+                      active,
+                      branches,
+                      uploaded_files,
+                      contactPersons,
+                      uploadedFiles,
+                      ...rest
+                    } = formData;
+                    const payload = toSnakeCase(rest);
+                    try {
+                      await updateVendor(vendorId, payload);
+                      if (typeof onRefresh === "function") await onRefresh();
+                      onClose();
+                    } catch (err) {
+                      alert("Failed to update vendor.");
+                    }
+                  } else if (currentStep === 2) {
+                    // Branch Info: update all branches
+                    try {
+                      const updatePromises = formData.branches.map(
+                        async (branch: any) => {
+                          const { id, contactPersons, ...rest } = branch;
+                          // Map 'email' to 'email_id' for backend
+                          const branchPayload = { ...rest };
+                          if (branchPayload.email) {
+                            branchPayload.email_id = branchPayload.email;
+                            delete branchPayload.email;
+                          }
+                          const payload = toSnakeCase(branchPayload);
+                          return updateVendorBranch(branch.id, payload);
+                        }
+                      );
+                      await Promise.all(updatePromises);
+                      if (typeof onRefresh === "function") await onRefresh();
+                      alert("All branches updated successfully.");
+                    } catch (err) {
+                      alert("Failed to update one or more branches.");
+                    }
                   }
                 }}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
