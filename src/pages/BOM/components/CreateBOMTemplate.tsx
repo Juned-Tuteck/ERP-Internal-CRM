@@ -1546,7 +1546,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                     </button>
                   </div>
                   <div className="mt-4">
-                    <a
+                    {/* <a
                       href="#"
                       className="text-sm text-blue-600 hover:text-blue-800"
                       onClick={(e) => {
@@ -1556,7 +1556,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                       }}
                     >
                       Download CSV Template
-                    </a>
+                    </a> */}
                   </div>
                 </div>
 

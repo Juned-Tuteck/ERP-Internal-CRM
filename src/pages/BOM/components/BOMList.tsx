@@ -1,5 +1,4 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   Calendar,
@@ -9,6 +8,7 @@ import {
   Download,
   CheckCircle,
   XCircle,
+  Upload,
 } from "lucide-react";
 import CreateBOM from "./CreateBOM";
 import BOMViewModal from "./BOMViewModal";
@@ -32,12 +32,15 @@ interface BOMListProps {
 const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
   const [boms, setBoms] = useState<BOM[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [bomToDelete, setBomToDelete] = React.useState<BOM | null>(null);
   const [editModalOpen, setEditModalOpen] = React.useState(false);
   const [editInitialData, setEditInitialData] = React.useState<any>(null);
   const [viewBOMId, setViewBOMId] = React.useState<string | null>(null);
   const [showViewModal, setShowViewModal] = React.useState(false);
+  const [refreshList, setRefreshList] = React.useState(0);
 
   // Fetch BOMs from API
   useEffect(() => {
@@ -76,7 +79,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
     };
 
     fetchBOMs();
-  }, []);
+  }, [refreshList]);
   // BOMItem and BOMTemplate types
   type BOMItem = {
     id: string;
@@ -404,15 +407,55 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
     onSelectBOM(bom);
   };
 
+  // Handle file upload
+  const handleFileUpload = async () => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("excelFile", file);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/bom/process/excel`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (response.ok) {
+        alert("File uploaded successfully!");
+        setUploadModalOpen(false);
+        setFile(null);
+        setRefreshList((prev) => prev + 1); 
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.message || "Failed to upload file"}`);
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("An error occurred while uploading the file.");
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Bills of Materials
-        </h3>
-        <p className="text-sm text-gray-500">
-          {loading ? "Loading..." : `${boms.length} total BOMs`}
-        </p>
+      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Bills of Materials
+          </h3>
+          <p className="text-sm text-gray-500">
+            {loading ? "Loading..." : `${boms.length} total BOMs`}
+          </p>
+        </div>
+        <button
+          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          onClick={() => setUploadModalOpen(true)}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Upload Excel
+        </button>
       </div>
 
       {loading ? (
@@ -612,6 +655,38 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
           }}
           bomId={viewBOMId}
         />
+      )}
+
+      {/* Upload Modal */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+            <h4 className="text-lg font-semibold mb-4 text-gray-900">
+              Upload Excel File
+            </h4>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="mb-4 w-full"
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setUploadModalOpen(false)}
+                className="px-4 py-2 rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFileUpload}
+                className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                disabled={!file}
+              >
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
