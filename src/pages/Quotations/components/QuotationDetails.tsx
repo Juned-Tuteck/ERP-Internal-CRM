@@ -181,14 +181,14 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
               Expires: {new Date(quotation.expiryDate).toLocaleDateString('en-IN')}
             </p>
             <div className="flex space-x-2 mt-2 items-center">
-              <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+              {/* <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
                 <Download className="h-3 w-3 mr-1" />
                 Export
               </button>
               <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
                 <Printer className="h-3 w-3 mr-1" />
                 Print
-              </button>
+              </button> */}
               <button 
                 onClick={() => setIsEditModalOpen(true)}
                 className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"

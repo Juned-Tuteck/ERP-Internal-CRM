@@ -112,6 +112,7 @@ export const getAllVendors = async (): Promise<Vendor[]> => {
   return backendVendors.map((v: any) => ({
     id: v.vendor_id,
     name: v.business_name,
+    vendorNumber: v.vendor_number || "",
     category: v.vendor_type || "",
     type: v.vendor_type || "",
     location: [v.city, v.state].filter(Boolean).join(", "),

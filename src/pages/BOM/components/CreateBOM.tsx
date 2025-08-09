@@ -44,6 +44,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
     date: new Date().toISOString().split('T')[0],
     note: '',
     status: 'DRAFT',
+    bomName: '', // <-- Add bomName to formData
   });
   const [specs, setSpecs] = useState<BOMSpec[]>([]);
   const [createdBOMId, setCreatedBOMId] = useState<string | null>(null);
@@ -147,14 +148,15 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
       [name]: value,
     }));
 
-    // If lead is selected, update lead name and work type
+    // If lead is selected, update lead name, work type, and bomName
     if (name === 'leadId') {
       const selectedLead = leads.find(lead => lead.id === value);
       if (selectedLead) {
         setFormData(prev => ({
           ...prev,
           leadName: selectedLead.projectName,
-          workType: selectedLead.workType
+          workType: selectedLead.workType,
+          bomName: `${selectedLead.projectName} - BOM `,
         }));
       }
     }
@@ -332,19 +334,19 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
   // Create BOM API call
   const handleCreateBOM = async () => {
     if (!formData.leadId) return;
-    
+
     setIsSubmitting(true);
     try {
       const bomPayload = {
-        name: formData.leadName,
+        name: formData.bomName, // Use bomName here
         leadId: formData.leadId,
         date: formData.date,
         workType: formData.workType
       };
-      
+
       const response = await createBOM(bomPayload);
       const bomId = response.data?.id;
-      
+
       if (bomId) {
         setCreatedBOMId(bomId);
         setCurrentStep(2);
@@ -637,6 +639,22 @@ const CreateBOM: React.FC<CreateBOMProps> = ({ isOpen, onClose, onSubmit, initia
                     <option key={lead.id} value={lead.id}>{lead.projectName}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* BOM Name Textfield */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  name="bomName"
+                  value={formData.bomName}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter BOM Name"
+                />
               </div>
 
               {formData.leadId && (

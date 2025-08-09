@@ -50,7 +50,7 @@ const Customers: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Customer Management</h1>
         <div className="flex space-x-3">
-          <button
+          {/* <button
             onClick={handleExportCustomers}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
@@ -60,7 +60,7 @@ const Customers: React.FC = () => {
           <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
             <Filter className="h-4 w-4 mr-2" />
             Filter
-          </button>
+          </button> */}
           {activeTab === 'customers' && (
             <button
               onClick={() => setIsAddModalOpen(true)}
