@@ -2236,7 +2236,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
         {/* Footer with navigation buttons */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200">
-          <button
+          <div></div>
+          {/* <button
             type="button"
             onClick={handlePrevious}
             disabled={currentStep === 1}
@@ -2244,7 +2245,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Previous
-          </button>
+          </button> */}
 
           <div className="flex space-x-3">
             <button
