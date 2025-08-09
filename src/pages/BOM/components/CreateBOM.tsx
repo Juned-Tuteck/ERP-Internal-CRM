@@ -75,17 +75,17 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
 }) => {
   const editMode = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(
-    initialData || {
-      leadId: "",
-      leadName: "",
-      workType: "",
-      date: new Date().toISOString().split("T")[0],
-      note: "",
-      status: "DRAFT",
-    }
-  );
-  console.log("Initial formData:", formData);
+
+  const [formData, setFormData] = useState(initialData || {
+    leadId: '',
+    leadName: '',
+    workType: '',
+    date: new Date().toISOString().split('T')[0],
+    note: '',
+    status: 'DRAFT',
+    bomName: '', // <-- Add bomName to formData
+  });
+
   const [specs, setSpecs] = useState<BOMSpec[]>([]);
   // Track edit state for spec names and item rows
   const [editingSpecId, setEditingSpecId] = useState<string | null>(null);
@@ -311,6 +311,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       [name]: value,
     }));
 
+
     // Real-time validation for header fields
     const updatedFormData = { ...formData, [name]: value };
     const errors = validateBOMHeader(updatedFormData);
@@ -324,6 +325,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
           ...prev,
           leadName: selectedLead.projectName,
           workType: selectedLead.workType,
+          bomName: `${selectedLead.projectName} - BOM `,
         }));
       }
     }
@@ -662,7 +664,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     setIsSubmitting(true);
     try {
       const bomPayload = {
-        name: formData.leadName,
+        name: formData.bomName, // Use bomName here
         leadId: formData.leadId,
         date: formData.date,
         workType: formData.workType,
@@ -1141,6 +1143,22 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                     {headerErrors.leadId}
                   </p>
                 )}
+              </div>
+
+              {/* BOM Name Textfield */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  name="bomName"
+                  value={formData.bomName}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter BOM Name"
+                />
               </div>
 
               {formData.leadId && (

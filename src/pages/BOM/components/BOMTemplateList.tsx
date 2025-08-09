@@ -41,12 +41,11 @@ interface BOMTemplate {
 interface BOMTemplateListProps {
   selectedTemplate: BOMTemplate | null;
   onSelectTemplate: (template: BOMTemplate) => void;
+  screenRefresh: number;
 }
 
-const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
-  selectedTemplate,
-  onSelectTemplate,
-}) => {
+const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onSelectTemplate, screenRefresh }) => {
+
   const [showBOMModal, setShowBOMModal] = useState(false);
   const [editTemplate, setEditTemplate] = useState<BOMTemplate | null>(null);
   const [deleteTemplate, setDeleteTemplate] = useState<BOMTemplate | null>(
@@ -93,7 +92,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
     };
 
     fetchTemplates();
-  }, []);
+  }, [screenRefresh]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

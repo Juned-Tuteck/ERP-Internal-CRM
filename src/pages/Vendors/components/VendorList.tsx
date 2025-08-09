@@ -12,6 +12,7 @@ import {
 export interface Vendor {
   id: string;
   name: string;
+  vendorNumber: string;
   category: string;
   type: string;
   location: string;

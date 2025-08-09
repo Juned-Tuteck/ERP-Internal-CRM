@@ -28,6 +28,7 @@ interface CreateBOMTemplateProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (templateData: any) => void;
+  setScreenRefresh: React.Dispatch<React.SetStateAction<number>>; // New prop to trigger screen refresh
   initialData?: {
     id?: string;
     workType: string;
@@ -64,7 +65,9 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  initialData, // <-- new prop
+  setScreenRefresh,
+  initialData // <-- new prop
+
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [method, setMethod] = useState<"manual" | "upload">("manual");
@@ -942,59 +945,42 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
     }
   };
 
-  const handleUploadTemplate = () => {
-    // In a real application, this would parse the CSV file
-    // For this demo, we'll just simulate a successful upload
-    if (csvFile) {
-      // Mock data after CSV upload
-      setFormData({
-        workType: "HVAC Systems",
-        name: "Uploaded HVAC Template",
-        description: "Automatically generated from CSV upload",
+  const handleUploadTemplate = async () => {
+    if (!csvFile) {
+      alert('Please select a file before uploading.');
+      return;
+    }
+
+    // Validate file type
+    const validExtensions = ['csv', 'xlsx', 'xls'];
+    const fileExtension = csvFile.name.split('.').pop()?.toLowerCase();
+    if (!fileExtension || !validExtensions.includes(fileExtension)) {
+      alert('Invalid file type. Please upload a .csv, .xlsx, or .xls file.');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('excelFile', csvFile);
+
+      // Make the API call
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom-template/process-excel`, {
+        method: 'POST',
+        body: formData,
       });
 
-      // Create a sample spec with items for CSV upload
-      const sampleSpec: Spec = {
-        id: Date.now().toString(),
-        name: "Uploaded HVAC Items",
-        isExpanded: true,
-        items: [
-          {
-            id: "101",
-            itemCode: "FAN-001",
-            itemName: "Industrial Exhaust Fan",
-            uomName: "Nos",
-            rate: 12500,
-            quantity: 4,
-            price: 50000,
-            materialType: "HIGH SIDE SUPPLY", // Default value
-          },
-          {
-            id: "102",
-            itemCode: "DUCT-001",
-            itemName: "Galvanized Steel Duct",
-            uomName: "Meter",
-            rate: 850,
-            quantity: 120,
-            price: 102000,
-            materialType: "HIGH SIDE SUPPLY", // Default value
-          },
-          {
-            id: "103",
-            itemCode: "FILTER-001",
-            itemName: "HEPA Filter",
-            uomName: "Nos",
-            rate: 4500,
-            quantity: 8,
-            price: 36000,
-            materialType: "HIGH SIDE SUPPLY", // Default value
-          },
-        ],
-      };
+      if (response.ok) {
+        alert('File processed successfully!');
+        onClose(); // Close the modal on success
+        setScreenRefresh(prev => prev + 1); 
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to process file: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('An error occurred while uploading the file. Please try again.');
 
-      setSpecs([sampleSpec]);
-
-      setCurrentStep(2);
     }
   };
 
@@ -1256,6 +1242,22 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset state when modal is closed
+      setFormData({
+        workType: '',
+        name: '',
+        description: '',
+      });
+      setSpecs([]);
+      setCsvFile(null);
+      setCurrentStep(1);
+      setMethod('manual');
+      setCreatedTemplateId(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -1503,45 +1505,44 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                       </div>
                     )}
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="space-y-6">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-sm text-gray-600 mb-2">
-                    Upload a CSV file to create a BOM template
-                  </p>
-                  <p className="text-xs text-gray-500 mb-4">
-                    The CSV must include columns for BOM Template Name, Work
-                    Type, Item Code, Quantity, and Description
-                  </p>
-                  <div className="flex flex-col items-center space-y-3">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="csv-upload"
-                    />
-                    <label
-                      htmlFor="csv-upload"
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                    >
-                      Choose File
-                    </label>
-                    {csvFile && (
-                      <div className="text-sm text-gray-900">
-                        Selected file: {csvFile.name}
-                      </div>
-                    )}
+                 )}
+            </>
+          ) : (
+            <div className="space-y-6">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-sm text-gray-600 mb-2">
+                  Upload a CSV file to create a BOM template
+                </p>
+                <p className="text-xs text-gray-500 mb-4">
+                  The CSV must include columns for BOM Template Name, Work Type, Item Code, Quantity, and Description
+                </p>
+                <div className="flex flex-col items-center space-y-3">
+                  <input
+                    type="file"
+                    accept=".csv, .xlsx, .xls"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="csv-upload"
+                  />
+                  <label
+                    htmlFor="csv-upload"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                  >
+                    Choose File
+                  </label>
+                  {csvFile && (
+                    <div className="text-sm text-gray-900">
+                      Selected file: {csvFile.name}
+                    </div>
+                  )}
                     <button
                       onClick={handleUploadTemplate}
                       disabled={!csvFile}
                       className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Template
+                       <Upload className="h-4 w-4 mr-2" />
+                    Upload Data For Template
                     </button>
                   </div>
                   <div className="mt-4">
@@ -1558,10 +1559,10 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                     </a>
                   </div>
                 </div>
+
               </div>
             )}
           </div>
-
           {/* Specification Modal */}
           {showSpecModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1574,6 +1575,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                     onClick={() => setShowSpecModal(false)}
                     className="text-gray-400 hover:text-gray-600"
                   >
+
                     <X className="h-5 w-5" />
                   </button>
                 </div>
