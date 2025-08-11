@@ -202,7 +202,15 @@ const Vendors: React.FC = () => {
           </div>
         </div>
       ) : (
-        <VendorApproval onApprovalAction={handleApprovalAction} />
+        <VendorApproval
+          onApprovalAction={handleApprovalAction}
+          onRefresh={async () => {
+            setLoading(true);
+            const data = await getAllVendors();
+            setVendors(data);
+            setLoading(false);
+          }}
+        />
       )}
 
       <AddVendorModal

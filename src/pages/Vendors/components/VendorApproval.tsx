@@ -18,10 +18,15 @@ interface VendorApprovalProps {
     action: "approve" | "reject",
     reason?: string
   ) => void;
+  onRefresh?: () => Promise<void>;
 }
 
-const VendorApproval: React.FC<VendorApprovalProps> = ({ onApprovalAction }) => {
+const VendorApproval: React.FC<VendorApprovalProps> = ({
+  onApprovalAction,
+  onRefresh,
+}) => {
   const [pendingVendors, setPendingVendors] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approve" | "reject">("approve");
@@ -34,10 +39,10 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({ onApprovalAction }) => 
         const response = await axios.get(`${baseURL}/vendor/`);
         console.log("Fetched vendors:", response.data.data);
         const filteredVendors = response.data.data?.filter(
-            (vendor: any) =>
-              !["APPROVED", "REJECTED"].includes(vendor.approval_status)
-          );
-          
+          (vendor: any) =>
+            !["APPROVED", "REJECTED"].includes(vendor.approval_status)
+        );
+
         const vendors = filteredVendors?.map((vendor: any) => ({
           id: vendor.vendor_id,
           vendorNumber: vendor.vendor_number || "-",
@@ -86,20 +91,37 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({ onApprovalAction }) => 
     if (selectedVendor) {
       try {
         const decision = actionType === "approve" ? "approved" : "rejected";
-        await axios.patch(`${baseURL}/vendor/${selectedVendor.id}/decision`, null, {
-          params: { status : decision },
-        });
+        await axios.patch(
+          `${baseURL}/vendor/${selectedVendor.id}/decision`,
+          null,
+          {
+            params: { status: decision },
+          }
+        );
         setPendingVendors((prev) =>
           prev.filter((vendor) => vendor.id !== selectedVendor.id)
         );
         setShowReasonModal(false);
         setReason("");
         setSelectedVendor(null);
+        if (typeof onRefresh === "function") {
+          await onRefresh();
+        }
       } catch (error) {
         console.error("Error updating vendor decision:", error);
       }
     }
   };
+
+  const filteredVendors = pendingVendors.filter((vendor) => {
+    const q = search.toLowerCase();
+    return (
+      vendor.businessName.toLowerCase().includes(q) ||
+      vendor.vendorNumber.toLowerCase().includes(q) ||
+      vendor.vendorType.toLowerCase().includes(q) ||
+      vendor.email.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -118,6 +140,16 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({ onApprovalAction }) => 
               <Clock className="h-4 w-4" />
               <span>Requires Procurement Head Approval</span>
             </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search vendors..."
+              className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
+              style={{ minWidth: 0 }}
+            />
           </div>
         </div>
 
@@ -143,7 +175,7 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({ onApprovalAction }) => 
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {pendingVendors.map((vendor) => (
+              {filteredVendors.map((vendor) => (
                 <tr key={vendor.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div>

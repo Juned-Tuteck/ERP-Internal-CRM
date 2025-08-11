@@ -41,6 +41,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
   const [viewBOMId, setViewBOMId] = React.useState<string | null>(null);
   const [showViewModal, setShowViewModal] = React.useState(false);
   const [refreshList, setRefreshList] = React.useState(0);
+  const [search, setSearch] = React.useState("");
 
   // Fetch BOMs from API
   useEffect(() => {
@@ -427,7 +428,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
         alert("File uploaded successfully!");
         setUploadModalOpen(false);
         setFile(null);
-        setRefreshList((prev) => prev + 1); 
+        setRefreshList((prev) => prev + 1);
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.message || "Failed to upload file"}`);
@@ -438,9 +439,19 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
     }
   };
 
+  const filteredBoms = boms.filter((bom) => {
+    const q = search.toLowerCase();
+    return (
+      (bom.leadName || "").toLowerCase().includes(q) ||
+      (bom.workType || "").toLowerCase().includes(q) ||
+      (bom.status || "").toLowerCase().includes(q) ||
+      (bom.bomNumber || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
             Bills of Materials
@@ -449,13 +460,23 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
             {loading ? "Loading..." : `${boms.length} total BOMs`}
           </p>
         </div>
-        <button
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          onClick={() => setUploadModalOpen(true)}
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Excel
-        </button>
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search BOMs..."
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-60 h-10"
+            style={{ minWidth: 0 }}
+          />
+          <button
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            onClick={() => setUploadModalOpen(true)}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Excel
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -504,7 +525,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {boms.map((bom) => (
+              {filteredBoms.map((bom) => (
                 <tr
                   key={bom.id}
                   className={`hover:bg-gray-50 cursor-pointer ${
