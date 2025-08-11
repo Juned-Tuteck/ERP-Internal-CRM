@@ -1,56 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  Search,
+} from "lucide-react";
+import axios from "axios";
 
 interface LeadApprovalProps {
-  onApprovalAction: (leadId: string, action: 'approved' | 'rejected', reason?: string) => void;
+  onApprovalAction: (
+    leadId: string,
+    action: "approved" | "rejected",
+    reason?: string
+  ) => void;
 }
 
 const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
-  const [actionType, setActionType] = useState<'approved' | 'rejected'>('approved');
-  const [reason, setReason] = useState('');
+  const [actionType, setActionType] = useState<"approved" | "rejected">(
+    "approved"
+  );
+  const [reason, setReason] = useState("");
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter leads based on search term
+  const filteredLeads = leads.filter((lead) => {
+    if (!searchTerm) return true;
+
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      lead.projectName.toLowerCase().includes(searchLower) ||
+      lead.businessName.toLowerCase().includes(searchLower) ||
+      lead.contactPerson.toLowerCase().includes(searchLower) ||
+      lead.leadType.toLowerCase().includes(searchLower) ||
+      lead.workType.toLowerCase().includes(searchLower) ||
+      lead.leadCriticality.toLowerCase().includes(searchLower) ||
+      lead.leadStage.toLowerCase().includes(searchLower) ||
+      lead.submittedBy.toLowerCase().includes(searchLower) ||
+      lead.projectValue.toLowerCase().includes(searchLower) ||
+      lead.leadDetails.toLowerCase().includes(searchLower) ||
+      lead.approvalStatus.toLowerCase().includes(searchLower) ||
+      lead.eta?.toLowerCase().includes(searchLower) ||
+      lead.approximateResponseTime.toLowerCase().includes(searchLower)
+    );
+  });
 
   // Fetch leads from API
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/lead/`);
-        const apiLeads = response.data.data;
-        console.log('Fetched leads for approval:', apiLeads);
-        
-        // Filter leads that need approval (not already approved or rejected)
-        const pendingLeads = apiLeads.filter((apiLead: any) => 
-          apiLead.approval_status !== 'APPROVED' && apiLead.approval_status !== 'REJECTED'
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/lead/`
         );
-        console.log('Pending leads for approval:', pendingLeads);
+        const apiLeads = response.data.data;
+        console.log("Fetched leads for approval:", apiLeads);
+
+        // Filter leads that need approval (not already approved or rejected)
+        const pendingLeads = apiLeads.filter(
+          (apiLead: any) =>
+            apiLead.approval_status !== "APPROVED" &&
+            apiLead.approval_status !== "REJECTED"
+        );
+        console.log("Pending leads for approval:", pendingLeads);
 
         // Map API response to UI format
         const mappedLeads = pendingLeads.map((apiLead: any) => ({
-          id: apiLead.lead_id?.toString() || '',
-          projectName: apiLead.project_name || '',
-          businessName: apiLead.business_name || '',
-          contactPerson: apiLead.contact_person || '',
-          projectValue: `₹${(apiLead.project_value || 0).toLocaleString('en-IN')}`,
-          leadType: apiLead.lead_type || '',
-          leadCriticality: apiLead.lead_criticality || '',
-          leadStage: apiLead.lead_stage || '',
-          submittedBy: apiLead.created_by || 'Unknown',
-          submittedDate: apiLead.created_at || '',
-          leadDetails: apiLead.lead_details || '',
-          workType: apiLead.work_type || '',
-          eta: apiLead.eta || '',
-          approximateResponseTime: apiLead.approximate_response_time_day?.toString() || '0',
-          approvalStatus: apiLead.approval_status || 'PENDING',
-          involvedAssociates: []
+          id: apiLead.lead_id?.toString() || "",
+          projectName: apiLead.project_name || "",
+          businessName: apiLead.business_name || "",
+          contactPerson: apiLead.contact_person || "",
+          projectValue: `₹${(apiLead.project_value || 0).toLocaleString(
+            "en-IN"
+          )}`,
+          leadType: apiLead.lead_type || "",
+          leadCriticality: apiLead.lead_criticality || "",
+          leadStage: apiLead.lead_stage || "",
+          submittedBy: apiLead.created_by || "Unknown",
+          submittedDate: apiLead.created_at || "",
+          leadDetails: apiLead.lead_details || "",
+          workType: apiLead.work_type || "",
+          eta: apiLead.eta || "",
+          approximateResponseTime:
+            apiLead.approximate_response_time_day?.toString() || "0",
+          approvalStatus: apiLead.approval_status || "PENDING",
+          involvedAssociates: [],
         }));
-        
+
         setLeads(mappedLeads);
       } catch (error) {
-        console.error('Error fetching leads:', error);
+        console.error("Error fetching leads:", error);
       } finally {
         setLoading(false);
       }
@@ -61,33 +103,33 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
 
   const getCriticalityColor = (criticality: string) => {
     switch (criticality) {
-      case 'Critical':
-        return 'bg-red-100 text-red-800';
-      case 'High':
-        return 'bg-orange-100 text-orange-800';
-      case 'Medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Low':
-        return 'bg-green-100 text-green-800';
+      case "Critical":
+        return "bg-red-100 text-red-800";
+      case "High":
+        return "bg-orange-100 text-orange-800";
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "Low":
+        return "bg-green-100 text-green-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case 'New Lead':
-        return 'bg-blue-100 text-blue-800';
-      case 'Qualified':
-        return 'bg-purple-100 text-purple-800';
-      case 'Meeting':
-        return 'bg-indigo-100 text-indigo-800';
+      case "New Lead":
+        return "bg-blue-100 text-blue-800";
+      case "Qualified":
+        return "bg-purple-100 text-purple-800";
+      case "Meeting":
+        return "bg-indigo-100 text-indigo-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const handleApprovalClick = (lead: any, action: 'approved' | 'rejected') => {
+  const handleApprovalClick = (lead: any, action: "approved" | "rejected") => {
     setSelectedLead(lead);
     setActionType(action);
     setShowReasonModal(true);
@@ -97,27 +139,28 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
     if (selectedLead) {
       try {
         // Call PUT API to update lead decision
-        const approved = actionType === 'approved' ? 'approved' : 'rejected';
+        const approved = actionType === "approved" ? "approved" : "rejected";
         const response = await axios.patch(
-          `${import.meta.env.VITE_API_BASE_URL}/lead/decision/${selectedLead.id}?status=${approved}`
+          `${import.meta.env.VITE_API_BASE_URL}/lead/decision/${
+            selectedLead.id
+          }?status=${approved}`
         );
 
-        console.log('Lead decision updated successfully:', response.data);
-        
+        console.log("Lead decision updated successfully:", response.data);
+
         // Call the original callback
         onApprovalAction(selectedLead.id, actionType, reason);
-        
+
         // Close modal and reset form
         setShowReasonModal(false);
-        setReason('');
+        setReason("");
         setSelectedLead(null);
 
         // Optionally refresh the leads list
         // You might want to call fetchLeads() here to refresh the data
-        
       } catch (error) {
-        console.error('Error updating lead decision:', error);
-        alert('Failed to update lead decision. Please try again.');
+        console.error("Error updating lead decision:", error);
+        alert("Failed to update lead decision. Please try again.");
       }
     }
   };
@@ -128,14 +171,34 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Pending Lead Approvals</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Pending Lead Approvals
+              </h3>
               <p className="text-sm text-gray-500">
-                {loading ? 'Loading...' : `${leads.length} leads awaiting approval`}
+                {loading
+                  ? "Loading..."
+                  : `${filteredLeads.length} leads awaiting approval`}
               </p>
             </div>
             <div className="flex items-center space-x-2 text-sm text-amber-600">
               <Clock className="h-4 w-4" />
               <span>Requires Manager Approval</span>
+            </div>
+          </div>
+
+          {/* Search Bar - Right Aligned */}
+          <div className="mt-3 flex justify-end">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-3 w-3 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search leads..."
+                className="block w-48 pl-9 pr-3 py-1.5 border border-gray-300 rounded-md leading-4 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
         </div>
@@ -145,9 +208,11 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
             <div className="p-8 text-center text-gray-500">
               Loading leads...
             </div>
-          ) : leads.length === 0 ? (
+          ) : filteredLeads.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No leads pending approval
+              {searchTerm
+                ? "No leads match your search criteria"
+                : "No leads pending approval"}
             </div>
           ) : (
             <table className="min-w-full divide-y divide-gray-200">
@@ -171,17 +236,27 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {leads.map((lead) => (
+                {filteredLeads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{lead.projectName}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {lead.projectName}
+                        </p>
                         <p className="text-sm text-gray-600">{lead.workType}</p>
                         <div className="flex items-center space-x-2 mt-1">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStageColor(lead.leadStage)}`}>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStageColor(
+                              lead.leadStage
+                            )}`}
+                          >
                             {lead.leadStage}
                           </span>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCriticalityColor(lead.leadCriticality)}`}>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCriticalityColor(
+                              lead.leadCriticality
+                            )}`}
+                          >
                             {lead.leadCriticality}
                           </span>
                         </div>
@@ -189,16 +264,29 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{lead.businessName}</p>
-                        <p className="text-sm text-gray-600">{lead.contactPerson}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {lead.businessName}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {lead.contactPerson}
+                        </p>
                         <p className="text-xs text-gray-500">{lead.leadType}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-medium text-green-600">{lead.projectValue}</p>
-                        <p className="text-xs text-gray-500">ETA: {lead.eta ? new Date(lead.eta).toLocaleDateString('en-IN') : 'N/A'}</p>
-                        <p className="text-xs text-gray-500">Response: {lead.approximateResponseTime} days</p>
+                        <p className="text-sm font-medium text-green-600">
+                          {lead.projectValue}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ETA:{" "}
+                          {lead.eta
+                            ? new Date(lead.eta).toLocaleDateString("en-IN")
+                            : "N/A"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Response: {lead.approximateResponseTime} days
+                        </p>
                       </div>
                     </td>
                     {/* <td className="px-6 py-4">
@@ -211,17 +299,22 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                     </td> */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
-                        {lead.approvalStatus !== 'APPROVED' && lead.approvalStatus !== 'REJECTED' ? (
+                        {lead.approvalStatus !== "APPROVED" &&
+                        lead.approvalStatus !== "REJECTED" ? (
                           <>
                             <button
-                              onClick={() => handleApprovalClick(lead, 'approved')}
+                              onClick={() =>
+                                handleApprovalClick(lead, "approved")
+                              }
                               className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
                             >
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Approve
                             </button>
                             <button
-                              onClick={() => handleApprovalClick(lead, 'rejected')}
+                              onClick={() =>
+                                handleApprovalClick(lead, "rejected")
+                              }
                               className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
                             >
                               <XCircle className="h-3 w-3 mr-1" />
@@ -229,11 +322,13 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                             </button>
                           </>
                         ) : (
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            lead.approvalStatus === 'APPROVED' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              lead.approvalStatus === "APPROVED"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {lead.approvalStatus}
                           </span>
                         )}
@@ -252,7 +347,9 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Lead Details</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Lead Details
+              </h3>
               <button
                 onClick={() => setSelectedLead(null)}
                 className="text-gray-400 hover:text-gray-600"
@@ -260,66 +357,113 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                 <XCircle className="h-6 w-6" />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Project Name</label>
-                    <p className="text-sm text-gray-900">{selectedLead.projectName}</p>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Project Name
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.projectName}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Project Value</label>
-                    <p className="text-sm text-green-600 font-medium">{selectedLead.projectValue}</p>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Project Value
+                    </label>
+                    <p className="text-sm text-green-600 font-medium">
+                      {selectedLead.projectValue}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Business Name</label>
-                    <p className="text-sm text-gray-900">{selectedLead.businessName}</p>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Business Name
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.businessName}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Contact Person</label>
-                    <p className="text-sm text-gray-900">{selectedLead.contactPerson}</p>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Contact Person
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.contactPerson}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Lead Type</label>
-                    <p className="text-sm text-gray-900">{selectedLead.leadType}</p>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Lead Type
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.leadType}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Work Type</label>
-                    <p className="text-sm text-gray-900">{selectedLead.workType}</p>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Work Type
+                    </label>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.workType}
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Criticality</label>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCriticalityColor(selectedLead.leadCriticality)}`}>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Criticality
+                    </label>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCriticalityColor(
+                        selectedLead.leadCriticality
+                      )}`}
+                    >
                       {selectedLead.leadCriticality}
                     </span>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Current Stage</label>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStageColor(selectedLead.leadStage)}`}>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Current Stage
+                    </label>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStageColor(
+                        selectedLead.leadStage
+                      )}`}
+                    >
                       {selectedLead.leadStage}
                     </span>
                   </div>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Lead Details</label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedLead.leadDetails}</p>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Lead Details
+                  </label>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {selectedLead.leadDetails}
+                  </p>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Involved Associates</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Involved Associates
+                  </label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {selectedLead.involvedAssociates.map((associate: string, index: number) => (
-                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {associate}
-                      </span>
-                    ))}
+                    {selectedLead.involvedAssociates.map(
+                      (associate: string, index: number) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {associate}
+                        </span>
+                      )
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
               <button
                 onClick={() => setSelectedLead(null)}
@@ -328,14 +472,14 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                 Close
               </button>
               <button
-                onClick={() => handleApprovalClick(selectedLead, 'rejected')}
+                onClick={() => handleApprovalClick(selectedLead, "rejected")}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700"
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Reject
               </button>
               <button
-                onClick={() => handleApprovalClick(selectedLead, 'approved')}
+                onClick={() => handleApprovalClick(selectedLead, "approved")}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -352,7 +496,7 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                {actionType === 'approved' ? 'Approve Lead' : 'Reject Lead'}
+                {actionType === "approved" ? "Approve Lead" : "Reject Lead"}
               </h3>
               <button
                 onClick={() => setShowReasonModal(false)}
@@ -361,10 +505,10 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                 <XCircle className="h-6 w-6" />
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="flex items-center space-x-3 mb-4">
-                {actionType === 'approved' ? (
+                {actionType === "approved" ? (
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 ) : (
                   <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -374,26 +518,34 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                     {selectedLead?.projectName}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {actionType === 'approved' ? 'Approve this lead for further processing?' : 'Reject this lead?'}
+                    {actionType === "approved"
+                      ? "Approve this lead for further processing?"
+                      : "Reject this lead?"}
                   </p>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {actionType === 'approved' ? 'Approval Notes (Optional)' : 'Rejection Reason *'}
+                  {actionType === "approved"
+                    ? "Approval Notes (Optional)"
+                    : "Rejection Reason *"}
                 </label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={3}
-                  required={actionType === 'rejected'}
-                  placeholder={actionType === 'approved' ? 'Add any notes...' : 'Please provide reason for rejection...'}
+                  required={actionType === "rejected"}
+                  placeholder={
+                    actionType === "approved"
+                      ? "Add any notes..."
+                      : "Please provide reason for rejection..."
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
               <button
                 onClick={() => setShowReasonModal(false)}
@@ -403,14 +555,14 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
               </button>
               <button
                 onClick={handleConfirmAction}
-                disabled={actionType === 'rejected' && !reason.trim()}
+                disabled={actionType === "rejected" && !reason.trim()}
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  actionType === 'approved' 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-red-600 hover:bg-red-700'
+                  actionType === "approved"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
                 } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
-                {actionType === 'approved' ? (
+                {actionType === "approved" ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Approve Lead

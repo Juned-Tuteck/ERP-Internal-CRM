@@ -3,13 +3,10 @@ import { useState, useEffect } from "react";
 import {
   FileSpreadsheet,
   Calendar,
-  Tag,
   Edit,
-  Trash2,
-  Download,
   CheckCircle,
   XCircle,
-  Building2,
+  Search,
 } from "lucide-react";
 import { getQuotations } from "../../../utils/quotationApi";
 
@@ -41,7 +38,52 @@ const QuotationList: React.FC<QuotationListProps> = ({
   refreshKey,
 }) => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [filteredQuotations, setFilteredQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter quotations based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredQuotations(quotations);
+    } else {
+      const filtered = quotations.filter((quotation) => {
+        const searchLower = searchTerm.toLowerCase();
+
+        // Format dates for searching
+        const createdDateFormatted = new Date(quotation.createdDate)
+          .toLocaleDateString("en-IN")
+          .toLowerCase();
+        const expiryDateFormatted = new Date(quotation.expiryDate)
+          .toLocaleDateString("en-IN")
+          .toLowerCase();
+
+        // Also include alternate date formats for better search experience
+        const createdDateISO = quotation.createdDate.toLowerCase();
+        const expiryDateISO = quotation.expiryDate.toLowerCase();
+
+        return (
+          quotation.leadName.toLowerCase().includes(searchLower) ||
+          quotation.businessName.toLowerCase().includes(searchLower) ||
+          (quotation.quotationNumber?.toLowerCase() || "").includes(
+            searchLower
+          ) ||
+          (quotation.leadNumber?.toLowerCase() || "").includes(searchLower) ||
+          (quotation.bomNumber?.toLowerCase() || "").includes(searchLower) ||
+          quotation.workType.toLowerCase().includes(searchLower) ||
+          (quotation.leadType?.toLowerCase() || "").includes(searchLower) ||
+          quotation.totalValue.toLowerCase().includes(searchLower) ||
+          quotation.createdBy.toLowerCase().includes(searchLower) ||
+          quotation.status.toLowerCase().includes(searchLower) ||
+          createdDateFormatted.includes(searchLower) ||
+          expiryDateFormatted.includes(searchLower) ||
+          createdDateISO.includes(searchLower) ||
+          expiryDateISO.includes(searchLower)
+        );
+      });
+      setFilteredQuotations(filtered);
+    }
+  }, [quotations, searchTerm]);
 
   // Fetch quotations from API
   useEffect(() => {
@@ -76,9 +118,11 @@ const QuotationList: React.FC<QuotationListProps> = ({
         );
 
         setQuotations(mappedQuotations);
+        setFilteredQuotations(mappedQuotations);
       } catch (error) {
         console.error("Error fetching quotations:", error);
         setQuotations([]);
+        setFilteredQuotations([]);
       } finally {
         setLoading(false);
       }
@@ -158,8 +202,24 @@ const QuotationList: React.FC<QuotationListProps> = ({
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">All Quotations</h3>
         <p className="text-sm text-gray-500">
-          {loading ? "Loading..." : `${quotations.length} total quotations`}
+          {loading
+            ? "Loading..."
+            : `${filteredQuotations.length} of ${quotations.length} quotations`}
         </p>
+
+        {/* Search Bar */}
+        <div className="mt-3 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            placeholder="Search quotations by name, business, quotation number, lead number, BOM number, work type, lead type, value, created by, status, or dates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -168,7 +228,7 @@ const QuotationList: React.FC<QuotationListProps> = ({
         </div>
       ) : (
         <div className="p-4 space-y-4">
-          {quotations.map((quotation) => (
+          {filteredQuotations.map((quotation) => (
             <div
               key={quotation.id}
               className={`relative p-4 rounded-lg border cursor-pointer hover:shadow-md ${
@@ -237,9 +297,11 @@ const QuotationList: React.FC<QuotationListProps> = ({
               </div>
             </div>
           ))}
-          {quotations.length === 0 && !loading && (
+          {filteredQuotations.length === 0 && !loading && (
             <div className="text-sm text-gray-500 text-center">
-              No quotations found
+              {searchTerm
+                ? "No quotations match your search"
+                : "No quotations found"}
             </div>
           )}
         </div>
