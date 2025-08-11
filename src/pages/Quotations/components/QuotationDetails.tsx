@@ -629,20 +629,27 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                 <Printer className="h-3 w-3 mr-1" />
                 Print
               </button> */}
-              <button 
-                onClick={() => setIsEditModalOpen(true)}
-                className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Edit
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50"
-              >
-                <Trash2 className="h-3 w-3 mr-1" />
-                Delete
-              </button>
+              {console.log("Qutation ------", quotation)}
+              {(quotation.status === "pending" ||
+                quotation.status === "draft") && (
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
+                >
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </button>
+              )}
+              {/* {(quotation.status === "pending" ||
+                quotation.status === "draft") && (
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Delete
+                </button>
+              )} */}
             </div>
           </div>
         </div>

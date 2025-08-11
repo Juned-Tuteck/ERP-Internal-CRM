@@ -237,30 +237,36 @@ const VendorDetails: React.FC<
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  console.log("Edit button clicked");
-                  setIsEditModalOpen(true);
-                }}
-                className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
-                title="Edit Vendor"
-              >
-                <SquarePen className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setIsDeactivateModalOpen(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
-                title="Deactivate Vendor"
-              >
-                <Power className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
-                title="Delete Vendor"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
+              {vendor.status === "PENDING" && (
+                <button
+                  onClick={() => {
+                    console.log("Edit button clicked");
+                    setIsEditModalOpen(true);
+                  }}
+                  className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                  title="Edit Vendor"
+                >
+                  <SquarePen className="h-5 w-5" />
+                </button>
+              )}
+              {vendor.status === "PENDING" && (
+                <button
+                  onClick={() => setIsDeactivateModalOpen(true)}
+                  className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
+                  title="Deactivate Vendor"
+                >
+                  <Power className="h-5 w-5" />
+                </button>
+              )}
+              {/* {vendor.status === "PENDING" && (
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="rounded-full p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
+                  title="Delete Vendor"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              )} */}
             </div>
             {/* Edit Vendor Modal (AddVendorModal in edit mode) */}
             {isEditModalOpen &&
