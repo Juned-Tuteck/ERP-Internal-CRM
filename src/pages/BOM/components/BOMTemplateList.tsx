@@ -107,7 +107,6 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
       (template.templateNumber?.toLowerCase?.() || "").includes(q)
     );
   });
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -318,12 +317,12 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                 >
                   Items
                 </th>
-                <th
+                {/* <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Status
-                </th>
+                </th> */}
                 <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -374,12 +373,12 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {template.itemCount} items
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {template.createdBy}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  </td> */}
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
                         template.status
@@ -387,7 +386,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                     >
                       {template.status}
                     </span>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button

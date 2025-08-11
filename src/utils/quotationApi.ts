@@ -174,3 +174,14 @@ export const updateQuotationPOCExpense = async (
   );
   return response.data;
 };
+
+// Update quotation approval status (approve/reject)
+export const updateQuotationDecision = async (
+  id: string,
+  status: "APPROVED" | "REJECTED"
+) => {
+  const response = await axios.patch(
+    `${API_BASE_URL}/customer-quotation-approval/${id}/decision?status=${status}`
+  );
+  return response.data;
+};
