@@ -20,11 +20,11 @@ export const getVendorById = async (vendorId: string): Promise<any> => {
     email: v.email,
     joinDate: v.created_at,
     status:
-      v.approval_status === "approved"
-        ? "active"
-        : v.approval_status === "rejected"
-        ? "inactive"
-        : "pending",
+      String(v.approval_status).toLowerCase() === "approved"
+        ? "APPROVED"
+        : String(v.approval_status).toLowerCase() === "rejected"
+        ? "REJECTED"
+        : "PENDING",
     avatar: v.business_name
       ? v.business_name
           .split(" ")
@@ -104,9 +104,12 @@ export const deactivateVendor = async (vendorId: string): Promise<any> => {
 };
 
 export const getAllVendors = async (): Promise<Vendor[]> => {
-  const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/vendor`, {
-    headers: { "Cache-Control": "no-cache" },
-  });
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/vendor`,
+    {
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
   // Map backend fields to frontend Vendor interface
   const backendVendors = response.data?.data || [];
   return backendVendors.map((v: any) => ({
@@ -121,11 +124,11 @@ export const getAllVendors = async (): Promise<Vendor[]> => {
     email: v.email,
     joinDate: v.created_at,
     status:
-      v.approval_status === "approved"
-        ? "active"
-        : v.approval_status === "rejected"
-        ? "inactive"
-        : "pending",
+      String(v.approval_status).toLowerCase() === "approved"
+        ? "APPROVED"
+        : String(v.approval_status).toLowerCase() === "rejected"
+        ? "REJECTED"
+        : "PENDING",
     avatar: v.business_name
       ? v.business_name
           .split(" ")

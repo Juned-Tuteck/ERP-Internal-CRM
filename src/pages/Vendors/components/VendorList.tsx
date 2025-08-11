@@ -20,7 +20,7 @@ export interface Vendor {
   phone: string;
   email: string;
   joinDate: string;
-  status: "active" | "inactive" | "pending";
+  status: "APPROVED" | "REJECTED" | "PENDING";
   avatar: string;
 }
 
@@ -37,11 +37,11 @@ const VendorList: React.FC<VendorListProps> = ({
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
+      case "APPROVED":
         return "bg-green-100 text-green-800";
-      case "inactive":
+      case "REJECTED":
         return "bg-red-100 text-red-800";
-      case "pending":
+      case "PENDING":
         return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -65,16 +65,38 @@ const VendorList: React.FC<VendorListProps> = ({
     }
   };
 
+  const [search, setSearch] = React.useState("");
+  const filteredVendors = vendors.filter((vendor) => {
+    const q = search.toLowerCase();
+    return (
+      vendor.name.toLowerCase().includes(q) ||
+      vendor.vendorNumber.toLowerCase().includes(q) ||
+      vendor.category.toLowerCase().includes(q) ||
+      vendor.type.toLowerCase().includes(q) ||
+      vendor.status.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">All Vendors</h3>
         <p className="text-sm text-gray-500">{vendors.length} total vendors</p>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search vendors..."
+          className="mt-2 w-full border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
 
-      <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-        {Array.isArray(vendors) && vendors.length > 0 ? (
-          vendors.map((vendor) => (
+      <div
+        className="divide-y divide-gray-200 overflow-y-auto"
+        style={{ height: 330 }}
+      >
+        {Array.isArray(filteredVendors) && filteredVendors.length > 0 ? (
+          filteredVendors.map((vendor) => (
             <div
               key={vendor.id}
               onClick={() => onSelectVendor(vendor)}
@@ -106,7 +128,7 @@ const VendorList: React.FC<VendorListProps> = ({
                     </span>
                   </div>
                   <p className="text-xs font-bold text-blue-600 truncate">
-                    Vendor : {vendor.vendorNumber || '-'}
+                    Vendor : {vendor.vendorNumber || "-"}
                   </p>
                   <div className="flex items-center mt-1">
                     <span

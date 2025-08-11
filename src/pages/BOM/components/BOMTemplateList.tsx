@@ -45,8 +45,11 @@ interface BOMTemplateListProps {
   screenRefresh: number;
 }
 
-const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onSelectTemplate, screenRefresh }) => {
-
+const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
+  selectedTemplate,
+  onSelectTemplate,
+  screenRefresh,
+}) => {
   const [showBOMModal, setShowBOMModal] = useState(false);
   const [editTemplate, setEditTemplate] = useState<BOMTemplate | null>(null);
   const [deleteTemplate, setDeleteTemplate] = useState<BOMTemplate | null>(
@@ -57,6 +60,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
   const [loading, setLoading] = useState(true);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewTemplateId, setViewTemplateId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   // Fetch BOM templates from API
   useEffect(() => {
@@ -94,6 +98,15 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
 
     fetchTemplates();
   }, [screenRefresh]);
+
+  const filteredTemplates = templates.filter((template) => {
+    const q = search.toLowerCase();
+    return (
+      template.name.toLowerCase().includes(q) ||
+      template.workType.toLowerCase().includes(q) ||
+      (template.templateNumber?.toLowerCase?.() || "").includes(q)
+    );
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -230,9 +243,12 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
 
   const handleExport = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/bom-template/export/excel`, {
-        responseType: "blob", // Ensure the response is treated as a file
-      });
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/bom-template/export/excel`,
+        {
+          responseType: "blob", // Ensure the response is treated as a file
+        }
+      );
 
       // Create a URL for the downloaded file
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -250,19 +266,29 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">BOM Templates</h3>
           <p className="text-sm text-gray-500">
             {loading ? "Loading..." : `${templates.length} total templates`}
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-        >
-          Export Templates
-        </button>
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search templates..."
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-60 h-10"
+            style={{ minWidth: 0 }}
+          />
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Export Templates
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -307,7 +333,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {templates.map((template) => (
+              {filteredTemplates.map((template) => (
                 <tr
                   key={template.id}
                   className={`hover:bg-gray-50 cursor-pointer ${
@@ -390,7 +416,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({ selectedTemplate, onS
                   </td>
                 </tr>
               ))}
-              {templates.length === 0 && !loading && (
+              {filteredTemplates.length === 0 && !loading && (
                 <tr>
                   <td
                     colSpan={5}
