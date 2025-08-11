@@ -30,6 +30,7 @@ interface Item {
 interface BOMTemplate {
   id: string;
   name: string;
+  templateNumber?: string;
   workType: string;
   itemCount: number;
   createdBy: string;
@@ -37,6 +38,7 @@ interface BOMTemplate {
   status: "active" | "inactive" | "draft";
   items: Item[];
   description?: string;
+  specs?: any[];
 }
 
 interface BOMTemplateListProps {
@@ -175,15 +177,21 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
 
       const items: any[] = specs.flatMap((spec: any) => spec.items);
 
-      const editTemplate = {
+      const editTemplate: BOMTemplate = {
         id: apiData.id,
         workType: workTypeMap[apiData.work_type] || apiData.work_type || "",
         name: apiData.name || "",
         description: apiData.reason || "",
         specs,
         items,
-        status: apiData.is_active ? "active" : "inactive",
+        status: (apiData.is_active ? "active" : "inactive") as
+          | "active"
+          | "inactive"
+          | "draft",
         createdDate: apiData.created_at,
+        templateNumber: apiData.bom_template_number,
+        itemCount: items.length,
+        createdBy: "System",
       };
 
       setEditTemplate(editTemplate);
@@ -213,12 +221,14 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
             (template: any) => ({
               id: template.id,
               name: template.name,
-              workType: template.workType,
+              templateNumber: template.bom_template_number,
+              workType: template.work_type,
               itemCount: 0,
               createdBy: "System",
               createdDate: template.created_at || new Date().toISOString(),
               status: template.is_active ? "active" : "inactive",
               items: [],
+              description: template.reason || "",
             })
           );
           setTemplates(mappedTemplates);
@@ -446,7 +456,22 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
         isOpen={showBOMModal}
         onClose={handleCloseModal}
         onSubmit={handleSubmitTemplate}
-        initialData={editTemplate}
+        setScreenRefresh={() => {}}
+        initialData={
+          editTemplate
+            ? {
+                id: editTemplate.id,
+                workType: editTemplate.workType,
+                name: editTemplate.name,
+                description: editTemplate.description || "",
+                items: editTemplate.items as any,
+                status: editTemplate.status,
+                createdDate: editTemplate.createdDate,
+                specs: editTemplate.specs,
+                templateNumber: editTemplate.templateNumber,
+              }
+            : undefined
+        }
       />
 
       {showDeleteModal && deleteTemplate && (
