@@ -413,12 +413,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             const response = await axios.get(
               `${import.meta.env.VITE_API_BASE_URL}/customer`
             );
+
             const customerData = response.data.data.map((customer: any) => ({
               id: customer.customer_id,
               name: customer.business_name,
             }));
-            setCustomers(customerData);
-            const selectedCustomer = customerData.find(
+            console.log("Customer DATA **********", customerData);
+            const approvedCustomers = customerData.filter(
+              (customer: any) => customer.approval_status === "APPROVED"
+            );
+            console.log("Approved Customers:", approvedCustomers);
+            setCustomers(approvedCustomers);
+            const selectedCustomer = approvedCustomers.find(
               (customer: any) => customer.name === initialData.businessName
             );
             if (selectedCustomer) {
@@ -491,8 +497,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         `${import.meta.env.VITE_API_BASE_URL}/customer`
       );
       const customerData = response.data.data;
+
+      console.log("Customer DATA **********", customerData);
+      const approvedCustomers = customerData.filter(
+        (customer: any) => customer.approval_status === "APPROVED"
+      );
+      console.log("Approved Customers:", approvedCustomers);
+
       setCustomers(
-        customerData.map((customer: any) => ({
+        approvedCustomers.map((customer: any) => ({
           id: customer.customer_id,
           name: customer.business_name,
         }))

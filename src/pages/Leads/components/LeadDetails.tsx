@@ -114,6 +114,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           involvedAssociates: lead.involvedAssociates || [],
           uploadedFiles: lead.uploadedFiles || [],
           followUpComments: lead.followUpComments || [],
+          leadNumber: apiLead.lead_number || lead.leadNumber,
+          customerNumber: apiLead.customer_number || lead.customerNumber,
         };
 
         setLeadDetails(mappedLead);
@@ -322,7 +324,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <p className="text-sm font-bold text-blue-600">
                     Lead : {displayLead.leadNumber || "-"}
                   </p>
-                  <p className="text-sm font-bold text-green-600">
+                  <p className="text-sm font-bold text-blue-400">
                     Customer : {displayLead.customerNumber || "-"}
                   </p>
                 </div>

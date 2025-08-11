@@ -246,6 +246,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
           name: lead.project_name,
           businessName: lead.business_name,
           workType: lead.work_type,
+          approvalStatus: lead.approval_status,
         }));
 
         setLeads(mappedLeads);
@@ -890,11 +891,13 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
             )}
           >
             <option value="">Select Lead</option>
-            {leads.map((lead) => (
-              <option key={lead.id} value={lead.id}>
-                {lead.name}
-              </option>
-            ))}
+            {leads
+              .filter((lead) => lead.approvalStatus === "APPROVED")
+              .map((lead) => (
+                <option key={lead.id} value={lead.id}>
+                  {lead.name}
+                </option>
+              ))}
           </select>
           {loading && (
             <p className="text-xs text-blue-500 mt-1">Loading leads...</p>

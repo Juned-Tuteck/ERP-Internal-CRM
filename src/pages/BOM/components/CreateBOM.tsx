@@ -76,15 +76,18 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   const editMode = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
 
-  const [formData, setFormData] = useState(initialData || {
-    leadId: '',
-    leadName: '',
-    workType: '',
-    date: new Date().toISOString().split('T')[0],
-    note: '',
-    status: 'DRAFT',
-    bomName: '', // <-- Add bomName to formData
-  });
+  const [formData, setFormData] = useState(
+    initialData || {
+      leadId: "",
+      leadName: "",
+      workType: "",
+      date: new Date().toISOString().split("T")[0],
+      note: "",
+      status: "DRAFT",
+      bomName: "", // <-- Add bomName to formData
+      approvalStatus: "PENDING",
+    }
+  );
 
   const [specs, setSpecs] = useState<BOMSpec[]>([]);
   // Track edit state for spec names and item rows
@@ -167,6 +170,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
             [LEAD_KEY_MAP.project_name]: lead.project_name,
             [LEAD_KEY_MAP.work_type]: lead.work_type,
             [LEAD_KEY_MAP.business_name]: lead.business_name,
+            [LEAD_KEY_MAP.approval_status]: lead.approval_status,
           }));
 
           setLeads(mappedLeads);
@@ -280,6 +284,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       date: new Date().toISOString().split("T")[0],
       note: "",
       status: "DRAFT",
+      approvalStatus: "PENDING",
     });
     setSpecs([]);
     setEditingSpecId(null);
@@ -310,7 +315,6 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       ...prev,
       [name]: value,
     }));
-
 
     // Real-time validation for header fields
     const updatedFormData = { ...formData, [name]: value };
@@ -784,6 +788,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         date: new Date().toISOString().split("T")[0],
         note: "",
         status: "DRAFT",
+        approvalStatus: "PENDING",
       });
       setSpecs([]);
       setSelectedTemplate(null);
@@ -1132,11 +1137,13 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   }`}
                 >
                   <option value="">Select Lead</option>
-                  {leads.map((lead) => (
-                    <option key={lead.id} value={lead.id}>
-                      {lead.projectName}
-                    </option>
-                  ))}
+                  {leads
+                    .filter((lead) => lead.approvalStatus === "APPROVED")
+                    .map((lead) => (
+                      <option key={lead.id} value={lead.id}>
+                        {lead.projectName}
+                      </option>
+                    ))}
                 </select>
                 {headerErrors.leadId && (
                   <p className="mt-1 text-sm text-red-600">
