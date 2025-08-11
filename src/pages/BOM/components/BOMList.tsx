@@ -584,18 +584,25 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
-                        className="text-blue-600 hover:text-blue-900"
+                        className={`text-blue-600 hover:text-blue-900 ${
+                          bom.status === "approved" || bom.status === "rejected"
+                            ? "opacity-50 cursor-not-allowed pointer-events-none"
+                            : ""
+                        }`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEditClick(e, bom);
                         }}
+                        disabled={
+                          bom.status === "approved" || bom.status === "rejected"
+                        }
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button className="text-indigo-600 hover:text-indigo-900">
                         <Download className="h-4 w-4" />
                       </button>
-                      <button
+                      {/* <button
                         className="text-red-600 hover:text-red-900"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -603,7 +610,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </button> */}
                     </div>
                   </td>
                 </tr>

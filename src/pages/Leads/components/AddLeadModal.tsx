@@ -407,8 +407,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             initialData.involvedAssociates || initialData.lead_associates || [],
         });
         setUploadedFiles(initialData.uploadedFiles || []);
+        console.log(
+          "THE INITIAL DATA ____________________:::::: ",
+          initialData
+        );
         if (initialData.businessName && isOpen) {
           // Fetch customers and use the response directly
+          console.log("INSIDE THE MODAL :::::::::::::");
           try {
             const response = await axios.get(
               `${import.meta.env.VITE_API_BASE_URL}/customer`
@@ -417,6 +422,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             const customerData = response.data.data.map((customer: any) => ({
               id: customer.customer_id,
               name: customer.business_name,
+              approval_status: customer.approval_status,
             }));
             console.log("Customer DATA **********", customerData);
             const approvedCustomers = customerData.filter(
@@ -427,6 +433,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             const selectedCustomer = approvedCustomers.find(
               (customer: any) => customer.name === initialData.businessName
             );
+
+            console.log("THE SELECTED CUSTOMER:", selectedCustomer);
             if (selectedCustomer) {
               setSelectedCustomerId(selectedCustomer.id);
               // Fetch branches for this customer
@@ -710,10 +718,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
       // Optionally update associates, files, etc. here if needed
 
-      // Notify parent and close modal
-      onSubmit({ success: true, leadId: initialData.id });
-      setCurrentStep(1);
-      setCreatedLeadId(null);
+      // In edit mode, set the createdLeadId to existing lead ID for follow-up functionality
+      setCreatedLeadId(initialData.id);
+
+      // Move to next step instead of closing modal to allow follow-up comments
+      setCurrentStep(2);
       setFormData({
         businessName: "",
         customerBranch: "",
@@ -761,12 +770,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       }
     } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -837,11 +840,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   // Add follow-up comment API call
   const handleAddComment = async () => {
-    if (!newComment.trim() || !createdLeadId) return;
+    // Use createdLeadId for create mode or initialData.id for edit mode
+    const leadId = createdLeadId || (isEditMode && initialData?.id);
+
+    if (!newComment.trim() || !leadId) return;
 
     try {
       const commentPayload = {
-        lead_id: createdLeadId,
+        lead_id: leadId,
         comment: newComment.trim(),
       };
 
@@ -887,7 +893,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       });
     }
 
-    if (currentStep === 3 && createdLeadId) {
+    // Check if we have a valid lead ID (either from creation or edit mode)
+    const leadId = createdLeadId || (isEditMode && initialData?.id);
+
+    if (currentStep === 3 && leadId) {
       handleAddComment();
     } else {
       // Fallback for local comment addition (when not connected to API)
@@ -910,8 +919,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Get the appropriate lead ID
+    const leadId = createdLeadId || (isEditMode && initialData?.id);
+
     // Close modal and notify parent component
-    onSubmit({ success: true, leadId: createdLeadId });
+    onSubmit({ success: true, leadId: leadId });
 
     // Reset form
     setCurrentStep(1);
@@ -1013,7 +1025,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </h3>
             <p className="text-sm text-gray-500">
               {isEditMode
-                ? "Update lead information"
+                ? `Update lead information - Step ${currentStep} of 3`
                 : `Step ${currentStep} of 3`}
             </p>
           </div>
@@ -1032,14 +1044,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               <div key={step.id} className="flex items-center">
                 <button
                   type="button"
-                  disabled={!isEditMode}
+                  onClick={() => {
+                    if (isEditMode) {
+                      setCurrentStep(step.id);
+                    }
+                  }}
                   className={`flex items-center space-x-2 ${
                     currentStep === step.id
                       ? "text-blue-600"
                       : currentStep > step.id
                       ? "text-green-600"
                       : "text-gray-400"
-                  }`}
+                  } ${isEditMode ? "cursor-pointer hover:text-blue-700" : ""}`}
                 >
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -1749,7 +1765,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
         {/* Footer with navigation buttons */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200">
-          <div></div>
+          <div>
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(currentStep - 1)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Previous
+              </button>
+            )}
+          </div>
           {/* <button
             type="button"
             onClick={handlePrevious}
@@ -1770,15 +1797,35 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </button>
 
             {isEditMode ? (
-              <button
-                type="button"
-                onClick={handleUpdateLead}
-                disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "Saving..." : "Save"}
-              </button>
+              currentStep === 1 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={isLoading}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  {isLoading ? "Saving..." : "Next"}
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </button>
+              ) : currentStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(currentStep + 1)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  onClick={handleSubmit}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Update Complete
+                </button>
+              )
             ) : currentStep < 3 ? (
               <button
                 type="button"

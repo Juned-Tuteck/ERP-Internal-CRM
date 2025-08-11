@@ -389,19 +389,28 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               {/* Edit Button */}
               <button
                 onClick={() => setShowEditModal(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 transition"
+                className={`rounded-full p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 transition ${
+                  displayLead.approvalStatus === "approved" ||
+                  displayLead.approvalStatus === "rejected"
+                    ? "opacity-50 cursor-not-allowed pointer-events-none"
+                    : ""
+                }`}
                 title="Edit Lead"
+                disabled={
+                  displayLead.approvalStatus === "approved" ||
+                  displayLead.approvalStatus === "rejected"
+                }
               >
                 <Edit2 className="h-5 w-5" />
               </button>
               {/* Delete Button */}
-              <button
+              {/* <button
                 onClick={() => setShowDeleteModal(true)}
                 className="rounded-full p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 transition"
                 title="Delete Lead"
               >
                 <Trash2 className="h-5 w-5" />
-              </button>
+              </button> */}
               {/* Create Project Button */}
               {displayLead.leadStage === "Won" && (
                 <button
