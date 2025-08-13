@@ -10,6 +10,7 @@ export const BOM_KEY_MAP = {
   leadId: "lead_id",
   date: "bom_date",
   workType: "work_type",
+  approvalStatus: "approval_status",
 };
 
 export const LEAD_KEY_MAP = {
@@ -64,6 +65,7 @@ export const createBOM = async (bomData: any) => {
     [BOM_KEY_MAP.leadId]: bomData.leadId,
     [BOM_KEY_MAP.date]: bomData.date,
     [BOM_KEY_MAP.workType]: bomData.workType,
+    [BOM_KEY_MAP.approvalStatus]: bomData.approvalStatus,
   };
 
   const response = await axios.post(`${API_BASE_URL}/bom/`, payload);

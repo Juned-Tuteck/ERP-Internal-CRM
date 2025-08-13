@@ -330,6 +330,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
           leadName: selectedLead.projectName,
           workType: selectedLead.workType,
           bomName: `${selectedLead.projectName} - BOM `,
+          approvalStatus: "PENDING", 
         }));
       }
     }
@@ -672,6 +673,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         leadId: formData.leadId,
         date: formData.date,
         workType: formData.workType,
+        approvalStatus: "PENDING",
       };
 
       const response = await createBOM(bomPayload);
