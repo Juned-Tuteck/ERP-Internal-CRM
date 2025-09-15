@@ -80,7 +80,7 @@ const CustomerList: React.FC<CustomerListProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
+      case "approved":
         return "bg-green-100 text-green-800";
       case "inactive":
         return "bg-red-100 text-red-800";
