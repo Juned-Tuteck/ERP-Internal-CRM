@@ -104,9 +104,9 @@ const QuotationList: React.FC<QuotationListProps> = ({
             businessName: apiQuotation.business_name || "Unknown Business",
             workType: apiQuotation.work_type || "Unknown",
             leadType: apiQuotation.lead_type || "Unknown",
-            totalValue: `₹${(apiQuotation.total_cost || 0).toLocaleString(
-              "en-IN"
-            )}`,
+            totalValue: `₹${(
+              apiQuotation.total_supply_own_cost || 0
+            ).toLocaleString("en-IN")}`,
             createdBy: apiQuotation.created_by || "Unknown",
             createdDate:
               apiQuotation.quotation_date ||

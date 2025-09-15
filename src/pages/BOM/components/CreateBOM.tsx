@@ -330,7 +330,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
           leadName: selectedLead.projectName,
           workType: selectedLead.workType,
           bomName: `${selectedLead.projectName} - BOM `,
-          approvalStatus: "PENDING", 
+          approvalStatus: "PENDING",
         }));
       }
     }
@@ -669,10 +669,10 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     setIsSubmitting(true);
     try {
       const bomPayload = {
-        name: formData.bomName, // Use bomName here
+        name: formData.leadName, // Use bomName here
         leadId: formData.leadId,
         date: formData.date,
-        workType: formData.workType,
+        workType: "TYPE2", //formData.workType,
         approvalStatus: "PENDING",
       };
 
@@ -1162,7 +1162,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                 <input
                   type="text"
                   name="bomName"
-                  value={formData.bomName}
+                  value={formData.leadName}
                   onChange={handleInputChange}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
