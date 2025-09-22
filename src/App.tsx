@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
@@ -17,7 +17,19 @@ import { CRMProvider } from './context/CRMContext';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const rawToken = params.get('token');
 
+        if (rawToken) {
+          const decodedToken = decodeURIComponent(rawToken);
+          localStorage.setItem('auth_token', decodedToken);
+
+          // clean the URL (remove ?token=... from history)
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }, []);
+      
   return (
     <CRMProvider>
       <Router>
