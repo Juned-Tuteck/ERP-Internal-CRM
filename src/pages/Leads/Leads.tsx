@@ -10,7 +10,7 @@ const Leads: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('leads');
-  const { addNotification } = useCRM();
+  const { addNotification, hasSubmenuAccess } = useCRM();
 
   const handleAddLead = (leadData: any) => {
     if (leadData.success) {
@@ -48,10 +48,37 @@ const Leads: React.FC = () => {
     });
   };
 
-  const tabs = [
-    { id: 'leads', name: 'All Leads', icon: Plus },
-    { id: 'approval', name: 'Lead Approval', icon: CheckCircle },
+  // Define all tabs with their access requirements
+  const allTabs = [
+    { id: 'leads', name: 'All Leads', icon: Plus, accessKey: 'All Leads' },
+    { id: 'approval', name: 'Lead Approval', icon: CheckCircle, accessKey: 'Lead Approval' },
   ];
+
+  // Filter tabs based on user submenu access permissions
+  const tabs = allTabs.filter(tab => hasSubmenuAccess(tab.accessKey));
+
+  // Ensure active tab is accessible, if not set to first available tab
+  React.useEffect(() => {
+    if (tabs.length > 0 && !tabs.some(tab => tab.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [tabs, activeTab]);
+
+  // If no tabs are accessible, show access denied message
+  if (tabs.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Leads Management</h1>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-6xl mb-4">🔒</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-500">You don't have permission to access any lead sections.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

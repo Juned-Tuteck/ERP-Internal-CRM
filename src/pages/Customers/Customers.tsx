@@ -13,7 +13,7 @@ const Customers: React.FC = () => {
   const [activeTab, setActiveTab] = useState('customers');
   const [customerInitialData, setCustomerInitialData] = useState(null);
   const [screenRefresh, setScreenRefresh] = useState(0);
-  const { addNotification } = useCRM();
+  const { addNotification, hasSubmenuAccess } = useCRM();
 
   const handleAddCustomer = (customerData: any) => {
     console.log('Adding new customer:', customerData);
@@ -40,10 +40,37 @@ const Customers: React.FC = () => {
     });
   };
 
-  const tabs = [
-    { id: 'customers', name: 'All Customers', icon: Building2 },
-    { id: 'approval', name: 'Customer Approval', icon: CheckCircle },
+  // Define all tabs with their access requirements
+  const allTabs = [
+    { id: 'customers', name: 'All Customers', icon: Building2, accessKey: 'All customers' },
+    { id: 'approval', name: 'Customer Approval', icon: CheckCircle, accessKey: 'Customer Approval' },
   ];
+
+  // Filter tabs based on user submenu access permissions
+  const tabs = allTabs.filter(tab => hasSubmenuAccess(tab.accessKey));
+
+  // Ensure active tab is accessible, if not set to first available tab
+  React.useEffect(() => {
+    if (tabs.length > 0 && !tabs.some(tab => tab.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [tabs, activeTab]);
+
+  // If no tabs are accessible, show access denied message
+  if (tabs.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Customer Management</h1>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-6xl mb-4">🔒</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-500">You don't have permission to access any customer sections.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

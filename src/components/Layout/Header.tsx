@@ -7,7 +7,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { searchQuery, setSearchQuery, notifications } = useCRM();
+  const { searchQuery, setSearchQuery, notifications, userData } = useCRM();
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -54,8 +54,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </button>
 
           <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">Welcome back!</p>
-            <p className="text-xs text-gray-500">{new Date().toLocaleDateString('en-IN')}</p>
+            <p className="text-sm font-medium text-gray-900">
+              {userData?.name ? `Welcome, ${userData.name.split(' ')[0]}!` : 'Welcome back!'}
+            </p>
+            <p className="text-xs text-gray-700 capitalize">
+              {userData?.role || new Date().toLocaleDateString('en-IN')}
+            </p>
           </div>
         </div>
       </div>
