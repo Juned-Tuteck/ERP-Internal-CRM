@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, Bell, Mail } from 'lucide-react';
+import { Menu, Search, Bell, Mail, Home } from 'lucide-react';
 import { useCRM } from '../../context/CRMContext';
 
 interface HeaderProps {
@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           >
             <Menu className="h-6 w-6" />
           </button>
-          
+
           <div className="ml-4 lg:ml-0 flex-1 max-w-lg">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -37,13 +37,21 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         </div>
 
         <div className="flex items-center space-x-4">
+          <button
+            // onClick={() => window.history.back()}
+            onClick={() => (window.location.href = `${import.meta.env.VITE_AUTH_UI_BASE_URL}/dashboard`)}
+            className="relative text-gray-500 hover:text-gray-700"
+          >
+            <Home className="h-6 w-6" />
+          </button>
+
           <button className="relative text-gray-500 hover:text-gray-700">
             <Mail className="h-6 w-6" />
             <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
               <span className="text-xs text-white">3</span>
             </span>
           </button>
-          
+
           <button className="relative text-gray-500 hover:text-gray-700">
             <Bell className="h-6 w-6" />
             {notifications.length > 0 && (

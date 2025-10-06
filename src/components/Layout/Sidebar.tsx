@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import {
   Home,
   UserPlus,
@@ -112,20 +113,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   onClick={onClose}
                   className={`
                     group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                    ${
-                      isActive
-                        ? "bg-blue-50 text-blue-700 border-r-2 border-blue-600"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    ${isActive
+                      ? "bg-blue-50 text-blue-700 border-r-2 border-blue-600"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                     }
                   `}
                 >
                   <item.icon
                     className={`
                       mr-3 h-5 w-5 flex-shrink-0
-                      ${
-                        isActive
-                          ? "text-blue-600"
-                          : "text-gray-500 group-hover:text-gray-700"
+                      ${isActive
+                        ? "text-blue-600"
+                        : "text-gray-500 group-hover:text-gray-700"
                       }
                     `}
                   />
@@ -143,11 +142,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <span className="text-sm font-medium text-white">
                   {userData?.name
                     ? userData.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)
                     : "U"}
                 </span>
               </div>
@@ -160,6 +159,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {userData?.role || "Member"}
               </p>
             </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem("auth_token");
+
+                window.location.href = `${import.meta.env.VITE_AUTH_UI_BASE_URL}/signin`;
+              }}
+              className="px-3 py-1 text-sm text-black rounded"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
