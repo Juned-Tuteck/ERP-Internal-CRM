@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
 } from "lucide-react";
+import { useCRM } from "../../../context/CRMContext";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL; // Import the base URL from environment variables
 
@@ -31,6 +32,7 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approve" | "reject">("approve");
   const [reason, setReason] = useState("");
+  const { hasActionAccess } = useCRM();
 
   // Fetch vendor data on component mount
   useEffect(() => {
@@ -240,20 +242,24 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleApprovalClick(vendor, "approve")}
-                        className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleApprovalClick(vendor, "reject")}
-                        className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Reject
-                      </button>
+                      {hasActionAccess('Approve', 'Vendor Approval', 'Vendors') && (
+                        <button
+                          onClick={() => handleApprovalClick(vendor, "approve")}
+                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Approve
+                        </button>
+                      )}
+                      {hasActionAccess('Reject', 'Vendor Approval', 'Vendors') && (
+                        <button
+                          onClick={() => handleApprovalClick(vendor, "reject")}
+                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Reject
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -329,11 +335,10 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
               <button
                 onClick={handleConfirmAction}
                 disabled={actionType === "reject" && !reason.trim()}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  actionType === "approve"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${actionType === "approve"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {actionType === "approve" ? (
                   <>

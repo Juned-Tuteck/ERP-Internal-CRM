@@ -1,5 +1,7 @@
 import React from "react";
 import { useState, useEffect } from "react";
+import { useCRM } from "../../../context/CRMContext";
+
 import {
   Building2,
   MapPin,
@@ -18,6 +20,7 @@ import {
 import axios from "axios";
 import AddCustomerModal from "./AddCustomerModal";
 
+
 interface CustomerDetailsProps {
   customer: any;
   setCustomerInitialData: (data: any) => void;
@@ -27,6 +30,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   customer,
   setCustomerInitialData,
 }) => {
+  const { hasActionAccess } = useCRM();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
@@ -324,7 +328,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <p className="text-xs text-gray-500">Total Revenue</p>
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {customer.status === "pending" && (
+              {customer.status === "pending" && hasActionAccess('edit', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
@@ -333,7 +337,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <SquarePen className="h-5 w-5" />
                 </button>
               )}
-              {customer.status === "pending" && (
+              {customer.status === "pending" && hasActionAccess('Deactivate', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsDeactivateModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
@@ -363,11 +367,10 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <tab.icon className="h-5 w-5" />
@@ -582,7 +585,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   {Math.floor(
                     (new Date().getTime() -
                       new Date(customer.joinDate).getTime()) /
-                      (1000 * 60 * 60 * 24 * 30)
+                    (1000 * 60 * 60 * 24 * 30)
                   )}
                 </p>
                 <p className="text-sm text-gray-500">Months Active</p>
@@ -747,8 +750,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 onClick={async () => {
                   try {
                     await axios.delete(
-                      `${import.meta.env.VITE_API_BASE_URL}/customer/${
-                        customer.id
+                      `${import.meta.env.VITE_API_BASE_URL}/customer/${customer.id
                       }`
                     );
                     alert("Customer deleted successfully!");

@@ -17,6 +17,7 @@ import {
 } from "../../../utils/bomTemplateApi";
 import BOMTemplateViewModal from "./BOMTemplateViewModal";
 import axios from "axios"; // Import axios for API calls
+import { useCRM } from "../../../context/CRMContext";
 
 interface Item {
   itemCode: string;
@@ -63,6 +64,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewTemplateId, setViewTemplateId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const { hasActionAccess } = useCRM();
 
   // Fetch BOM templates from API
   useEffect(() => {
@@ -345,9 +347,8 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
               {filteredTemplates.map((template) => (
                 <tr
                   key={template.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${
-                    selectedTemplate?.id === template.id ? "bg-blue-50" : ""
-                  }`}
+                  className={`hover:bg-gray-50 cursor-pointer ${selectedTemplate?.id === template.id ? "bg-blue-50" : ""
+                    }`}
                   onClick={() => handleRowClick(template)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -399,28 +400,34 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                   </td> */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button
-                        className="text-blue-600 hover:text-blue-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditTemplate(template);
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button className="text-indigo-600 hover:text-indigo-900">
-                        <Download className="h-4 w-4" />
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteTemplate(template);
-                          setShowDeleteModal(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {hasActionAccess('Edit ', 'Bom templates', 'BOM') && (
+                        <button
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditTemplate(template);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )}
+                      {hasActionAccess('Download', 'Bom templates', 'BOM') && (
+                        <button className="text-indigo-600 hover:text-indigo-900">
+                          <Download className="h-4 w-4" />
+                        </button>
+                      )}
+                      {hasActionAccess('Delete', 'Bom templates', 'BOM') && (
+                        <button
+                          className="text-red-600 hover:text-red-900"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTemplate(template);
+                            setShowDeleteModal(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -456,20 +463,20 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
         isOpen={showBOMModal}
         onClose={handleCloseModal}
         onSubmit={handleSubmitTemplate}
-        setScreenRefresh={() => {}}
+        setScreenRefresh={() => { }}
         initialData={
           editTemplate
             ? {
-                id: editTemplate.id,
-                workType: editTemplate.workType,
-                name: editTemplate.name,
-                description: editTemplate.description || "",
-                items: editTemplate.items as any,
-                status: editTemplate.status,
-                createdDate: editTemplate.createdDate,
-                specs: editTemplate.specs,
-                templateNumber: editTemplate.templateNumber,
-              }
+              id: editTemplate.id,
+              workType: editTemplate.workType,
+              name: editTemplate.name,
+              description: editTemplate.description || "",
+              items: editTemplate.items as any,
+              status: editTemplate.status,
+              createdDate: editTemplate.createdDate,
+              specs: editTemplate.specs,
+              templateNumber: editTemplate.templateNumber,
+            }
             : undefined
         }
       />

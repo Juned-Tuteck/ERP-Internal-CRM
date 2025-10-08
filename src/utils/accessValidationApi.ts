@@ -4,12 +4,13 @@ import { API_ENDPOINTS } from "./apiEndpoints";
 export interface AccessPermission {
   access_id: string;
   name: string;
-  level_type: "MODULE" | "MENU" | "SUBMENU";
+  level_type: "MODULE" | "MENU" | "SUBMENU" | "ACTION";
   access_type: "READ" | "WRITE" | "DELETE";
   assigned_at: string;
   description: string | null;
   parent_name: string | null;
   grandparent_name: string | null;
+  grand_grandparent_name: string | null;
 }
 
 export interface UserData {

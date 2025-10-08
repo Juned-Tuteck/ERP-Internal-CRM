@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
+import { useCRM } from "../../../context/CRMContext";
 
 interface LeadDetailsProps {
   lead: any;
@@ -39,6 +40,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { hasActionAccess } = useCRM();
 
   // Add state for edit modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -68,8 +70,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         if (apiLead.customer_branch_id) {
           try {
             const branchRes = await axios.get(
-              `${import.meta.env.VITE_API_BASE_URL}/customer-branch/${
-                apiLead.customer_branch_id
+              `${import.meta.env.VITE_API_BASE_URL}/customer-branch/${apiLead.customer_branch_id
               }`
             );
             const branchData = branchRes.data?.data;
@@ -369,7 +370,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             <div className="flex space-x-2 mt-2">
               {/* Update Status */}
               {displayLead.leadStage !== "Won" &&
-                displayLead.leadStage !== "Lost" && (
+                displayLead.leadStage !== "Lost" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
                   <button
                     onClick={() => setShowWinLossModal(true)}
                     className="rounded-full p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition"
@@ -379,30 +380,33 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   </button>
                 )}
               {/* History Button */}
-              <button
-                onClick={() => setShowHistoryModal(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition"
-                title="View History"
-              >
-                <History className="h-5 w-5" />
-              </button>
+              {hasActionAccess('View History', 'All Leads', 'Lead') && (
+                <button
+                  onClick={() => setShowHistoryModal(true)}
+                  className="rounded-full p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition"
+                  title="View History"
+                >
+                  <History className="h-5 w-5" />
+                </button>
+              )}
               {/* Edit Button */}
-              <button
-                onClick={() => setShowEditModal(true)}
-                className={`rounded-full p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 transition ${
-                  displayLead.approvalStatus === "approved" ||
-                  displayLead.approvalStatus === "rejected"
+              {hasActionAccess('Edit', 'All Leads', 'Lead') && (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className={`rounded-full p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 transition ${displayLead.approvalStatus === "approved" ||
+                    displayLead.approvalStatus === "rejected"
                     ? "opacity-50 cursor-not-allowed pointer-events-none"
                     : ""
-                }`}
-                title="Edit Lead"
-                disabled={
-                  displayLead.approvalStatus === "approved" ||
-                  displayLead.approvalStatus === "rejected"
-                }
-              >
-                <Edit2 className="h-5 w-5" />
-              </button>
+                    }`}
+                  title="Edit Lead"
+                  disabled={
+                    displayLead.approvalStatus === "approved" ||
+                    displayLead.approvalStatus === "rejected"
+                  }
+                >
+                  <Edit2 className="h-5 w-5" />
+                </button>
+              )}
               {/* Delete Button */}
               {/* <button
                 onClick={() => setShowDeleteModal(true)}
@@ -525,14 +529,14 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     displayLead.leadStage === "New Lead"
                       ? "20%"
                       : displayLead.leadStage === "Qualified"
-                      ? "40%"
-                      : displayLead.leadStage === "Meeting"
-                      ? "60%"
-                      : displayLead.leadStage === "Quotation Submitted"
-                      ? "80%"
-                      : displayLead.leadStage === "Won"
-                      ? "100%"
-                      : "0%",
+                        ? "40%"
+                        : displayLead.leadStage === "Meeting"
+                          ? "60%"
+                          : displayLead.leadStage === "Quotation Submitted"
+                            ? "80%"
+                            : displayLead.leadStage === "Won"
+                              ? "100%"
+                              : "0%",
                 }}
               ></div>
             </div>
@@ -543,8 +547,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 <span>
                   {displayLead.submittedDate
                     ? new Date(displayLead.submittedDate).toLocaleDateString(
-                        "en-IN"
-                      )
+                      "en-IN"
+                    )
                     : "N/A"}
                 </span>
               </div>
@@ -553,10 +557,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 <span>
                   {displayLead.submittedDate
                     ? Math.floor(
-                        (new Date().getTime() -
-                          new Date(displayLead.submittedDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )
+                      (new Date().getTime() -
+                        new Date(displayLead.submittedDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                    )
                     : 0}{" "}
                   days
                 </span>
@@ -624,8 +628,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             <div className="font-medium text-gray-900 ml-2">
               {displayLead.leadGeneratedDate
                 ? new Date(displayLead.leadGeneratedDate).toLocaleDateString(
-                    "en-IN"
-                  )
+                  "en-IN"
+                )
                 : "-"}
             </div>
           </div>
@@ -633,7 +637,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             <Users className="h-4 w-4 text-blue-500" />
             <span className="text-gray-500">Involved Associates</span>
             {displayLead.involvedAssociates &&
-            displayLead.involvedAssociates.length > 0 ? (
+              displayLead.involvedAssociates.length > 0 ? (
               <div className="flex flex-wrap gap-2 ml-2">
                 {displayLead.involvedAssociates.map((a: any, idx: number) => (
                   <div
@@ -663,7 +667,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           Follow-up Comments
         </h3>
         {displayLead.followUpComments &&
-        displayLead.followUpComments.length > 0 ? (
+          displayLead.followUpComments.length > 0 ? (
           <div className="space-y-4">
             {displayLead.followUpComments.map((comment: any, index: number) => (
               <div
@@ -679,16 +683,16 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                         <span>
                           {comment.timestamp
                             ? new Date(comment.timestamp).toLocaleString(
-                                "en-IN",
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                }
-                              )
+                              "en-IN",
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              }
+                            )
                             : "No timestamp"}
                         </span>
                       </div>
@@ -795,11 +799,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               <button
                 onClick={handleWinLossSubmit}
                 disabled={!winLossReason.trim() || isSubmitting}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  selectedOutcome === "Won"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${selectedOutcome === "Won"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {isSubmitting ? (
                   <>

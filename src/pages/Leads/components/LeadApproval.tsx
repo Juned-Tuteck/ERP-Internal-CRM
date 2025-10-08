@@ -7,6 +7,7 @@ import {
   Search,
 } from "lucide-react";
 import axios from "axios";
+import { useCRM } from "../../../context/CRMContext";
 
 interface LeadApprovalProps {
   onApprovalAction: (
@@ -26,6 +27,7 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const { hasActionAccess } = useCRM();
 
   // Filter leads based on search term
   const filteredLeads = leads.filter((lead) => {
@@ -141,8 +143,7 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
         // Call PUT API to update lead decision
         const approved = actionType === "approved" ? "approved" : "rejected";
         const response = await axios.patch(
-          `${import.meta.env.VITE_API_BASE_URL}/lead/decision/${
-            selectedLead.id
+          `${import.meta.env.VITE_API_BASE_URL}/lead/decision/${selectedLead.id
           }?status=${approved}`
         );
 
@@ -300,34 +301,37 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         {lead.approvalStatus !== "APPROVED" &&
-                        lead.approvalStatus !== "REJECTED" ? (
+                          lead.approvalStatus !== "REJECTED" ? (
                           <>
-                            <button
-                              onClick={() =>
-                                handleApprovalClick(lead, "approved")
-                              }
-                              className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Approve
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleApprovalClick(lead, "rejected")
-                              }
-                              className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                            >
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Reject
-                            </button>
+                            {hasActionAccess('Approve', 'Lead Approval', 'Lead') && (
+                              <button
+                                onClick={() =>
+                                  handleApprovalClick(lead, "approved")
+                                }
+                                className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Approve
+                              </button>
+                            )}
+                            {hasActionAccess('Reject', 'Lead Approval', 'Lead') && (
+                              <button
+                                onClick={() =>
+                                  handleApprovalClick(lead, "rejected")
+                                }
+                                className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
+                              >
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Reject
+                              </button>
+                            )}
                           </>
                         ) : (
                           <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              lead.approvalStatus === "APPROVED"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${lead.approvalStatus === "APPROVED"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                              }`}
                           >
                             {lead.approvalStatus}
                           </span>
@@ -556,11 +560,10 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
               <button
                 onClick={handleConfirmAction}
                 disabled={actionType === "rejected" && !reason.trim()}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  actionType === "approved"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${actionType === "approved"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {actionType === "approved" ? (
                   <>

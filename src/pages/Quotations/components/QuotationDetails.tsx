@@ -14,6 +14,7 @@ import {
   Trash2,
   AlertTriangle,
 } from "lucide-react";
+import { useCRM } from "../../../context/CRMContext";
 import CreateQuotationModal from "./CreateQuotationModal";
 import { getQuotationById } from "../../../utils/quotationApi";
 
@@ -30,6 +31,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
     useState<any>(null);
   // const [reloadDtls, setReloadDtls] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { hasActionAccess } = useCRM();
 
   // Fetch detailed quotation information when quotation is selected
   useEffect(() => {
@@ -250,13 +252,13 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
           quotationDate: apiQuotation.quotation_date
             ? new Date(apiQuotation.quotation_date).toLocaleDateString("en-CA")
             : quotation.createdDate
-            ? new Date(quotation.createdDate).toLocaleDateString("en-CA")
-            : "",
+              ? new Date(quotation.createdDate).toLocaleDateString("en-CA")
+              : "",
           expiryDate: apiQuotation.expiry_date
             ? new Date(apiQuotation.expiry_date).toLocaleDateString("en-CA")
             : quotation.expiryDate
-            ? new Date(quotation.expiryDate).toLocaleDateString("en-CA")
-            : "",
+              ? new Date(quotation.expiryDate).toLocaleDateString("en-CA")
+              : "",
           bomId: apiQuotation.bom_id || "",
           specs: mappedSpecs || [],
           items: [], // Keep for backward compatibility
@@ -265,7 +267,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
           // Step 2: POC - Reverse mapping from POC expenses
           projectCosts: (
             apiQuotation.poc_expenses?.[
-              "Project Management & Site Establishment Cost"
+            "Project Management & Site Establishment Cost"
             ] || []
           ).map((cost: any) => ({
             id: cost.id?.toString() || Date.now().toString(),
@@ -526,7 +528,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
       )?.margin || 0,
     supplySellingAmount:
       displayQuotation.highSideCostWithoutGst +
-        displayQuotation.lowSideCostWithoutGst || 0,
+      displayQuotation.lowSideCostWithoutGst || 0,
     installationSubtotal: displayQuotation.totalInstallationOwnCost || 0,
     installationMargin:
       displayQuotation.costMargins?.find(
@@ -631,15 +633,15 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
               </button> */}
               {console.log("Qutation ------", quotation)}
               {(quotation.status === "pending" ||
-                quotation.status === "draft") && (
-                <button
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
-                >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
-                </button>
-              )}
+                quotation.status === "draft") && hasActionAccess("Edit ", "All Quotations", "Quotations") && (
+                  <button
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </button>
+                )}
               {/* {(quotation.status === "pending" ||
                 quotation.status === "draft") && (
                 <button
@@ -662,11 +664,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
             >
               {tab.name}
             </button>
@@ -1255,10 +1256,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                       </div>
                     </div>
                   )) || (
-                    <div className="text-center py-4 text-gray-500">
-                      <p>No items found for this specification.</p>
-                    </div>
-                  )}
+                      <div className="text-center py-4 text-gray-500">
+                        <p>No items found for this specification.</p>
+                      </div>
+                    )}
                 </div>
 
                 {/* Spec Total */}
@@ -1273,10 +1274,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                 </div>
               </div>
             )) || (
-              <div className="text-center py-8 text-gray-500">
-                <p>No specifications found for this quotation.</p>
-              </div>
-            )}
+                <div className="text-center py-8 text-gray-500">
+                  <p>No specifications found for this quotation.</p>
+                </div>
+              )}
 
             {/* Overall Summary */}
             <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
@@ -1764,7 +1765,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
             <div className="border border-gray-200 rounded-lg p-4">
               <div className="space-y-4">
                 {displayQuotation.comments &&
-                displayQuotation.comments.length > 0 ? (
+                  displayQuotation.comments.length > 0 ? (
                   displayQuotation.comments.map(
                     (comment: any, index: number) => (
                       <div
@@ -1786,8 +1787,8 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
                             <span className="text-xs text-gray-500">
                               {comment.created_at
                                 ? new Date(comment.created_at).toLocaleString(
-                                    "en-IN"
-                                  )
+                                  "en-IN"
+                                )
                                 : "Unknown Date"}
                             </span>
                           </div>

@@ -13,6 +13,7 @@ import {
   getQuotations,
   updateQuotationDecision,
 } from "../../../utils/quotationApi";
+import { useCRM } from "../../../context/CRMContext";
 
 interface QuotationData {
   id: string;
@@ -52,6 +53,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
   const [quotations, setQuotations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const { hasActionAccess } = useCRM();
 
   // Fetch quotations from API
   useEffect(() => {
@@ -224,14 +226,12 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
 
         // Show success message (you can add a toast notification here)
         console.log(
-          `Quotation ${
-            actionType === "approve" ? "approved" : "rejected"
+          `Quotation ${actionType === "approve" ? "approved" : "rejected"
           } successfully`
         );
       } catch (error) {
         console.error(
-          `Error ${
-            actionType === "approve" ? "approving" : "rejecting"
+          `Error ${actionType === "approve" ? "approving" : "rejecting"
           } quotation:`,
           error
         );
@@ -376,24 +376,28 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                           <Eye className="h-3 w-3 mr-1" />
                           View
                         </button> */}
-                        <button
-                          onClick={() =>
-                            handleApprovalClick(quotation, "approve")
-                          }
-                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleApprovalClick(quotation, "reject")
-                          }
-                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                        >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Reject
-                        </button>
+                        {hasActionAccess("Approve", "Quotation Approval", "Quotations") && (
+                          <button
+                            onClick={() =>
+                              handleApprovalClick(quotation, "approve")
+                            }
+                            className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Approve
+                          </button>
+                        )}
+                        {hasActionAccess("Reject", "Quotation Approval", "Quotations") && (
+                          <button
+                            onClick={() =>
+                              handleApprovalClick(quotation, "reject")
+                            }
+                            className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Reject
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -488,11 +492,10 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                 disabled={
                   (actionType === "reject" && !reason.trim()) || actionLoading
                 }
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  actionType === "approve"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${actionType === "approve"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {actionLoading ? (
                   <>

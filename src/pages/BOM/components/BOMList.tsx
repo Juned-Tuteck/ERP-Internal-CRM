@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import CreateBOM from "./CreateBOM";
 import BOMViewModal from "./BOMViewModal";
+import { useCRM } from "../../../context/CRMContext";
 
 interface BOM {
   id: string;
@@ -42,6 +43,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
   const [showViewModal, setShowViewModal] = React.useState(false);
   const [refreshList, setRefreshList] = React.useState(0);
   const [search, setSearch] = React.useState("");
+  const { hasActionAccess } = useCRM();
 
   // Fetch BOMs from API
   useEffect(() => {
@@ -337,8 +339,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
       if (apiBOM.bom_template_id) {
         try {
           const templateRes = await fetch(
-            `${import.meta.env.VITE_API_BASE_URL}/bom-template/${
-              apiBOM.bom_template_id
+            `${import.meta.env.VITE_API_BASE_URL}/bom-template/${apiBOM.bom_template_id
             }`
           );
           const templateData = await templateRes.json();
@@ -528,9 +529,8 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
               {filteredBoms.map((bom) => (
                 <tr
                   key={bom.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${
-                    selectedBOM?.id === bom.id ? "bg-blue-50" : ""
-                  }`}
+                  className={`hover:bg-gray-50 cursor-pointer ${selectedBOM?.id === bom.id ? "bg-blue-50" : ""
+                    }`}
                   onClick={() => handleRowClick(bom)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -583,25 +583,28 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button
-                        className={`text-blue-600 hover:text-blue-900 ${
-                          bom.status === "approved" || bom.status === "rejected"
+                      {hasActionAccess('Edit ', 'Boms', 'BOM') && (
+                        <button
+                          className={`text-blue-600 hover:text-blue-900 ${bom.status === "approved" || bom.status === "rejected"
                             ? "opacity-50 cursor-not-allowed pointer-events-none"
                             : ""
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditClick(e, bom);
-                        }}
-                        disabled={
-                          bom.status === "approved" || bom.status === "rejected"
-                        }
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button className="text-indigo-600 hover:text-indigo-900">
-                        <Download className="h-4 w-4" />
-                      </button>
+                            }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick(e, bom);
+                          }}
+                          disabled={
+                            bom.status === "approved" || bom.status === "rejected"
+                          }
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )}
+                      {hasActionAccess('Download', 'Boms', 'BOM') && (
+                        <button className="text-indigo-600 hover:text-indigo-900">
+                          <Download className="h-4 w-4" />
+                        </button>
+                      )}
                       {/* <button
                         className="text-red-600 hover:text-red-900"
                         onClick={(e) => {

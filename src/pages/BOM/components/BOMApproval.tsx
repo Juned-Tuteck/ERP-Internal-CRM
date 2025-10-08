@@ -8,6 +8,7 @@ import {
   FileText,
   Download,
 } from "lucide-react";
+import { useCRM } from "../../../context/CRMContext";
 
 interface BOMApprovalProps {
   onApprovalAction: (
@@ -26,6 +27,7 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState("");
+  const { hasActionAccess } = useCRM();
 
   // Fetch BOMs with pending approval status
   useEffect(() => {
@@ -108,8 +110,7 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
     try {
       const status = actionType === "approve" ? "APPROVED" : "REJECTED";
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/bom/${
-          selectedBOM.id
+        `${import.meta.env.VITE_API_BASE_URL}/bom/${selectedBOM.id
         }/approval?status=${status}`,
         {
           method: "PATCH",
@@ -136,8 +137,7 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
 
       // Show success message (you can replace with a toast notification)
       alert(
-        `BOM ${
-          actionType === "approve" ? "approved" : "rejected"
+        `BOM ${actionType === "approve" ? "approved" : "rejected"
         } successfully!`
       );
     } catch (error) {
@@ -264,20 +264,24 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleApprovalClick(bom, "approve")}
-                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleApprovalClick(bom, "reject")}
-                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                        >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Reject
-                        </button>
+                        {hasActionAccess('Approve', 'Bom approval', 'BOM') && (
+                          <button
+                            onClick={() => handleApprovalClick(bom, "approve")}
+                            className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Approve
+                          </button>
+                        )}
+                        {hasActionAccess('Reject', 'Bom approval', 'BOM') && (
+                          <button
+                            onClick={() => handleApprovalClick(bom, "reject")}
+                            className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Reject
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -529,11 +533,10 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
                 disabled={
                   (actionType === "reject" && !reason.trim()) || isSubmitting
                 }
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  actionType === "approve"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${actionType === "approve"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {isSubmitting ? (
                   <>

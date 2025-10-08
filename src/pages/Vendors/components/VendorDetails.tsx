@@ -18,6 +18,7 @@ import {
   SquarePen,
 } from "lucide-react";
 import AddVendorModal from "./AddVendorModal";
+import { useCRM } from "../../../context/CRMContext";
 
 interface VendorDetailsProps {
   data: {
@@ -59,6 +60,7 @@ const VendorDetails: React.FC<
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [branchDetails, setBranchDetails] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("general");
+  const { hasActionAccess } = useCRM();
 
   // No enhancedVendor, use vendor, branches, contacts, files directly
   const vendor = data?.vendor || null;
@@ -237,7 +239,7 @@ const VendorDetails: React.FC<
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {vendor.status === "PENDING" && (
+              {vendor.status === "PENDING" && hasActionAccess('Edit', 'All vendors', 'Vendors') && (
                 <button
                   onClick={() => {
                     console.log("Edit button clicked");
@@ -249,7 +251,7 @@ const VendorDetails: React.FC<
                   <SquarePen className="h-5 w-5" />
                 </button>
               )}
-              {vendor.status === "PENDING" && (
+              {vendor.status === "PENDING" && hasActionAccess('Deactivate', 'All vendors', 'Vendors') && (
                 <button
                   onClick={() => setIsDeactivateModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
@@ -271,30 +273,30 @@ const VendorDetails: React.FC<
             {/* Edit Vendor Modal (AddVendorModal in edit mode) */}
             {isEditModalOpen &&
               (console.log("Rendering AddVendorModal"),
-              (
-                <AddVendorModal
-                  isOpen={isEditModalOpen}
-                  onClose={() => {
-                    console.log("Closing modal");
-                    setIsEditModalOpen(false);
-                  }}
-                  onSubmit={(updatedVendorData) => {
-                    console.log("Updated Vendor:", updatedVendorData);
-                    setIsEditModalOpen(false);
-                  }}
-                  initialData={() => {
-                    // Use contacts and branches from the data prop, not vendor.contacts/branches
-                    const formData = transformToFormData({
-                      ...vendor,
-                      contacts: contacts,
-                      branches: branches,
-                      files: files,
-                    });
-                    console.log("Initial data for modal:", formData);
-                    return formData;
-                  }}
-                />
-              ))}
+                (
+                  <AddVendorModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                      console.log("Closing modal");
+                      setIsEditModalOpen(false);
+                    }}
+                    onSubmit={(updatedVendorData) => {
+                      console.log("Updated Vendor:", updatedVendorData);
+                      setIsEditModalOpen(false);
+                    }}
+                    initialData={() => {
+                      // Use contacts and branches from the data prop, not vendor.contacts/branches
+                      const formData = transformToFormData({
+                        ...vendor,
+                        contacts: contacts,
+                        branches: branches,
+                        files: files,
+                      });
+                      console.log("Initial data for modal:", formData);
+                      return formData;
+                    }}
+                  />
+                ))}
           </div>
         </div>
       </div>
@@ -393,11 +395,10 @@ const VendorDetails: React.FC<
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <tab.icon className="h-5 w-5" />
@@ -558,9 +559,9 @@ const VendorDetails: React.FC<
                           <span className="text-sm font-medium text-white">
                             {person.name
                               ? person.name
-                                  .split(" ")
-                                  .map((n: string) => n[0])
-                                  .join("")
+                                .split(" ")
+                                .map((n: string) => n[0])
+                                .join("")
                               : ""}
                           </span>
                         </div>
@@ -662,9 +663,9 @@ const VendorDetails: React.FC<
                             <span className="text-xs font-medium text-white">
                               {person.name
                                 ? person.name
-                                    .split(" ")
-                                    .map((n: string) => n[0])
-                                    .join("")
+                                  .split(" ")
+                                  .map((n: string) => n[0])
+                                  .join("")
                                 : ""}
                             </span>
                           </div>

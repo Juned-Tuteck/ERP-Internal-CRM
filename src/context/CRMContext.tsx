@@ -22,6 +22,7 @@ interface CRMContextType {
   hasMenuAccess: (menuName: string) => boolean;
   hasModuleAccess: (moduleName: string) => boolean;
   hasSubmenuAccess: (submenuName: string) => boolean;
+  hasActionAccess: (actionName: string, subMenuName: string, menusName: string) => boolean;
 }
 
 interface Notification {
@@ -95,6 +96,17 @@ export const CRMProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
+  const hasActionAccess = (actionName: string, subMenuName: string, menusName: string): boolean => {
+    return userAccesses.some(
+      (access) =>
+        access.level_type === "ACTION" &&
+        access.name.toLowerCase() === actionName.toLowerCase() &&
+        access.parent_name === subMenuName &&
+        access.grandparent_name === menusName &&
+        access.grand_grandparent_name === "CRM"
+    );
+  };
+
   return (
     <CRMContext.Provider
       value={{
@@ -116,6 +128,7 @@ export const CRMProvider: React.FC<{ children: ReactNode }> = ({
         hasMenuAccess,
         hasModuleAccess,
         hasSubmenuAccess,
+        hasActionAccess,
       }}
     >
       {children}

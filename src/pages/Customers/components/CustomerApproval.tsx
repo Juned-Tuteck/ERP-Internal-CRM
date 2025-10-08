@@ -10,6 +10,8 @@ import {
   MapPin,
 } from "lucide-react";
 
+import { useCRM } from "../../../context/CRMContext";
+
 const CustomerApproval: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
@@ -17,6 +19,7 @@ const CustomerApproval: React.FC = () => {
   const [reason, setReason] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingCustomers, setPendingCustomers] = useState<any[]>([]);
+  const { hasActionAccess } = useCRM();
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -106,8 +109,7 @@ const CustomerApproval: React.FC = () => {
     if (selectedCustomer) {
       try {
         const response = await axios.patch(
-          `${import.meta.env.VITE_API_BASE_URL}/customer/${
-            selectedCustomer.id
+          `${import.meta.env.VITE_API_BASE_URL}/customer/${selectedCustomer.id
           }/decision`,
           null,
           {
@@ -125,8 +127,7 @@ const CustomerApproval: React.FC = () => {
             )
           );
           alert(
-            `Customer ${
-              actionType === "approve" ? "approved" : "rejected"
+            `Customer ${actionType === "approve" ? "approved" : "rejected"
             } successfully!`
           );
         }
@@ -315,20 +316,24 @@ const CustomerApproval: React.FC = () => {
                         <Eye className="h-3 w-3 mr-1" />
                         View
                       </button> */}
-                      <button
-                        onClick={() => handleApprovalClick(customer, "approve")}
-                        className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleApprovalClick(customer, "reject")}
-                        className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Reject
-                      </button>
+                      {hasActionAccess('Approve', 'Customer Approval', 'customers') && (
+                        <button
+                          onClick={() => handleApprovalClick(customer, "approve")}
+                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Approve
+                        </button>
+                      )}
+                      {hasActionAccess('Reject', 'Customer Approval', 'customers') && (
+                        <button
+                          onClick={() => handleApprovalClick(customer, "reject")}
+                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Reject
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -408,11 +413,10 @@ const CustomerApproval: React.FC = () => {
               <button
                 onClick={handleConfirmAction}
                 disabled={actionType === "reject" && !reason.trim()}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  actionType === "approve"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${actionType === "approve"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {actionType === "approve" ? (
                   <>
