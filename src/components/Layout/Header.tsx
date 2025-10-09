@@ -1,13 +1,14 @@
 import React from 'react';
-import { Menu, Search, Bell, Mail, Home } from 'lucide-react';
+import { Menu, Search, Mail, Bell, Home } from 'lucide-react';
 import { useCRM } from '../../context/CRMContext';
+import { NotificationButton } from '../../components/NotificationButton';
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { searchQuery, setSearchQuery, notifications, userData } = useCRM();
+  const { searchQuery, setSearchQuery, userData } = useCRM();
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -45,21 +46,23 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <Home className="h-6 w-6" />
           </button>
 
-          <button className="relative text-gray-500 hover:text-gray-700">
+          {/* <button className="relative text-gray-500 hover:text-gray-700">
             <Mail className="h-6 w-6" />
             <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
               <span className="text-xs text-white">3</span>
             </span>
-          </button>
+          </button> */}
 
-          <button className="relative text-gray-500 hover:text-gray-700">
+          {/* <button className="relative text-gray-500 hover:text-gray-700">
             <Bell className="h-6 w-6" />
-            {notifications.length > 0 && (
+            {1 > 0 && (
               <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white">{notifications.length}</span>
+                <span className="text-xs text-white">1</span>
               </span>
             )}
-          </button>
+          </button> */}
+
+          <NotificationButton />
 
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">
