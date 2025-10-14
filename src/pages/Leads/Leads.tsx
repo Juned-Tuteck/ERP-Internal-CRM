@@ -38,6 +38,8 @@ const Leads: React.FC = () => {
       type: 'success',
       message: 'Lead converted to project successfully!',
     });
+    // Optionally refresh the lead list to show updated status
+    window.location.reload();
   };
 
   const handleApprovalAction = (leadId: string, action: 'approve' | 'reject', reason?: string) => {
