@@ -344,7 +344,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
           if (projectResult.success) {
             console.log("Project created successfully:", projectResult.data);
-            alert(`Lead marked as Won and Project created successfully! Project ID: ${projectResult.projectId || 'N/A'}`);
+            alert(`Lead marked as Won and Project created successfully!`);
 
             // Also trigger the parent conversion handler
             onConvert(displayLead.id);
