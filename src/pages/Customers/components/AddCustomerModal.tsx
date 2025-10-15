@@ -21,6 +21,9 @@ import {
   getFirstError,
 } from "../../../utils/validationUtils";
 
+import useNotifications from '../../../hook/useNotifications';
+import { useCRM } from '../../../context/CRMContext';
+
 interface AddCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -58,6 +61,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   onSubmit,
   initialData,
 }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(
     initialData || {
@@ -1508,6 +1517,27 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         ) {
           throw new Error("Failed to create customer");
         }
+
+        // ------------------------------------------------------------------------------------------For notifications
+          try {
+              await sendNotification({
+                receiver_ids: ['admin'],
+                title: `CRM - New Customer Registration : ${formData.business_name||'Customer'}`,
+                message: `Customer ${formData.business_name||'Customer'} registered successfully and sent for approval!by ${userData?.name || 'a user'}`,
+                service_type: 'CRM',
+                link: '/customers',
+                sender_id: userRole || 'user',
+                access: {
+                  module: "CRM",
+                  menu: "customers",
+                }
+              });
+              console.log(`Notification sent for CRM Customer ${formData.business_name||'Customer'}`);
+          } catch (notifError) {
+            console.error('Failed to send notification:', notifError);
+            // Continue with the flow even if notification fails
+          }
+        // ----------------------------------------------------------------------------------------
 
         console.log("Customer created successfully:", customerResponse.data);
 
@@ -3238,7 +3268,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 disabled={isLoading}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Processing..." : "Next"}
+                {isLoading ? "Processing..." : (currentStep==1?"Register and Next": "Next")}
                 {!isLoading && <ChevronRight className="h-4 w-4 ml-2" />}
               </button>
             ) : (
@@ -3248,7 +3278,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Register Customer
+                Save
               </button>
             )}
           </div>

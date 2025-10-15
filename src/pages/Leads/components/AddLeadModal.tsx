@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
+import useNotifications from '../../../hook/useNotifications';
+import { useCRM } from '../../../context/CRMContext';
+
 interface AddLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,6 +26,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   onSubmit,
   initialData,
 }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(
     initialData || {
@@ -748,6 +757,28 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       });
       setUploadedFiles([]);
       setNewComment("");
+
+    // ------------------------------------------------------------------------------------------For notifications
+      try {
+          await sendNotification({
+            receiver_ids: ['admin'],
+            title: `New Lead Updated Successfully : ${formData.businessName||'Lead'}`,
+            message: `Lead ${formData.businessName||'Lead'} updated successfully by ${userData?.name || 'a user'}`,
+            service_type: 'CRM',
+            link: '/leads',
+            sender_id: userRole || 'user',
+            access: {
+              module: "CRM",
+              menu: "Lead",
+            }
+          });
+          console.log(`Notification sent for CRM Lead ${formData.businessName||'Lead'}`);
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Continue with the flow even if notification fails
+      }
+    // ----------------------------------------------------------------------------------------
+
     } catch (error) {
       console.error("Error updating lead:", error);
       alert("Failed to update lead. Please try again.");
@@ -827,6 +858,27 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           associatePayload
         );
       }
+
+      // ------------------------------------------------------------------------------------------For notifications
+        try {
+            await sendNotification({
+              receiver_ids: ['admin'],
+              title: `New Lead Created Successfully : ${formData.businessName||'Lead'}`,
+              message: `Lead ${formData.businessName||'Lead'} registered successfully and sent for approval!by ${userData?.name || 'a user'}`,
+              service_type: 'CRM',
+              link: '/leads',
+              sender_id: userRole || 'user',
+              access: {
+                module: "CRM",
+                menu: "Lead",
+              }
+            });
+            console.log(`Notification sent for CRM Lead ${formData.businessName||'Lead'}`);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Continue with the flow even if notification fails
+        }
+      // ----------------------------------------------------------------------------------------
 
       // Move to next step
       setCurrentStep(2);

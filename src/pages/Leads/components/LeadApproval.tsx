@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useCRM } from "../../../context/CRMContext";
+import useNotifications from '../../../hook/useNotifications';
 
 interface LeadApprovalProps {
   onApprovalAction: (
@@ -18,6 +19,13 @@ interface LeadApprovalProps {
 }
 
 const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
+  
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approved" | "rejected">(
@@ -156,6 +164,27 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
         setShowReasonModal(false);
         setReason("");
         setSelectedLead(null);
+
+        // ------------------------------------------------------------------------------------------For notifications
+        try {
+              await sendNotification({
+                receiver_ids: ['admin'],
+                title: `Lead ${actionType === "approved" ? "approved" : "rejected"} : ${selectedLead.businessName || 'Lead'}`,
+                message: `Lead ${selectedLead.businessName || 'Lead'} has been ${actionType === "approved" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
+                service_type: 'CRM',
+                link: '/leads',
+                sender_id: userRole || 'user',
+                access: {
+                  module: "CRM",
+                  menu: "Lead",
+                }
+              });
+              console.log(`Notification sent for CRM Lead ${selectedLead.businessName || 'Lead'}`);
+          } catch (notifError) {
+            console.error('Failed to send notification:', notifError);
+            // Continue with the flow even if notification fails
+          }
+        // ----------------------------------------------------------------------------------------
 
         // Optionally refresh the leads list
         // You might want to call fetchLeads() here to refresh the data

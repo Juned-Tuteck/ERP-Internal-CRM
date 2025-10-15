@@ -10,6 +10,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { useCRM } from "../../../context/CRMContext";
+import useNotifications from '../../../hook/useNotifications';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL; // Import the base URL from environment variables
 
@@ -26,6 +27,12 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
   onApprovalAction,
   onRefresh,
 }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [pendingVendors, setPendingVendors] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
@@ -106,6 +113,28 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
         setShowReasonModal(false);
         setReason("");
         setSelectedVendor(null);
+
+        // ------------------------------------------------------------------------------------------For notifications
+        try {
+              await sendNotification({
+                receiver_ids: ['admin'],
+                title: `CRM - Vendor ${actionType === "approve" ? "approved" : "rejected"} : ${selectedVendor.businessName || 'Vendor'}`,
+                message: `Vendor ${selectedVendor.businessName || 'Vendor'} has been ${actionType === "approve" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
+                service_type: 'CRM',
+                link: '/vendors',
+                sender_id: userRole || 'user',
+                access: {
+                  module: "CRM",
+                  menu: "Vendors",
+                }
+              });
+              console.log(`Notification sent for CRM Vendor ${selectedVendor.businessName || 'Vendor'}`);
+          } catch (notifError) {
+            console.error('Failed to send notification:', notifError);
+            // Continue with the flow even if notification fails
+          }
+        // ----------------------------------------------------------------------------------------
+
         if (typeof onRefresh === "function") {
           await onRefresh();
         }

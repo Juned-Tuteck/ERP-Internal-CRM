@@ -28,6 +28,9 @@ import {
   hasErrors,
 } from "../../../utils/validationUtils";
 
+import useNotifications from '../../../hook/useNotifications';
+import { useCRM } from '../../../context/CRMContext';
+
 interface AddVendorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -66,6 +69,12 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   initialData,
   onRefresh,
 }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(
     initialData || {
@@ -678,6 +687,28 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         if (contacts.length > 0) {
           await bulkUpload(contacts);
         }
+
+        // ------------------------------------------------------------------------------------------For notifications
+        try {
+            await sendNotification({
+              receiver_ids: ['admin'],
+              title: `CRM - New Vendor Registration : ${formData.businessName||'Vendor'}`,
+              message: `Vendor ${formData.businessName||'Vendor'} registered successfully and sent for approval by ${userData?.name || 'a user'}`,
+              service_type: 'CRM',
+              link: '/vendors',
+              sender_id: userRole || 'user',
+              access: {
+                module: "CRM",
+                menu: "Vendors",
+              }
+            });
+            console.log(`Notification sent for CRM Vendor ${formData.businessName||'Vendor'}`);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Continue with the flow even if notification fails
+        }
+        // ----------------------------------------------------------------------------------------
+
         setCurrentStep(currentStep + 1);
       } catch (err) {
         alert("Failed to create vendor or bulk upload. Please try again.");
@@ -2324,7 +2355,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 onClick={handleNext}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
-                Next
+                {currentStep == 1 ? "Register and Next" : "Next"}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </button>
             ) : (
