@@ -11,8 +11,16 @@ import {
 } from "lucide-react";
 
 import { useCRM } from "../../../context/CRMContext";
+import useNotifications from '../../../hook/useNotifications';
 
 const CustomerApproval: React.FC = () => {
+   //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
+  
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approve" | "reject">("approve");
@@ -126,6 +134,28 @@ const CustomerApproval: React.FC = () => {
               (customer) => customer.id !== selectedCustomer.id
             )
           );
+
+          // ------------------------------------------------------------------------------------------For notifications
+          try {
+                await sendNotification({
+                  receiver_ids: ['admin'],
+                  title: `CRM - Customer ${actionType === "approve" ? "approved" : "rejected"} : ${selectedCustomer.businessName || 'Customer'}`,
+                  message: `Customer ${selectedCustomer.businessName || 'Customer'} has been ${actionType === "approve" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
+                  service_type: 'CRM',
+                  link: '/customers',
+                  sender_id: userRole || 'user',
+                  access: {
+                    module: "CRM",
+                    menu: "customers",
+                  }
+                });
+                console.log(`Notification sent for CRM Customer ${selectedCustomer.businessName || 'Customer'}`);
+            } catch (notifError) {
+              console.error('Failed to send notification:', notifError);
+              // Continue with the flow even if notification fails
+            }
+          // ----------------------------------------------------------------------------------------
+
           alert(
             `Customer ${actionType === "approve" ? "approved" : "rejected"
             } successfully!`

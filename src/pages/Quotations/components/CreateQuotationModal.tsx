@@ -20,6 +20,10 @@ import {
   updateQuotationComment,
 } from "../../../utils/quotationApi";
 
+
+import useNotifications from '../../../hook/useNotifications';
+import { useCRM } from '../../../context/CRMContext';
+
 interface CreateQuotationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,6 +37,12 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   onSubmit,
   initialData,
 }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdQuotationId, setCreatedQuotationId] = useState<string | null>(
@@ -586,6 +596,27 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         ...prev,
         comments: [...prev.comments, newComment],
       }));
+      // ------------------------------------------------------------------------------------------For notifications
+        try {
+            await sendNotification({
+              receiver_ids: ['admin'],
+              title: `New Quotation Created Successfully For : ${formData.businessName||'Quotation'}`,
+              message: `Quotation Created successfully and sent for approval!by ${userData?.name || 'a user'}`,
+              service_type: 'CRM',
+              link: '/quotations',
+              sender_id: userRole || 'user',
+              access: {
+                module: "CRM",
+                menu: "Quotations",
+              }
+            });
+            console.log(`Notification sent for CRM Quotation of ${formData.businessName||'Quotation'}`);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Continue with the flow even if notification fails
+        }
+      // ----------------------------------------------------------------------------------------
+
     } catch (error) {
       console.error("Error adding comment:", error);
       alert("Failed to add comment. Please try again.");
