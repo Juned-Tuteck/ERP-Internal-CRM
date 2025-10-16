@@ -13,8 +13,16 @@ import {
   Upload,
 } from "lucide-react";
 import { useCRM } from "../../context/CRMContext";
+import useNotifications from '../../hook/useNotifications';
+
 
 const BOM: React.FC = () => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [activeTab, setActiveTab] = useState("templates");
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
   const [isCreateBOMOpen, setIsCreateBOMOpen] = useState(false);
@@ -38,12 +46,27 @@ const BOM: React.FC = () => {
   };
 
   // Called after BOM is created
-  const handleCreateBOM = (bomData: any) => {
-    console.log("Creating new BOM:", bomData);
-    addNotification({
-      type: "success",
-      message: `BOM for "${bomData.leadName}" created successfully and sent for approval!`,
-    });
+  const handleCreateBOM = async (bomData: any) => {
+    // ------------------------------------------------------------------------------------------For notifications
+    try {
+      await sendNotification({
+        receiver_ids: ['admin'],
+        title: `CRM BOM Created : ${bomData?.bomName || 'New BOM'}`,
+        message: `CRM BOM ${bomData?.bomName || 'New BOM'} successfully Created by ${userData?.name || 'a user'}`,
+        service_type: 'CRM',
+        link: '/bom',
+        sender_id: userRole || 'user',
+        access: {
+          module: "CRM",
+          menu: "BOM",
+        }
+      });
+      console.log(`Notification sent for CRM BOM Created ${bomData?.bomName || 'New BOM'}`);
+    } catch (notifError) {
+      console.error('Failed to send notification:', notifError);
+      // Continue with the flow even if notification fails
+    }
+    // ------------------------------------------------------------------------------------------
     setIsCreateBOMOpen(false);
     setBOMListKey((k) => k + 1); // Refresh BOM list
   };

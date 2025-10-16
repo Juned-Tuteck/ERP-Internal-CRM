@@ -13,6 +13,7 @@ import {
 import CreateBOM from "./CreateBOM";
 import BOMViewModal from "./BOMViewModal";
 import { useCRM } from "../../../context/CRMContext";
+import useNotifications from '../../../hook/useNotifications';
 
 interface BOM {
   id: string;
@@ -33,6 +34,12 @@ interface BOMListProps {
 }
 
 const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [boms, setBoms] = useState<BOM[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -398,7 +405,28 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
   };
 
   // Handler for saving edited BOM
-  const handleEditSave = (updatedBOM: any) => {
+  const handleEditSave = async (updatedBOM: any) => {
+    // ------------------------------------------------------------------------------------------For notifications
+    try {
+      await sendNotification({
+        receiver_ids: ['admin'],
+        title: `CRM BOM Update : ${updatedBOM?.bomName || 'New Lead'}`,
+        message: `CRM BOM ${updatedBOM?.bomName || 'New Lead'} successfully Updated by ${userData?.name || 'a user'}`,
+        service_type: 'CRM',
+        link: '/bom',
+        sender_id: userRole || 'user',
+        access: {
+          module: "CRM",
+          menu: "BOM",
+        }
+      });
+      console.log(`Notification sent for CRM BOM Update ${updatedBOM?.bomName || 'New Lead'}`);
+    } catch (notifError) {
+      console.error('Failed to send notification:', notifError);
+      // Continue with the flow even if notification fails
+    }
+    // ------------------------------------------------------------------------------------------
+
     setBoms((prev) =>
       prev.map((b) => (b.id === updatedBOM.id ? { ...b, ...updatedBOM } : b))
     );
