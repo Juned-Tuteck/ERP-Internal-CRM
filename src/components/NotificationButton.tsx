@@ -74,7 +74,7 @@ export function NotificationButton() {
     }
     
     if (notification.link) {
-      window.open(notification.link, '_blank');
+      window.location.href = notification.link;
     }
   };
   
