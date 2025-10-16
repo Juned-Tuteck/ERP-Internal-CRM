@@ -148,7 +148,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         try {
           const data = await response.json();
           if (data && data.message) msg = data.message;
-        } catch {}
+        } catch { }
         alert(msg);
       }
     } catch (err) {
@@ -499,12 +499,12 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       prev.map((spec) =>
         spec.id === specId
           ? {
-              ...spec,
-              items: [...spec.items, newItem],
-              price:
-                spec.items.reduce((sum, item) => sum + item.price, 0) +
-                newItem.price,
-            }
+            ...spec,
+            items: [...spec.items, newItem],
+            price:
+              spec.items.reduce((sum, item) => sum + item.price, 0) +
+              newItem.price,
+          }
           : spec
       )
     );
@@ -553,38 +553,38 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       prev.map((spec) =>
         spec.id === specId
           ? {
-              ...spec,
-              items: spec.items.map((item) =>
+            ...spec,
+            items: spec.items.map((item) =>
+              item.id === itemId
+                ? {
+                  ...item,
+                  [field]: value,
+                  price:
+                    field === "quantity" || field === "netRate"
+                      ? field === "quantity"
+                        ? value * item.netRate
+                        : item.quantity * value
+                      : item.price,
+                }
+                : item
+            ),
+            price: spec.items
+              .map((item) =>
                 item.id === itemId
                   ? {
-                      ...item,
-                      [field]: value,
-                      price:
-                        field === "quantity" || field === "netRate"
-                          ? field === "quantity"
-                            ? value * item.netRate
-                            : item.quantity * value
-                          : item.price,
-                    }
+                    ...item,
+                    [field]: value,
+                    price:
+                      field === "quantity" || field === "netRate"
+                        ? field === "quantity"
+                          ? value * item.netRate
+                          : item.quantity * value
+                        : item.price,
+                  }
                   : item
-              ),
-              price: spec.items
-                .map((item) =>
-                  item.id === itemId
-                    ? {
-                        ...item,
-                        [field]: value,
-                        price:
-                          field === "quantity" || field === "netRate"
-                            ? field === "quantity"
-                              ? value * item.netRate
-                              : item.quantity * value
-                            : item.price,
-                      }
-                    : item
-                )
-                .reduce((sum, item) => sum + item.price, 0),
-            }
+              )
+              .reduce((sum, item) => sum + item.price, 0),
+          }
           : spec
       )
     );
@@ -610,12 +610,12 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       prev.map((spec) =>
         spec.id === specId
           ? {
-              ...spec,
-              items: spec.items.filter((item) => item.id !== itemId),
-              price: spec.items
-                .filter((item) => item.id !== itemId)
-                .reduce((sum, item) => sum + item.price, 0),
-            }
+            ...spec,
+            items: spec.items.filter((item) => item.id !== itemId),
+            price: spec.items
+              .filter((item) => item.id !== itemId)
+              .reduce((sum, item) => sum + item.price, 0),
+          }
           : spec
       )
     );
@@ -631,24 +631,24 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       prev.map((spec) =>
         spec.id === specId
           ? {
-              ...spec,
-              items: spec.items.map((item) =>
+            ...spec,
+            items: spec.items.map((item) =>
+              item.id === itemId
+                ? {
+                  ...item,
+                  quantity,
+                  price: item.netRate * quantity,
+                }
+                : item
+            ),
+            price: spec.items
+              .map((item) =>
                 item.id === itemId
-                  ? {
-                      ...item,
-                      quantity,
-                      price: item.netRate * quantity,
-                    }
+                  ? { ...item, quantity, price: item.netRate * quantity }
                   : item
-              ),
-              price: spec.items
-                .map((item) =>
-                  item.id === itemId
-                    ? { ...item, quantity, price: item.netRate * quantity }
-                    : item
-                )
-                .reduce((sum, item) => sum + item.price, 0),
-            }
+              )
+              .reduce((sum, item) => sum + item.price, 0),
+          }
           : spec
       )
     );
@@ -664,7 +664,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
 
   // Create BOM API call
   const handleCreateBOM = async () => {
-    if (!formData.leadId) return;
+    if (!formData.leadId) return null;
 
     setIsSubmitting(true);
     try {
@@ -681,21 +681,24 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
 
       if (bomId) {
         setCreatedBOMId(bomId);
-        setCurrentStep(2);
+        // setCurrentStep(2);
+        return bomId;
       } else {
         throw new Error("BOM ID not received from API");
       }
     } catch (error) {
       console.error("Error creating BOM:", error);
       alert("Failed to create BOM. Please try again.");
+      return null;
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Save BOM with specs and details
-  const handleSaveBOM = async () => {
-    if (!createdBOMId) {
+  const handleSaveBOM = async (bomId?: string) => {
+    const targetBomId = bomId || createdBOMId;
+    if (!targetBomId) {
       alert("BOM not created yet. Please try again.");
       return;
     }
@@ -704,7 +707,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     try {
       // Step 1: Create specs
       const specsPayload = specs.map((spec) => ({
-        bom_id: createdBOMId,
+        bom_id: targetBomId,
         spec_description:
           spec.name && spec.name.trim() !== "" ? spec.name : "Unnamed Spec",
         spec_price: spec.price,
@@ -761,7 +764,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         total_price: totalPrice,
       };
 
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/${createdBOMId}`, {
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/${targetBomId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -804,7 +807,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
 
   const handleNext = () => {
     if (currentStep === 1 && formData.leadId) {
-      handleCreateBOM();
+      // handleCreateBOM();
+      setCurrentStep(2);
     }
   };
 
@@ -861,7 +865,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                name: formData.leadName,
+                name: formData.bomName,
                 lead_id: formData.leadId,
                 work_type: "TYPE2", // Always pass TYPE2 as work_type
                 bom_date: formData.date,
@@ -966,8 +970,17 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       };
       onSubmit(bomData);
     } else {
-      // Handle create mode
-      handleSaveBOM();
+
+      if (!createdBOMId) {
+
+        const bomId = await handleCreateBOM();
+        if (bomId) {
+          // BOM created successfully, now save specs and details
+          await handleSaveBOM(bomId);
+        }
+      } else {
+        await handleSaveBOM(createdBOMId);
+      }
     }
   };
 
@@ -1093,13 +1106,12 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
               {steps.map((s, idx) => (
                 <div key={s.step} className="flex items-center">
                   <span
-                    className={`text-sm font-medium ${
-                      currentStep === s.step
-                        ? "text-blue-600"
-                        : currentStep > s.step
+                    className={`text-sm font-medium ${currentStep === s.step
+                      ? "text-blue-600"
+                      : currentStep > s.step
                         ? "text-green-600"
                         : "text-gray-400"
-                    } ${editMode ? "cursor-pointer underline" : ""}`}
+                      } ${editMode ? "cursor-pointer underline" : ""}`}
                     onClick={() => handleStepClick(s.step)}
                   >
                     {s.label}
@@ -1132,11 +1144,10 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   value={formData.leadId}
                   onChange={handleInputChange}
                   required
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    headerErrors.leadId
-                      ? "border-red-300 bg-red-50"
-                      : "border-gray-300"
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${headerErrors.leadId
+                    ? "border-red-300 bg-red-50"
+                    : "border-gray-300"
+                    }`}
                 >
                   <option value="">Select Lead</option>
                   {leads
@@ -1162,7 +1173,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                 <input
                   type="text"
                   name="bomName"
-                  value={formData.leadName}
+                  value={formData.bomName}
                   onChange={handleInputChange}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1199,11 +1210,10 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   onChange={handleInputChange}
                   required
                   max={new Date().toISOString().split("T")[0]}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    headerErrors.date
-                      ? "border-red-300 bg-red-50"
-                      : "border-gray-300"
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${headerErrors.date
+                    ? "border-red-300 bg-red-50"
+                    : "border-gray-300"
+                    }`}
                 />
                 {headerErrors.date && (
                   <p className="mt-1 text-sm text-red-600">
@@ -1349,11 +1359,10 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                   onChange={(e) =>
                                     updateSpecName(spec.id, e.target.value)
                                   }
-                                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                                    specErrors[spec.id]?.name
-                                      ? "border-red-300 bg-red-50"
-                                      : "border-gray-300"
-                                  }`}
+                                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${specErrors[spec.id]?.name
+                                    ? "border-red-300 bg-red-50"
+                                    : "border-gray-300"
+                                    }`}
                                   placeholder="Enter spec name"
                                   disabled={
                                     editMode &&
@@ -1474,7 +1483,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                                   item.id,
                                                   "supplyRate",
                                                   parseFloat(e.target.value) ||
-                                                    0
+                                                  0
                                                 )
                                               }
                                               min="0"
@@ -1493,7 +1502,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                                   item.id,
                                                   "installationRate",
                                                   parseFloat(e.target.value) ||
-                                                    0
+                                                  0
                                                 )
                                               }
                                               min="0"
@@ -1512,7 +1521,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                                   item.id,
                                                   "netRate",
                                                   parseFloat(e.target.value) ||
-                                                    0
+                                                  0
                                                 )
                                               }
                                               min="0"
@@ -1692,15 +1701,17 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         {/* Footer with navigation buttons */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200">
           <div></div>
-          {/* <button
-            type="button"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </button> */}
+          {!editMode && currentStep > 1 && (
+            <button
+              type="button"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </button>
+          )}
 
           <div className="flex space-x-3">
             <button
@@ -1721,11 +1732,10 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   handleSubmit();
                 }}
                 disabled={currentStep === 2 && specs.length === 0}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  currentStep === 2 && hasEmptySpecs(specs)
-                    ? "bg-yellow-600 hover:bg-yellow-700"
-                    : "bg-green-600 hover:bg-green-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${currentStep === 2 && hasEmptySpecs(specs)
+                  ? "bg-yellow-600 hover:bg-yellow-700"
+                  : "bg-green-600 hover:bg-green-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
                 title={
                   currentStep === 2 && hasEmptySpecs(specs)
                     ? "There are incomplete specifications that need attention"
@@ -1758,11 +1768,10 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                   handleSubmit();
                 }}
                 disabled={specs.length === 0 || isSubmitting}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  hasEmptySpecs(specs)
-                    ? "bg-yellow-600 hover:bg-yellow-700"
-                    : "bg-green-600 hover:bg-green-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${hasEmptySpecs(specs)
+                  ? "bg-yellow-600 hover:bg-yellow-700"
+                  : "bg-green-600 hover:bg-green-700"
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
                 title={
                   hasEmptySpecs(specs)
                     ? "There are incomplete specifications that need attention"
@@ -1773,8 +1782,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                 {isSubmitting
                   ? "Saving..."
                   : hasEmptySpecs(specs)
-                  ? "Review & Save"
-                  : "Save BOM"}
+                    ? "Review & Save"
+                    : "Save BOM"}
               </button>
             )}
           </div>
@@ -1783,8 +1792,5 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     </div>
   );
 };
-
-// PATCH: Save item row for existing items (PUT with detail_id)
-// Move inside component to access setEditingItem
 
 export default CreateBOM;

@@ -22,6 +22,8 @@ interface BOM {
   totalValue: string;
   createdBy: string;
   createdDate: string;
+  bom_type: string;
+  bomNumber: string;
   status: "draft" | "pending_approval" | "approved" | "rejected";
 }
 
@@ -68,6 +70,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
               0
             ) || 0,
           totalValue: `₹${(apiBOM.total_price || 0).toLocaleString("en-IN")}`,
+          bom_type: apiBOM.bom_type || "Unknown",
           createdBy: apiBOM.created_by || "Unknown",
           createdDate: apiBOM.created_at || new Date().toISOString(),
           status: apiBOM.approval_status?.toLowerCase() || "draft",
@@ -375,6 +378,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
         id: apiBOM.id,
         leadId: apiBOM.lead_id || apiBOM.id,
         leadName: apiBOM.name,
+        bomName: apiBOM.name,
         workType: apiBOM.work_type,
         date: apiBOM.bom_date
           ? apiBOM.bom_date.split("T")[0]
@@ -440,7 +444,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
     }
   };
 
-  const filteredBoms = boms.filter((bom) => {
+  const filteredBoms = boms.filter((bom) => bom.bom_type === "CRM").filter((bom) => {
     const q = search.toLowerCase();
     return (
       (bom.leadName || "").toLowerCase().includes(q) ||
@@ -449,6 +453,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
       (bom.bomNumber || "").toLowerCase().includes(q)
     );
   });
+  console.log("Filtered BOMs:", filteredBoms);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -458,7 +463,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
             Bills of Materials
           </h3>
           <p className="text-sm text-gray-500">
-            {loading ? "Loading..." : `${boms.length} total BOMs`}
+            {loading ? "Loading..." : `${filteredBoms.length} total BOMs`}
           </p>
         </div>
         <div className="flex gap-2 items-center">
