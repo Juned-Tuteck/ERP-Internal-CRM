@@ -175,6 +175,7 @@ export const updateQuotationPOCExpense = async (
   return response.data;
 };
 
+
 // Update quotation approval status (approve/reject)
 export const updateQuotationDecision = async (
   id: string,
@@ -183,5 +184,11 @@ export const updateQuotationDecision = async (
   const response = await axios.patch(
     `${API_BASE_URL}/customer-quotation-approval/${id}/decision?status=${status}`
   );
+  return response.data;
+};
+
+// Delete quotation by ID
+export const deleteQuotation = async (id: string) => {
+  const response = await axios.delete(`${API_BASE_URL}/customer-quotation/${id}`);
   return response.data;
 };

@@ -143,7 +143,13 @@ const Quotations: React.FC = () => {
             />
           </div>
           <div className="lg:col-span-2">
-            <QuotationDetails quotation={selectedQuotation} />
+            <QuotationDetails
+              quotation={selectedQuotation}
+              onQuotationDeleted={() => {
+                setRefreshKey((prev) => prev + 1);
+                setSelectedQuotation(null);
+              }}
+            />
           </div>
         </div>
       ) : (
