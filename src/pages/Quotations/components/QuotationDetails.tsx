@@ -249,6 +249,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation }) => {
           leadId: apiQuotation.lead_id || "",
           leadName: apiQuotation.lead_name || quotation.leadName,
           businessName: apiQuotation.business_name || quotation.businessName,
+          quotationNumber: apiQuotation.customer_quotation_number || "",
           quotationDate: apiQuotation.quotation_date
             ? new Date(apiQuotation.quotation_date).toLocaleDateString("en-CA")
             : quotation.createdDate

@@ -23,6 +23,7 @@ import {
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
+import { log } from "console";
 
 interface CreateQuotationModalProps {
   isOpen: boolean;
@@ -142,6 +143,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         specs: initialData.specs || [],
         items: initialData.items || [], // Keep for backward compatibility
         // Step 1: Costing Sheet
+        quotationNumber: initialData.quotationNumber || "",
         quotationDate: initialData.quotationDate,
         expiryDate: initialData.expiryDate,
         // Step 2: POC
@@ -310,6 +312,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
 
       const quotationResponse = await createQuotation(quotationPayload);
       const quotationId = quotationResponse.data?.id;
+      const quotationNumber = quotationResponse.data?.customer_quotation_number;
 
       if (!quotationId) {
         throw new Error("Quotation ID not received from API");
@@ -412,6 +415,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       }
       setFormData({
         ...formData,
+        quotationNumber: quotationNumber,
         materialCost: totals.totalSupplyOwnAmount,
         labourCost: totals.totalInstallationOwnAmount,
       });
@@ -596,26 +600,6 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         ...prev,
         comments: [...prev.comments, newComment],
       }));
-      // ------------------------------------------------------------------------------------------For notifications
-        try {
-            await sendNotification({
-              receiver_ids: ['admin'],
-              title: `New Quotation Created Successfully For : ${formData.businessName||'Quotation'}`,
-              message: `Quotation Created successfully and sent for approval!by ${userData?.name || 'a user'}`,
-              service_type: 'CRM',
-              link: '/quotations',
-              sender_id: userRole || 'user',
-              access: {
-                module: "CRM",
-                menu: "Quotations",
-              }
-            });
-            console.log(`Notification sent for CRM Quotation of ${formData.businessName||'Quotation'}`);
-        } catch (notifError) {
-          console.error('Failed to send notification:', notifError);
-          // Continue with the flow even if notification fails
-        }
-      // ----------------------------------------------------------------------------------------
 
     } catch (error) {
       console.error("Error adding comment:", error);
@@ -653,7 +637,28 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // ------------------------------------------------------------------------------------------For notifications
+      try {
+          await sendNotification({
+            receiver_ids: ['admin'],
+            title: `New Quotation Created Successfully For : ${formData.quotationNumber||'Quotation'}`,
+            message: `Quotation Created successfully and sent for approval!by ${userData?.name || 'a user'}`,
+            service_type: 'CRM',
+            link: '/quotations',
+            sender_id: userRole || 'user',
+            access: {
+              module: "CRM",
+              menu: "Quotations",
+            }
+          });
+          console.log(`Notification sent for CRM Quotation of ${formData.quotationNumber||'Quotation'}`);
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Continue with the flow even if notification fails
+      }
+    // ----------------------------------------------------------------------------------------
+
     // Close modal with success message
     alert("Quotation created successfully!");
     onSubmit(formData);
@@ -1028,13 +1033,34 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       }
 
       if (updateSuccess) {
+        // ------------------------------------------------------------------------------------------For notifications
+        try {
+            await sendNotification({
+              receiver_ids: ['admin'],
+              title: `Quotation Updated Successfully For : ${formData.quotationNumber||'Quotation'}`,
+              message: `Quotation Updated successfully by ${userData?.name || 'a user'}`,
+              service_type: 'CRM',
+              link: '/quotations',
+              sender_id: userRole || 'user',
+              access: {
+                module: "CRM",
+                menu: "Quotations",
+              }
+            });
+            console.log(`Notification sent for CRM Quotation of ${formData.quotationNumber||'Quotation'}`);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Continue with the flow even if notification fails
+        }
+        // ----------------------------------------------------------------------------------------
+
         alert("Quotation updated successfully!");
-        onClose();
+        // onClose();
 
         // Reset form
-        setCurrentStep(1);
-        setCreatedQuotationId(null);
-        setFormData(getDefaultFormData());
+        // setCurrentStep(1);
+        // setCreatedQuotationId(null);
+        // setFormData(getDefaultFormData());
       }
     } catch (error) {
       console.error("Error in handleUpdate:", error);

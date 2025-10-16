@@ -14,6 +14,8 @@ import {
   updateQuotationDecision,
 } from "../../../utils/quotationApi";
 import { useCRM } from "../../../context/CRMContext";
+import useNotifications from '../../../hook/useNotifications';
+
 
 interface QuotationData {
   id: string;
@@ -45,6 +47,13 @@ interface QuotationApprovalProps {
 const QuotationApproval: React.FC<QuotationApprovalProps> = ({
   onApprovalAction,
 }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
+ 
   const [selectedQuotation, setSelectedQuotation] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approve" | "reject">("approve");
@@ -223,6 +232,27 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
         const apiQuotations = response.data || [];
         const mappedQuotations = mapQuotationData(apiQuotations);
         setQuotations(mappedQuotations);
+
+        // ------------------------------------------------------------------------------------------For notifications
+        try {
+            await sendNotification({
+              receiver_ids: ['admin'],
+              title: `Quotation ${actionType === "approve" ? "Approved" : "Rejected"} Successfully For : ${selectedQuotation.quotationNumber||'Quotation'}`,
+              message: `Quotation ${actionType === "approve" ? "Approved" : "Rejected"} successfully by ${userData?.name || 'a user'}`,
+              service_type: 'CRM',
+              link: '/quotations',
+              sender_id: userRole || 'user',
+              access: {
+                module: "CRM",
+                menu: "Quotations",
+              }
+            });
+            console.log(`Notification sent for CRM Quotation of ${selectedQuotation.quotationNumber||'Quotation'}`);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Continue with the flow even if notification fails
+        }
+        // ----------------------------------------------------------------------------------------
 
         // Show success message (you can add a toast notification here)
         console.log(
