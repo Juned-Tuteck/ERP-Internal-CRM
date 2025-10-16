@@ -649,7 +649,6 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 <Printer className="h-3 w-3 mr-1" />
                 Print
               </button> */}
-              {console.log("Qutation ------", quotation)}
               {(quotation.status === "pending" ||
                 quotation.status === "draft") && hasActionAccess("Edit ", "All Quotations", "Quotations") && (
                   <button
