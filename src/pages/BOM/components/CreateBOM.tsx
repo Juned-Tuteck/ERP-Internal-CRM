@@ -1701,7 +1701,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         {/* Footer with navigation buttons */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200">
           <div></div>
-          {!editMode && currentStep > 1 && (
+          {/* {!editMode && currentStep > 1 && (
             <button
               type="button"
               onClick={handlePrevious}
@@ -1711,7 +1711,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
               <ChevronLeft className="h-4 w-4 mr-2" />
               Previous
             </button>
-          )}
+          )} */}
 
           <div className="flex space-x-3">
             <button
