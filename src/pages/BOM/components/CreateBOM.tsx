@@ -733,7 +733,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
         if (specId) {
           spec.items.forEach((item) => {
             detailsPayload.push({
-              bom_id: createdBOMId,
+              bom_id: targetBomId,
               bom_spec_id: specId,
               item_id: item.id,
               required_quantity: item.quantity,
