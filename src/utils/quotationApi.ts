@@ -187,6 +187,12 @@ export const updateQuotationDecision = async (
   return response.data;
 };
 
+// Increment quotation step
+export const incrementQuotationStep = async (id: string) => {
+  const response = await axios.put(`${API_BASE_URL}/customer-quotation/increment-step/${id}`);
+  return response.data;
+};
+
 // Delete quotation by ID
 export const deleteQuotation = async (id: string) => {
   const response = await axios.delete(`${API_BASE_URL}/customer-quotation/${id}`);

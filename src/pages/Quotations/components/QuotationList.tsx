@@ -113,7 +113,7 @@ const QuotationList: React.FC<QuotationListProps> = ({
               apiQuotation.created_at ||
               new Date().toISOString(),
             expiryDate: apiQuotation.expiry_date || new Date().toISOString(),
-            status: apiQuotation.approval_status?.toLowerCase() || "draft",
+            status: apiQuotation.step > 3 ? apiQuotation.approval_status?.toLowerCase() : "draft",
           })
         );
 
@@ -231,11 +231,10 @@ const QuotationList: React.FC<QuotationListProps> = ({
           {filteredQuotations.map((quotation) => (
             <div
               key={quotation.id}
-              className={`relative p-4 rounded-lg border cursor-pointer hover:shadow-md ${
-                selectedQuotation?.id === quotation.id
+              className={`relative p-4 rounded-lg border cursor-pointer hover:shadow-md ${selectedQuotation?.id === quotation.id
                   ? "bg-blue-50 border-blue-300"
                   : "bg-white border-gray-200"
-              }`}
+                }`}
               onClick={() => onSelectQuotation(quotation)}
             >
               <div className="flex items-center">

@@ -18,6 +18,7 @@ import {
   updateQuotationPOCExpense,
   updateQuotationCostMargin,
   updateQuotationComment,
+  incrementQuotationStep,
 } from "../../../utils/quotationApi";
 
 
@@ -249,43 +250,31 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     }
   }, [initialData]);
 
-  const handleNext = async () => {
-    if (currentStep === 1) {
-      await handleStep1Submit();
-    } else if (currentStep === 2) {
-      await handleStep2Submit();
-    } else if (currentStep === 3) {
-      await handleStep3Submit();
-    } else if (currentStep === 4) {
-      await handleStep4Submit();
-    } else if (currentStep < 5) {
-      setCurrentStep(currentStep + 1);
-    }
 
-    // if (isEditMode) {
-    //   // In edit mode, update the current step and move to next
-    //   let updateSuccess = false;
+  // if (isEditMode) {
+  //   // In edit mode, update the current step and move to next
+  //   let updateSuccess = false;
 
-    //   if (currentStep === 1) {
-    //     updateSuccess = await handleStep1Update();
-    //   } else if (currentStep === 2) {
-    //     updateSuccess = await handleStep2Update();
-    //   } else if (currentStep === 3) {
-    //     updateSuccess = await handleStep3Update();
-    //   } else if (currentStep === 4) {
-    //     updateSuccess = await handleStep4Update();
-    //   } else if (currentStep === 5) {
-    //     updateSuccess = await handleStep5Update();
-    //   }
+  //   if (currentStep === 1) {
+  //     updateSuccess = await handleStep1Update();
+  //   } else if (currentStep === 2) {
+  //     updateSuccess = await handleStep2Update();
+  //   } else if (currentStep === 3) {
+  //     updateSuccess = await handleStep3Update();
+  //   } else if (currentStep === 4) {
+  //     updateSuccess = await handleStep4Update();
+  //   } else if (currentStep === 5) {
+  //     updateSuccess = await handleStep5Update();
+  //   }
 
-    //   // Move to next step only if update was successful
-    //   if (updateSuccess && currentStep < 5) {
-    //     setCurrentStep(currentStep + 1);
-    //   }
-    // } else {
-    // In create mode, use the original logic
-    // }
-  };
+  //   // Move to next step only if update was successful
+  //   if (updateSuccess && currentStep < 5) {
+  //     setCurrentStep(currentStep + 1);
+  //   }
+  // } else {
+  // In create mode, use the original logic
+  // }
+
 
   // Step 1: Create quotation, specs, and item details
   const handleStep1Submit = async () => {
@@ -319,6 +308,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       }
 
       setCreatedQuotationId(quotationId);
+      console.log("Created Quotation ID:", quotationId);
+      console.log("Quotation State:", createdQuotationId)
 
       // Step 2: Create specs
       const specsPayload = formData.specs.map((spec: any) => ({
@@ -419,6 +410,14 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         materialCost: totals.totalSupplyOwnAmount,
         labourCost: totals.totalInstallationOwnAmount,
       });
+
+      try {
+        await incrementQuotationStep(quotationId);
+        console.log(`Step ${currentStep} incremented successfully for quotation ${quotationId}`);
+      } catch (error) {
+        console.error("Error incrementing step:", error);
+        // Don't block the flow if step increment fails, just log the error
+      }
 
       // Move to next step
       setCurrentStep(2);
@@ -637,26 +636,59 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     }
   };
 
+
+  const handleNext = async () => {
+    let stepCompleted = false;
+
+    if (currentStep === 1) {
+      await handleStep1Submit();
+      // stepCompleted = true;
+    } else if (currentStep === 2) {
+      await handleStep2Submit();
+      stepCompleted = true;
+    } else if (currentStep === 3) {
+      await handleStep3Submit();
+      stepCompleted = true;
+    } else if (currentStep === 4) {
+      await handleStep4Submit();
+      stepCompleted = true;
+    } else if (currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+      stepCompleted = true;
+    }
+
+    // Call increment step API after successful step completion
+    if (stepCompleted && createdQuotationId) {
+      try {
+        await incrementQuotationStep(createdQuotationId);
+        console.log(`Step ${currentStep} incremented successfully for quotation ${createdQuotationId}`);
+      } catch (error) {
+        console.error("Error incrementing step:", error);
+        // Don't block the flow if step increment fails, just log the error
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     // ------------------------------------------------------------------------------------------For notifications
-      try {
-          await sendNotification({
-            receiver_ids: ['admin'],
-            title: `New Quotation Created Successfully For : ${formData.quotationNumber||'Quotation'}`,
-            message: `Quotation Created successfully and sent for approval!by ${userData?.name || 'a user'}`,
-            service_type: 'CRM',
-            link: '/quotations',
-            sender_id: userRole || 'user',
-            access: {
-              module: "CRM",
-              menu: "Quotations",
-            }
-          });
-          console.log(`Notification sent for CRM Quotation of ${formData.quotationNumber||'Quotation'}`);
-      } catch (notifError) {
-        console.error('Failed to send notification:', notifError);
-        // Continue with the flow even if notification fails
-      }
+    try {
+      await sendNotification({
+        receiver_ids: ['admin'],
+        title: `New Quotation Created Successfully For : ${formData.quotationNumber || 'Quotation'}`,
+        message: `Quotation Created successfully and sent for approval!by ${userData?.name || 'a user'}`,
+        service_type: 'CRM',
+        link: '/quotations',
+        sender_id: userRole || 'user',
+        access: {
+          module: "CRM",
+          menu: "Quotations",
+        }
+      });
+      console.log(`Notification sent for CRM Quotation of ${formData.quotationNumber || 'Quotation'}`);
+    } catch (notifError) {
+      console.error('Failed to send notification:', notifError);
+      // Continue with the flow even if notification fails
+    }
     // ----------------------------------------------------------------------------------------
 
     // Close modal with success message
@@ -1033,21 +1065,42 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       }
 
       if (updateSuccess) {
+        // Call increment step API only when progressing to a new step
+        // This happens when current step in edit mode equals quotation's stored step + 1
+        const quotationCurrentStep = initialData.currentQuotationStep || 1;
+        console.log(`Quotation current step: ${quotationCurrentStep}, Current editing step: ${currentStep}`);
+        const shouldIncrementStep = currentStep == Number(quotationCurrentStep) + 1;
+        console.log("shouldIncrement:", shouldIncrementStep)
+
+        if (shouldIncrementStep) {
+          try {
+            await incrementQuotationStep(initialData.id);
+            // Update the quotationCurrentStep to reflect the new step value after successful increment
+            initialData.currentQuotationStep = currentStep;
+            console.log(`Step ${currentStep} incremented successfully for quotation ${initialData.id} (quotation was at step ${quotationCurrentStep}, now updated to step ${currentStep})`);
+          } catch (stepError) {
+            console.error("Error incrementing step:", stepError);
+            // Don't block the flow if step increment fails, just log the error
+          }
+        } else {
+          console.log(`Skipping step increment - Current step: ${currentStep}, Quotation step: ${quotationCurrentStep}. Step increment only happens when editing the next new step.`);
+        }
+
         // ------------------------------------------------------------------------------------------For notifications
         try {
-            await sendNotification({
-              receiver_ids: ['admin'],
-              title: `Quotation Updated Successfully For : ${formData.quotationNumber||'Quotation'}`,
-              message: `Quotation Updated successfully by ${userData?.name || 'a user'}`,
-              service_type: 'CRM',
-              link: '/quotations',
-              sender_id: userRole || 'user',
-              access: {
-                module: "CRM",
-                menu: "Quotations",
-              }
-            });
-            console.log(`Notification sent for CRM Quotation of ${formData.quotationNumber||'Quotation'}`);
+          await sendNotification({
+            receiver_ids: ['admin'],
+            title: `Quotation Updated Successfully For : ${formData.quotationNumber || 'Quotation'}`,
+            message: `Quotation Updated successfully by ${userData?.name || 'a user'}`,
+            service_type: 'CRM',
+            link: '/quotations',
+            sender_id: userRole || 'user',
+            access: {
+              module: "CRM",
+              menu: "Quotations",
+            }
+          });
+          console.log(`Notification sent for CRM Quotation of ${formData.quotationNumber || 'Quotation'}`);
         } catch (notifError) {
           console.error('Failed to send notification:', notifError);
           // Continue with the flow even if notification fails
@@ -1071,8 +1124,31 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   };
 
   const isEditMode = !!initialData;
+
+  // Handle close/cancel with state reset
+  const handleCloseModal = () => {
+    // Reset all state to default values
+    setCurrentStep(1);
+    setIsSubmitting(false);
+    setCreatedQuotationId(null);
+    setFormData(getDefaultFormData());
+
+    // Call the original onClose function
+    onClose();
+  };
+
   const handleBreadcrumbClick = (stepId: number) => {
-    if (isEditMode) setCurrentStep(stepId);
+    // Allow navigation to previous steps in both create and edit modes
+    // In edit mode, allow navigation to any step
+    // In create mode, only allow navigation to previous/completed steps
+    if (isEditMode) {
+      setCurrentStep(stepId);
+    } else {
+      // In create mode, only allow going back to previous steps
+      if (stepId < currentStep) {
+        setCurrentStep(stepId);
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -1088,7 +1164,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
             <p className="text-sm text-gray-500">Step {currentStep} of 5</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -1103,29 +1179,27 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleBreadcrumbClick(step.id)}
-                  style={
-                    isEditMode ? { cursor: "pointer" } : { cursor: "default" }
-                  }
-                  className={`flex items-center space-x-2 focus:outline-none ${
-                    currentStep === step.id
-                      ? "text-blue-600"
-                      : currentStep > step.id
-                      ? "text-green-600"
+                  style={{
+                    cursor: isEditMode || step.id < currentStep ? "pointer" : "default"
+                  }}
+                  className={`group flex items-center space-x-2 focus:outline-none transition-colors ${currentStep === step.id
+                    ? "text-blue-600"
+                    : currentStep > step.id
+                      ? "text-green-600 hover:text-green-700"
                       : isEditMode
-                      ? "text-blue-400"
-                      : "text-gray-400"
-                  }`}
+                        ? "text-blue-400 hover:text-blue-500"
+                        : "text-gray-400"
+                    }`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      currentStep === step.id
-                        ? "bg-blue-100 text-blue-600"
-                        : currentStep > step.id
-                        ? "bg-green-100 text-green-600"
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${currentStep === step.id
+                      ? "bg-blue-100 text-blue-600"
+                      : currentStep > step.id
+                        ? "bg-green-100 text-green-600 group-hover:bg-green-200"
                         : isEditMode
-                        ? "bg-blue-50 text-blue-400"
-                        : "bg-gray-100 text-gray-400"
-                    }`}
+                          ? "bg-blue-50 text-blue-400 group-hover:bg-blue-100"
+                          : "bg-gray-100 text-gray-400"
+                      }`}
                   >
                     {step.id}
                   </div>

@@ -476,8 +476,11 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           createdDate: apiQuotation.quotation_date || quotation.createdDate,
           status:
             apiQuotation.approval_status?.toLowerCase() || quotation.status,
-        };
 
+          // Quotation current step for edit mode validation
+          currentQuotationStep: apiQuotation.step,
+        };
+        console.log("Mapped Quotation for Edit:", mappedQuotationForEdit);
         setQuotationDetailsForEdit(mappedQuotationForEdit);
         setQuotationDetails(mappedQuotation);
       } catch (error) {
