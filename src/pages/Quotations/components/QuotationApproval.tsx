@@ -10,12 +10,22 @@ import {
   Search,
 } from "lucide-react";
 import {
-  getQuotations,
   updateQuotationDecision,
+  getQuotationsByApproverRole,
 } from "../../../utils/quotationApi";
 import { useCRM } from "../../../context/CRMContext";
 import useNotifications from '../../../hook/useNotifications';
 
+
+interface ApprovalDetail {
+  approval_id: string;
+  approver_role: string;
+  approval_status: string;
+  approved_by: string | null;
+  approval_comment: string | null;
+  approval_created_at: string;
+  approval_updated_at: string | null;
+}
 
 interface QuotationData {
   id: string;
@@ -34,6 +44,7 @@ interface QuotationData {
   installation_cost_with_gst: string;
   created_by: string;
   created_at: string;
+  approvals: ApprovalDetail[];
 }
 
 interface QuotationApprovalProps {
@@ -69,7 +80,10 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
     const fetchQuotations = async () => {
       try {
         setLoading(true);
-        const response = await getQuotations();
+        // Use the new API to get quotations by approver role
+        const response = await getQuotationsByApproverRole({
+          approver_role: userRole
+        });
         const apiQuotations = response.data || [];
 
         // Map API response to UI format and filter only pending quotations
@@ -84,7 +98,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
     };
 
     fetchQuotations();
-  }, []);
+  }, [userRole]);
 
   // Calculate total value from API data
   const calculateTotalValue = (apiQuotation: QuotationData) => {
@@ -124,6 +138,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
           new Date().toISOString(),
         expiryDate: apiQuotation.expiry_date || new Date().toISOString(),
         status: "pending_approval",
+        approvals: apiQuotation.approvals || [],
         originalData: apiQuotation,
       }));
   };
@@ -228,7 +243,9 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
         setSelectedQuotation(null);
 
         // Refresh the quotations list by re-fetching data
-        const response = await getQuotations();
+        const response = await getQuotationsByApproverRole({
+          approver_role: userRole
+        });
         const apiQuotations = response.data || [];
         const mappedQuotations = mapQuotationData(apiQuotations);
         setQuotations(mappedQuotations);
@@ -326,6 +343,9 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Value
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Approval Status
+                </th>
                 {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created By
                 </th> */}
@@ -337,7 +357,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center">
+                  <td colSpan={6} className="px-6 py-8 text-center">
                     <div className="text-gray-500">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                       <p className="text-sm">Loading quotations...</p>
@@ -385,6 +405,32 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                         {quotation.totalValue}
                       </div>
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        {quotation.approvals && quotation.approvals.length > 0 ? (
+                          quotation.approvals.map((approval: ApprovalDetail) => (
+                            <div key={approval.approval_id} className="flex items-center space-x-2">
+                              <span className="text-xs font-medium text-gray-700 capitalize">
+                                {approval.approver_role}:
+                              </span>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                  approval.approval_status === "APPROVED"
+                                    ? "bg-green-100 text-green-800 border-green-200"
+                                    : approval.approval_status === "REJECTED"
+                                    ? "bg-red-100 text-red-800 border-red-200"
+                                    : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                }`}
+                              >
+                                {approval.approval_status}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-500">No approvals</span>
+                        )}
+                      </div>
+                    </td>
                     {/* <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <p className="text-sm font-medium text-gray-900">
@@ -398,43 +444,95 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                       </div>
                     </td> */}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        {/* <button
-                          onClick={() => setSelectedQuotation(quotation)}
-                          className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </button> */}
-                        {hasActionAccess("Approve", "Quotation Approval", "Quotations") && (
-                          <button
-                            onClick={() =>
-                              handleApprovalClick(quotation, "approve")
-                            }
-                            className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Approve
-                          </button>
-                        )}
-                        {hasActionAccess("Reject", "Quotation Approval", "Quotations") && (
-                          <button
-                            onClick={() =>
-                              handleApprovalClick(quotation, "reject")
-                            }
-                            className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"
-                          >
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Reject
-                          </button>
-                        )}
-                      </div>
+                      {(() => {
+                        // Find the approval for the current user's role
+                        const currentUserApproval = quotation.approvals?.find(
+                          (approval: ApprovalDetail) => approval.approver_role === userRole
+                        );
+
+                        if (!currentUserApproval) {
+                          return (
+                            <span className="text-xs text-gray-500">
+                              No approval required for your role
+                            </span>
+                          );
+                        }
+
+                        // Check if the current user's approval is pending
+                        if (currentUserApproval.approval_status === "PENDING") {
+                          console.log('Rendering action buttons for quotation:', quotation.quotationNumber);
+                          console.log('User Role:', userRole);
+                          console.log('Current User Approval:', currentUserApproval);
+                          console.log('hasActionAccess Approve:', hasActionAccess("Approve", "Quotation Approval", "Quotations"));
+                          console.log('hasActionAccess Reject:', hasActionAccess("Reject", "Quotation Approval", "Quotations"));
+                          
+                          const canApprove = hasActionAccess("Approve", "Quotation Approval", "Quotations");
+                          const canReject = hasActionAccess("Reject", "Quotation Approval", "Quotations");
+                          
+                          return (
+                            <div className="flex items-center space-x-2">
+                              {canApprove ? (
+                                <button
+                                  onClick={() => handleApprovalClick(quotation, "approve")}
+                                  className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200"
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approve
+                                </button>
+                              ) : (
+                                <span className="text-xs text-red-500">No Approve Access</span>
+                              )}
+                              {canReject ? (
+                                <button
+                                  onClick={() => handleApprovalClick(quotation, "reject")}
+                                  className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Reject
+                                </button>
+                              ) : (
+                                <span className="text-xs text-red-500">No Reject Access</span>
+                              )}
+                            </div>
+                          );
+                        } else {
+                          // Show status for current user's role if already processed
+                          return (
+                            <div className="flex flex-col space-y-1">
+                              <span
+                                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide border ${
+                                  currentUserApproval.approval_status === "APPROVED"
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : currentUserApproval.approval_status === "REJECTED"
+                                    ? "bg-red-100 text-red-800 border-red-300"
+                                    : "bg-gray-100 text-gray-700 border-gray-300"
+                                }`}
+                              >
+                                {currentUserApproval.approval_status === "APPROVED" && (
+                                  <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
+                                )}
+                                {currentUserApproval.approval_status === "REJECTED" && (
+                                  <XCircle className="h-3 w-3 mr-1 text-red-600" />
+                                )}
+                                {currentUserApproval.approval_status === "PENDING" && (
+                                  <Clock className="h-3 w-3 mr-1 text-yellow-600" />
+                                )}
+                                {currentUserApproval.approval_status.charAt(0).toUpperCase() +
+                                  currentUserApproval.approval_status.slice(1).toLowerCase()}
+                              </span>
+                              <span className="text-xs text-gray-500 text-center">
+                                No action needed
+                              </span>
+                            </div>
+                          );
+                        }
+                      })()}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center">
+                  <td colSpan={6} className="px-6 py-8 text-center">
                     <div className="text-gray-500">
                       <Search className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                       <p className="text-sm">
