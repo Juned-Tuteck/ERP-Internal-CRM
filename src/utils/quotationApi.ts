@@ -15,6 +15,19 @@ export const getQuotationById = async (id: string) => {
   return response.data;
 };
 
+// Get quotations by approver role with approval details
+export const getQuotationsByApproverRole = async (params: {
+  approver_role: string;
+  approval_status?: string;
+  lead_id?: string;
+  bom_id?: string;
+}) => {
+  const response = await axios.get(`${API_BASE_URL}/customer-quotation-approval/quotations/by-role`, {
+    params
+  });
+  return response.data;
+};
+
 // Get leads
 export const getLeads = async () => {
   const response = await axios.get(`${API_BASE_URL}/lead/`);
