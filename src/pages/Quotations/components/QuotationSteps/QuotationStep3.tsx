@@ -87,35 +87,35 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({
   // Get values from previous steps
   const ownSupply = formData.specs
     ? formData.specs.reduce(
-        (sum: number, spec: any) =>
-          sum +
-          spec.items.reduce(
-            (itemSum: number, item: any) =>
-              itemSum + (item.finalSupplyAmount || 0),
-            0
-          ),
-        0
-      )
+      (sum: number, spec: any) =>
+        sum +
+        spec.items.reduce(
+          (itemSum: number, item: any) =>
+            itemSum + (item.finalSupplyAmount || item.supplyOwnAmount || 0),
+          0
+        ),
+      0
+    )
     : formData.items?.reduce(
-        (sum: number, item: any) => sum + (item.finalSupplyAmount || 0),
-        0
-      ) || 0;
+      (sum: number, item: any) => sum + (item.finalSupplyAmount || item.supplyOwnAmount || 0),
+      0
+    ) || 0;
 
   const ownLabour = formData.specs
     ? formData.specs.reduce(
-        (sum: number, spec: any) =>
-          sum +
-          spec.items.reduce(
-            (itemSum: number, item: any) =>
-              itemSum + (item.finalInstallationAmount || 0),
-            0
-          ),
-        0
-      )
+      (sum: number, spec: any) =>
+        sum +
+        spec.items.reduce(
+          (itemSum: number, item: any) =>
+            itemSum + (item.finalInstallationAmount || item.installationOwnAmount || 0),
+          0
+        ),
+      0
+    )
     : formData.items?.reduce(
-        (sum: number, item: any) => sum + (item.finalInstallationAmount || 0),
-        0
-      ) || 0;
+      (sum: number, item: any) => sum + (item.finalInstallationAmount || item.installationOwnAmount || 0),
+      0
+    ) || 0;
 
   const totalOverheads = formData.totalOverheadsCost || 0;
   const totalOwn = ownSupply + ownLabour;
@@ -195,8 +195,8 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({
 
       // SITC calculations
       const sitcSubTotal = totalOwn + totalOverheads;
-      const sitcMarginAmount =
-        sitcSubTotal * (formData.sitcSummary.marginPercentage / 100);
+      // SITC margin amount is the sum of supply margin amount and labour margin amount
+      const sitcMarginAmount = supplyMarginAmount + labourMarginAmount;
       const sitcSellingAmount = sitcSubTotal + sitcMarginAmount;
       const sitcMF = totalOwn > 0 ? sitcSellingAmount / totalOwn : 0;
 
@@ -360,11 +360,10 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({
                   max="100"
                   step="0.01"
                   placeholder="0.00"
-                  className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 transition-colors ${
-                    hasError
-                      ? "border-red-500 focus:ring-red-500 bg-red-50"
-                      : "border-gray-300 focus:ring-blue-500"
-                  }`}
+                  className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 transition-colors ${hasError
+                    ? "border-red-500 focus:ring-red-500 bg-red-50"
+                    : "border-gray-300 focus:ring-blue-500"
+                    }`}
                   aria-invalid={hasError}
                   aria-describedby={hasError ? `${fieldName}-error` : undefined}
                 />

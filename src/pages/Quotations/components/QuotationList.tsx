@@ -113,7 +113,7 @@ const QuotationList: React.FC<QuotationListProps> = ({
               apiQuotation.created_at ||
               new Date().toISOString(),
             expiryDate: apiQuotation.expiry_date || new Date().toISOString(),
-            status: apiQuotation.step > 3 ? apiQuotation.approval_status?.toLowerCase() : "draft",
+            status: apiQuotation.step > 3 ? apiQuotation.approval_status : "DRAFT",
           })
         );
 
@@ -133,15 +133,15 @@ const QuotationList: React.FC<QuotationListProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "approved":
+      case "APPROVED":
         return "bg-green-100 text-green-800";
-      case "rejected":
+      case "REJECTED":
         return "bg-red-100 text-red-800";
-      case "pending_approval":
+      case "PENDING_FOR_APPROVAL":
         return "bg-yellow-100 text-yellow-800";
-      case "draft":
+      case "DRAFT":
         return "bg-gray-100 text-gray-800";
-      case "expired":
+      case "REVISIT":
         return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -150,15 +150,15 @@ const QuotationList: React.FC<QuotationListProps> = ({
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "approved":
+      case "APPROVED":
         return <CheckCircle className="h-4 w-4 text-green-600 mr-1" />;
-      case "rejected":
+      case "REJECTED":
         return <XCircle className="h-4 w-4 text-red-600 mr-1" />;
-      case "pending_approval":
+      case "PENDING_FOR_APPROVAL":
         return <Calendar className="h-4 w-4 text-yellow-600 mr-1" />;
-      case "draft":
+      case "DRAFT":
         return <Edit className="h-4 w-4 text-gray-600 mr-1" />;
-      case "expired":
+      case "REVISIT":
         return <Calendar className="h-4 w-4 text-orange-600 mr-1" />;
       default:
         return null;
@@ -232,8 +232,8 @@ const QuotationList: React.FC<QuotationListProps> = ({
             <div
               key={quotation.id}
               className={`relative p-4 rounded-lg border cursor-pointer hover:shadow-md ${selectedQuotation?.id === quotation.id
-                  ? "bg-blue-50 border-blue-300"
-                  : "bg-white border-gray-200"
+                ? "bg-blue-50 border-blue-300"
+                : "bg-white border-gray-200"
                 }`}
               onClick={() => onSelectQuotation(quotation)}
             >

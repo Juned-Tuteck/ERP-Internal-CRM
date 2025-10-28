@@ -13,10 +13,13 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
+  Send,
+  Info,
+  X,
 } from "lucide-react";
 import { useCRM } from "../../../context/CRMContext";
 import CreateQuotationModal from "./CreateQuotationModal";
-import { getQuotationById, deleteQuotation } from "../../../utils/quotationApi";
+import { getQuotationById, deleteQuotation, callRoleVariances, createBulkCustomerQuotationApprovals, updateQuotationStatus } from "../../../utils/quotationApi";
 
 interface QuotationDetailsProps {
   quotation: any;
@@ -40,14 +43,104 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
       setLoading(false);
     }
   };
+
+  // Handler for sending quotation for approval
+  const handleSendForApproval = async () => {
+    if (!quotation?.id) return;
+
+    setIsSendingForApproval(true);
+    try {
+      const roleHierarchy = {
+        level1: "sales manager",
+        level2: "crm zonal head"
+      };
+      console.log("Quotation Details for Approval:", quotationDetails);
+      const profit_percentage = quotationDetails.profitPercentage || 0;
+      console.log("Calculated Profit Percentage:", profit_percentage);
+
+      console.log(`Calling role-variances API for quotation ${quotation.id}`);
+      const roleVariancesResponse = await callRoleVariances();
+      console.log('Role variances API response:', roleVariancesResponse);
+
+      if (roleVariancesResponse?.success && roleVariancesResponse?.data) {
+        // Filter roles by profit_percentage
+        const filteredRoles = (roleVariancesResponse.data || [])
+          .filter((role: any) => Number(role.profit_percentage) <= profit_percentage)
+          .sort(
+            (a: any, b: any) =>
+              (Number(b.profit_percentage) || 0) - (Number(a.profit_percentage) || 0)
+          )
+          .slice(0, 1); // keep only the top role
+
+        console.log("Top role by profit percentage:", filteredRoles);
+
+        // Prepare approvals array
+        const approvals: {
+          customer_quotation_id: string;
+          approver_role: string;
+          approval_status: string;
+        }[] = [];
+
+        // Add filtered roles from API
+        filteredRoles.forEach((role: any) => {
+          approvals.push({
+            customer_quotation_id: quotation.id,
+            approver_role: role.role_name,
+            approval_status: "PENDING"
+          });
+        });
+
+        // Add hardcoded roles from roleHierarchy
+        Object.values(roleHierarchy).forEach((role: string) => {
+          approvals.push({
+            customer_quotation_id: quotation.id,
+            approver_role: role,
+            approval_status: "PENDING"
+          });
+        });
+
+        console.log('Final approvals payload:', { approvals });
+
+        // Call bulk approval API
+        if (approvals.length > 0) {
+          const bulkApprovalResponse = await createBulkCustomerQuotationApprovals({ approvals });
+          console.log('Bulk approval API response:', bulkApprovalResponse);
+
+          // Update quotation status to PENDING_FOR_APPROVAL
+          try {
+            const updateStatusResponse = await updateQuotationStatus(quotation.id, "PENDING_FOR_APPROVAL");
+            console.log('Quotation status updated:', updateStatusResponse);
+          } catch (statusError) {
+            console.error('Error updating quotation status:', statusError);
+            // Continue with the flow even if status update fails
+          }
+
+          setIsApprovalSent(true); // Set the approval sent state to true
+          alert("Quotation sent for approval successfully!");
+        } else {
+          alert("No approvers found for this quotation.");
+        }
+      } else {
+        alert("Failed to fetch role variances. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error sending quotation for approval:", error);
+      alert("Failed to send quotation for approval. Please try again.");
+    } finally {
+      setIsSendingForApproval(false);
+    }
+  };
   const [activeTab, setActiveTab] = useState("summary");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isApprovalHistoryModalOpen, setIsApprovalHistoryModalOpen] = useState(false);
   const [quotationDetails, setQuotationDetails] = useState<any>(null);
   const [quotationDetailsForEdit, setQuotationDetailsForEdit] =
     useState<any>(null);
   // const [reloadDtls, setReloadDtls] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSendingForApproval, setIsSendingForApproval] = useState(false);
+  const [isApprovalSent, setIsApprovalSent] = useState(false);
   const { hasActionAccess } = useCRM();
 
   // Fetch detailed quotation information when quotation is selected
@@ -56,9 +149,11 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
       if (!quotation?.id) return;
 
       setLoading(true);
+      setIsApprovalSent(false); // Reset approval sent state when new quotation is selected
       try {
         const response = await getQuotationById(quotation.id);
         const apiQuotation = response.data;
+        console.log("API Quotation Data:", apiQuotation);
 
         console.log(
           "QuotationDate:",
@@ -77,6 +172,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           leadName: apiQuotation.lead_name || quotation.leadName,
           businessName: apiQuotation.business_name || quotation.businessName,
           workType: apiQuotation.work_type || quotation.workType,
+          profitPercentage: apiQuotation.profit_percentage || 0,
           totalValue: `₹${(
             parseFloat(apiQuotation.high_side_cost_with_gst || 0) +
             parseFloat(apiQuotation.low_side_cost_with_gst || 0) +
@@ -84,6 +180,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           ).toLocaleString("en-IN")}`,
           createdBy: apiQuotation.created_by || quotation.createdBy,
           createdDate: apiQuotation.quotation_date || quotation.createdDate,
+          currentQuotationStep: apiQuotation.step || quotation.currentQuotationStep,
           expiryDate: apiQuotation.expiry_date || quotation.expiryDate,
           status:
             apiQuotation.approval_status?.toLowerCase() || quotation.status,
@@ -130,6 +227,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           pocExpenses: apiQuotation.poc_expenses || {},
           costMargins: apiQuotation.cost_margins || [],
           comments: apiQuotation.comments || [],
+          approval_history: apiQuotation.approval_history || [],
         };
 
         const mappedSpecs = apiQuotation.bom_specs.map((spec: any) => ({
@@ -521,7 +619,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
   }
 
   // Use detailed quotation data if available, otherwise fallback to prop data
+  console.log("Quotation Details State:", quotationDetails);
+  console.log("Quotation Prop Data:", quotation);
   const displayQuotation = quotationDetails || quotation;
+  console.log("Display Quotation:", displayQuotation);
 
   // Extract quotation items from API data
   const quotationItems =
@@ -622,13 +723,24 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
             </div>
 
             <div className="flex items-center space-x-2 mt-1">
-              <span
-                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                  quotation.status
-                )}`}
-              >
-                {quotation.status.replace("_", " ")}
-              </span>
+              <div className="flex items-center space-x-1">
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                    quotation.status
+                  )}`}
+                >
+                  {quotation.status.replace("_", " ")}
+                </span>
+                {(quotation.status === "PENDING_FOR_APPROVAL" || quotation.status === "REVISIT") && (
+                  <button
+                    onClick={() => setIsApprovalHistoryModalOpen(true)}
+                    className="inline-flex items-center justify-center w-4 h-4 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
+                    title="View Approval History"
+                  >
+                    <Info className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
               <span className="text-xs text-gray-500">
                 Created:{" "}
                 {new Date(quotation.createdDate).toLocaleDateString("en-IN")}
@@ -652,21 +764,34 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 <Printer className="h-3 w-3 mr-1" />
                 Print
               </button> */}
-              {(quotation.status === "pending" ||
-                quotation.status === "draft") && hasActionAccess("Edit ", "All Quotations", "Quotations") && (
+              {(displayQuotation?.currentQuotationStep >= 4 || quotationDetails?.currentQuotationStep >= 4) &&
+                quotation.status !== "PENDING_FOR_APPROVAL" && quotation.status !== "APPROVED" && quotation.status !== "REJECTED" && (
+                  <button
+                    onClick={handleSendForApproval}
+                    disabled={isSendingForApproval || isApprovalSent}
+                    className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-xs font-medium text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="h-3 w-3 mr-1" />
+                    {isSendingForApproval ? "Sending..." : isApprovalSent ? "Approval Sent" : "Send for Approval"}
+                  </button>
+                )}
+              {(quotation.status === "PENDING" ||
+                quotation.status === "DRAFT" || quotation.status === "REVISIT") && hasActionAccess("Edit ", "All Quotations", "Quotations") && (
                   <button
                     onClick={() => setIsEditModalOpen(true)}
-                    className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
+                    disabled={isApprovalSent}
+                    className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
                   </button>
                 )}
-              {(quotation.status === "pending" ||
-                quotation.status === "draft") && (
+              {(quotation.status === "PENDING" ||
+                quotation.status === "DRAFT" || quotation.status === "REVISIT") && (
                   <button
                     onClick={() => setIsDeleteModalOpen(true)}
-                    className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50"
+                    disabled={isApprovalSent}
+                    className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
                     Delete
@@ -1886,6 +2011,108 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 disabled={loading}
               >
                 {loading ? "Deleting..." : "Delete Quotation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval History Modal */}
+      {isApprovalHistoryModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Info className="h-6 w-6 text-blue-600 mr-3" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Approval History
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsApprovalHistoryModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {quotationDetails?.approval_history && quotationDetails.approval_history.length > 0 ? (
+                <div className="space-y-4">
+                  {quotationDetails.approval_history.map((approval: any, index: number) => (
+                    <div key={approval.id || index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${approval.approval_status === 'APPROVED' ? 'bg-green-500' :
+                            approval.approval_status === 'REJECTED' ? 'bg-red-500' :
+                              approval.approval_status === 'REVISIT' ? 'bg-orange-500' :
+                                'bg-yellow-500'
+                            }`}></div>
+                          <h4 className="text-md font-medium text-gray-900 capitalize">
+                            {approval.approver_role.replace('_', ' ')}
+                          </h4>
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${approval.approval_status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                          approval.approval_status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                            approval.approval_status === 'REVISIT' ? 'bg-orange-100 text-orange-800' :
+                              'bg-yellow-100 text-yellow-800'
+                          }`}>
+                          {approval.approval_status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Approved By:</span>
+                          <p className="font-medium text-gray-900">
+                            {approval.approved_by || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Date:</span>
+                          <p className="font-medium text-gray-900">
+                            {approval.created_at ?
+                              new Date(approval.created_at).toLocaleDateString("en-IN") + ' ' +
+                              new Date(approval.created_at).toLocaleTimeString("en-IN", {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                              : 'Pending'
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      {approval.approval_comment && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <span className="text-gray-600 text-sm">Comment:</span>
+                          <p className="text-gray-900 text-sm mt-1">
+                            {approval.approval_comment}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Info className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No approval history</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    This quotation doesn't have any approval history yet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-4 border-t border-gray-200">
+              <button
+                onClick={() => setIsApprovalHistoryModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Close
               </button>
             </div>
           </div>
