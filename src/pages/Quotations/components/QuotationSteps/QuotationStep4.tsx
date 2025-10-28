@@ -334,13 +334,12 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                             </td>
                             <td className="px-4 py-3">
                               <span
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  item.materialType === "HIGH SIDE SUPPLY"
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.materialType === "HIGH SIDE SUPPLY"
                                     ? "bg-blue-100 text-blue-800"
                                     : item.materialType === "LOW SIDE SUPPLY"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-purple-100 text-purple-800"
-                                }`}
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-purple-100 text-purple-800"
+                                  }`}
                               >
                                 {item.materialType}
                               </span>
@@ -442,11 +441,10 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                       max="100"
                       step="0.01"
                       placeholder=""
-                      className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${
-                        validationErrors.highSideSupply
+                      className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${validationErrors.highSideSupply
                           ? "border-red-500 focus:ring-red-500"
                           : "border-gray-300 focus:ring-blue-500"
-                      }`}
+                        }`}
                     />
                     {validationErrors.highSideSupply && (
                       <div className="text-xs text-red-600">
@@ -502,11 +500,10 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                       max="100"
                       step="0.01"
                       placeholder=""
-                      className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${
-                        validationErrors.lowSideSupply
+                      className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${validationErrors.lowSideSupply
                           ? "border-red-500 focus:ring-red-500"
                           : "border-gray-300 focus:ring-blue-500"
-                      }`}
+                        }`}
                     />
                     {validationErrors.lowSideSupply && (
                       <div className="text-xs text-red-600">
@@ -562,11 +559,10 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                       max="100"
                       step="0.01"
                       placeholder=""
-                      className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${
-                        validationErrors.installation
+                      className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${validationErrors.installation
                           ? "border-red-500 focus:ring-red-500"
                           : "border-gray-300 focus:ring-blue-500"
-                      }`}
+                        }`}
                     />
                     {validationErrors.installation && (
                       <div className="text-xs text-red-600">
@@ -656,7 +652,7 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <h5 className="text-sm font-medium text-gray-600 mb-2">
             Total GST Amount
@@ -672,14 +668,28 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
 
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <h5 className="text-sm font-medium text-gray-600 mb-2">
-            Total Without GST
+            Final Selling Amount
           </h5>
           <p className="text-lg font-bold text-gray-900">
             ₹
-            {totalWithoutGST.toLocaleString("en-IN", {
+            {(formData.sitcSummary?.sellingAmount || 0).toLocaleString("en-IN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+          <h5 className="text-sm font-medium text-gray-600 mb-2">
+            Profit Percentage
+          </h5>
+          <p className="text-lg font-bold text-purple-600">
+            {(() => {
+              const marginAmount = formData.sitcSummary?.marginAmount || 0;
+              const subTotal = formData.sitcSummary?.subTotal || 0;
+              const profitPercentage = subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
+              return profitPercentage.toFixed(2);
+            })()}%
           </p>
         </div>
 
@@ -689,16 +699,28 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
           </h5>
           <p className="text-xl font-bold text-green-600">
             ₹
-            {totalWithGST.toLocaleString("en-IN", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {(() => {
+              const sellingAmount = formData.sitcSummary?.sellingAmount || 0;
+              const gstAmount = totalWithGST - totalWithoutGST;
+              const grandTotal = sellingAmount + gstAmount;
+              return grandTotal.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
+            })()}
           </p>
         </div>
       </div>
 
       {/* Update formData with final calculations */}
       {React.useEffect(() => {
+        const sellingAmount = formData.sitcSummary?.sellingAmount || 0;
+        const gstAmount = totalWithGST - totalWithoutGST;
+        const grandTotalWithGST = sellingAmount + gstAmount;
+        const marginAmount = formData.sitcSummary?.marginAmount || 0;
+        const subTotal = formData.sitcSummary?.subTotal || 0;
+        const profitPercentage = subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
+
         setFormData((prev: any) => ({
           ...prev,
           finalCosting: {
@@ -711,7 +733,10 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
             installationWithGST,
             totalWithoutGST,
             totalWithGST,
-            totalGSTAmount: totalWithGST - totalWithoutGST,
+            totalGSTAmount: gstAmount,
+            finalSellingAmount: sellingAmount,
+            grandTotalWithGST: grandTotalWithGST,
+            profitPercentage: profitPercentage,
           },
         }));
       }, [
@@ -724,6 +749,9 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
         installationWithGST,
         totalWithoutGST,
         totalWithGST,
+        formData.sitcSummary?.sellingAmount,
+        formData.sitcSummary?.marginAmount,
+        formData.sitcSummary?.subTotal,
       ])}
     </div>
   );

@@ -412,8 +412,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       });
 
       try {
-        await incrementQuotationStep(quotationId);
-        console.log(`Step ${currentStep} incremented successfully for quotation ${quotationId}`);
+        await handleStepIncrement(quotationId);
       } catch (error) {
         console.error("Error incrementing step:", error);
         // Don't block the flow if step increment fails, just log the error
@@ -552,6 +551,11 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     try {
       const finalCosting = formData.finalCosting || {};
 
+      // Calculate profit percentage
+      const marginAmount = formData.sitcSummary?.marginAmount || 0;
+      const subTotal = formData.sitcSummary?.subTotal || 0;
+      const profitPercentage = subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
+
       const gstPayload = {
         high_side_cost_without_gst: finalCosting.highSideAmount || 0,
         high_side_gst_percentage: formData.gstRates?.highSideSupply || 18,
@@ -562,6 +566,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         installation_cost_without_gst: finalCosting.installationAmount || 0,
         installation_gst_percentage: formData.gstRates?.installation || 18,
         installation_cost_with_gst: finalCosting.installationWithGST || 0,
+        profit_percentage: profitPercentage,
       };
 
       await updateQuotation(createdQuotationId, gstPayload);
@@ -630,6 +635,20 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     };
   };
 
+
+
+  // Helper function to handle step increment
+  const handleStepIncrement = async (quotationId: string) => {
+    try {
+      const incrementResponse = await incrementQuotationStep(quotationId);
+      console.log(`Step incremented successfully for quotation ${quotationId}`);
+      return incrementResponse;
+    } catch (error) {
+      console.error("Error incrementing step:", error);
+      throw error;
+    }
+  };
+
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
@@ -660,8 +679,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     // Call increment step API after successful step completion
     if (stepCompleted && createdQuotationId) {
       try {
-        await incrementQuotationStep(createdQuotationId);
-        console.log(`Step ${currentStep} incremented successfully for quotation ${createdQuotationId}`);
+        await handleStepIncrement(createdQuotationId);
       } catch (error) {
         console.error("Error incrementing step:", error);
         // Don't block the flow if step increment fails, just log the error
@@ -700,6 +718,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     setCreatedQuotationId(null);
     setFormData(getDefaultFormData());
   };
+
 
   // Step-specific update handlers for edit mode
   // Step 1 Update: Update quotation basic details and specs/items
@@ -983,6 +1002,11 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     try {
       const finalCosting = formData.finalCosting || {};
 
+      // Calculate profit percentage
+      const marginAmount = formData.sitcSummary?.marginAmount || 0;
+      const subTotal = formData.sitcSummary?.subTotal || 0;
+      const profitPercentage = subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
+
       const gstPayload = {
         high_side_cost_without_gst: finalCosting.highSideAmount || 0,
         high_side_gst_percentage: formData.gstRates?.highSideSupply || 18,
@@ -993,6 +1017,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         installation_cost_without_gst: finalCosting.installationAmount || 0,
         installation_gst_percentage: formData.gstRates?.installation || 18,
         installation_cost_with_gst: finalCosting.installationWithGST || 0,
+        profit_percentage: profitPercentage,
       };
 
       await updateQuotation(initialData.id, gstPayload);
@@ -1074,7 +1099,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
 
         if (shouldIncrementStep) {
           try {
-            await incrementQuotationStep(initialData.id);
+            await handleStepIncrement(initialData.id);
             // Update the quotationCurrentStep to reflect the new step value after successful increment
             initialData.currentQuotationStep = currentStep;
             console.log(`Step ${currentStep} incremented successfully for quotation ${initialData.id} (quotation was at step ${quotationCurrentStep}, now updated to step ${currentStep})`);

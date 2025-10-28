@@ -237,8 +237,53 @@ export const incrementQuotationStep = async (id: string) => {
   return response.data;
 };
 
+// Call role variances API
+export const callRoleVariances = async () => {
+  const token = localStorage.getItem('auth_token');
+  const response = await axios.get(
+    `${import.meta.env.VITE_AUTH_BASE_URL}/role-variances`,
+    {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  return response.data;
+};
+
+// Create bulk customer quotation approvals
+export const createBulkCustomerQuotationApprovals = async (payload: {
+  approvals: {
+    customer_quotation_id: string;
+    approver_role: string;
+    approval_status: string;
+  }[];
+}) => {
+  const token = localStorage.getItem('auth_token');
+  const response = await axios.post(
+    `${import.meta.env.VITE_API_BASE_URL}/customer-quotation-approval/bulk`,
+    payload,
+    {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  return response.data;
+};
+
 // Delete quotation by ID
 export const deleteQuotation = async (id: string) => {
   const response = await axios.delete(`${API_BASE_URL}/customer-quotation/${id}`);
+  return response.data;
+};
+
+// Update customer quotation status to PENDING_FOR_APPROVAL
+export const updateQuotationStatus = async (id: string, status: string) => {
+  const response = await axios.put(`${API_BASE_URL}/customer-quotation/${id}`, {
+    approval_status: status
+  });
   return response.data;
 };

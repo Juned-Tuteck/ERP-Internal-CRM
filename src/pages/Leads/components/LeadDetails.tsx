@@ -490,7 +490,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 <Trash2 className="h-5 w-5" />
               </button> */}
               {/* Create Project Button */}
-              {displayLead.leadStage === "Won" && (
+              {/* {displayLead.leadStage === "Won" && (
                 <button
                   onClick={() => onConvert(displayLead.id)}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
@@ -498,7 +498,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <UserCheck className="h-4 w-4 mr-2" />
                   Create Project
                 </button>
-              )}
+              )} */}
             </div>
           </div>
         </div>
