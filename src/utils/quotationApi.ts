@@ -189,13 +189,44 @@ export const updateQuotationPOCExpense = async (
 };
 
 
-// Update quotation approval status (approve/reject)
+// Update quotation approval status (approve/reject/revisit)
 export const updateQuotationDecision = async (
   id: string,
-  status: "APPROVED" | "REJECTED"
+  status: "APPROVED" | "REJECTED" | "REVISIT",
+  approved_by?: string,
+  approval_comment?: string
 ) => {
+  const requestBody: {
+    status: string;
+    approved_by?: string;
+    approval_comment?: string;
+  } = {
+    status: status.toLowerCase()
+  };
+  
+  if (approved_by) {
+    requestBody.approved_by = approved_by;
+  }
+  
+  if (approval_comment) {
+    requestBody.approval_comment = approval_comment;
+  }
+
   const response = await axios.patch(
-    `${API_BASE_URL}/customer-quotation-approval/${id}/decision?status=${status}`
+    `${API_BASE_URL}/customer-quotation-approval/${id}/decision`,
+    requestBody
+  );
+  return response.data;
+};
+
+// Update main customer quotation table (for final approval)
+export const updateCustomerQuotation = async (
+  id: string,
+  updateFields: Record<string, any>
+) => {
+  const response = await axios.put(
+    `${API_BASE_URL}/customer-quotation/${id}`,
+    updateFields
   );
   return response.data;
 };
