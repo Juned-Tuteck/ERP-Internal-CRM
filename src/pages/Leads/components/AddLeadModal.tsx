@@ -90,6 +90,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [contactPersons, setContactPersons] = useState<
     Array<{ id: string; name: string }>
   >([]);
+  const [users, setUsers] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
@@ -424,6 +427,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           // Fetch customers and use the response directly
           console.log("INSIDE THE MODAL :::::::::::::");
           try {
+            // Fetch users for Referenced By dropdown
+            fetchUsers();
+            
             const response = await axios.get(
               `${import.meta.env.VITE_API_BASE_URL}/customer`
             );
@@ -502,6 +508,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       } else if (isOpen) {
         fetchCustomers();
+        fetchUsers();
       }
     };
     fetchAllForEdit();
@@ -570,6 +577,33 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     } catch (error) {
       console.error("Error fetching contact persons:", error);
       setContactPersons([]);
+    }
+  };
+
+  // Fetch users for Referenced By dropdown
+  const fetchUsers = async () => {
+    try {
+      // TODO: Replace with actual API endpoint when provided
+      const response = await axios.get(
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/basic`,
+        {
+          headers: {
+        Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      const userData = response.data.data;
+      console.log("Users Data:", userData);
+      
+      setUsers(
+        userData.map((user: any) => ({
+          id: user.id || user.user_id,
+          name: user.name || user.full_name || user.username,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      setUsers([]);
     }
   };
 
@@ -1293,18 +1327,23 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Referenced By
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="referencedBy"
                       value={formData.referencedBy}
                       onChange={handleInputChange}
-                      placeholder="Enter reference source"
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         validationErrors.referencedBy
                           ? "border-red-500"
                           : "border-gray-300"
                       }`}
-                    />
+                    >
+                      <option value="">Select User</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.name}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
                     <ValidationError fieldName="referencedBy" />
                   </div>
 

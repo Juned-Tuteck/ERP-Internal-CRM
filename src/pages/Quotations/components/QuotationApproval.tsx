@@ -471,6 +471,13 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                         >
                           {quotation.workType}
                         </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${getWorkTypeColor(
+                            quotation.workType
+                          )}`}
+                        >
+                          {quotation.quotationNumber}
+                        </span>
                         <div className="text-xs text-gray-500 mt-1">
                           <div className="flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />

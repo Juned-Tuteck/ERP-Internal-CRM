@@ -20,6 +20,41 @@ interface ValidationErrors {
   summary?: { [field: string]: string };
 }
 
+// Cost types for each section
+const COST_TYPES = {
+  projectCosts: [
+    "Electricity & Water",
+    "Guest House",
+    "Minor Civil Work",
+    "Outstation Travelling + Hotel Cost",
+    "Painting Charges, Sleeves",
+    "Planning Cost in office",
+    "Safety",
+    "Scaffolding",
+    "Site Office & Store Construction",
+    "Unloading of material at site after delivery & Material shifting from store except chiller",
+    "Watch & Ward"
+  ],
+  supervisionCosts: [
+    "Project Manager",
+    "Safety Inspector/QA/QC I",
+    "Site Engineer",
+    "Supervisor",
+    "Technician / Fore man"
+  ],
+  financeCosts: [
+    "Advance BG Charges",
+    "Insurance Charges",
+    "Performance BG Charges",
+    "Retention BG Charges"
+  ],
+  contingencyCosts: [
+    "Material & labour Contingency",
+    "Testing & Inspection",
+    "Warranty / DLP"
+  ]
+};
+
 const QuotationStep2: React.FC<QuotationStep2Props> = ({
   formData,
   setFormData,
@@ -36,17 +71,18 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
   );
 
   // Validation functions
-  const validateCostItemField = (field: string, value: any): string => {
+  const validateCostItemField = (field: string, value: any, section?: string): string => {
     switch (field) {
       case "description":
         if (!value || value.toString().trim() === "") {
           return "Description is required";
         }
-        if (value.toString().trim().length < 3) {
-          return "Description must be at least 3 characters long";
-        }
-        if (value.toString().length > 200) {
-          return "Description cannot exceed 200 characters";
+        // Validate against predefined cost types if section is provided
+        if (section && COST_TYPES[section as keyof typeof COST_TYPES]) {
+          const validOptions = COST_TYPES[section as keyof typeof COST_TYPES];
+          if (!validOptions.includes(value)) {
+            return "Please select a valid description from the dropdown";
+          }
         }
         return "";
 
@@ -246,7 +282,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
         ];
 
         fields.forEach((field) => {
-          const error = validateCostItemField(field, item[field]);
+          const error = validateCostItemField(field, item[field], section);
           if (error) {
             setFieldError(section, index, field, error);
             isValid = false;
@@ -357,7 +393,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
     value: any
   ) => {
     // Validate the field
-    const validationError = validateCostItemField(field, value);
+    const validationError = validateCostItemField(field, value, section);
     if (validationError) {
       setFieldError(section, index, field, validationError);
     } else {
@@ -500,7 +536,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
         ];
 
         fields.forEach((field) => {
-          const error = validateCostItemField(field, item[field]);
+          const error = validateCostItemField(field, item[field], section);
           if (error) {
             setFieldError(section, index, field, error);
           }
@@ -617,8 +653,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-3 py-2">
                         <div>
-                          <input
-                            type="text"
+                          <select
                             value={item.description || ""}
                             onChange={(e) =>
                               updateCostItem(
@@ -633,8 +668,14 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
                                 ? "border-red-300 focus:ring-red-500"
                                 : "border-gray-300 focus:ring-blue-500"
                             }`}
-                            placeholder="Enter description"
-                          />
+                          >
+                            <option value="">Select description...</option>
+                            {COST_TYPES[sectionKey].map((costType) => (
+                              <option key={costType} value={costType}>
+                                {costType}
+                              </option>
+                            ))}
+                          </select>
                           {getFieldError(sectionKey, index, "description") && (
                             <div className="mt-1 flex items-center text-xs text-red-600">
                               <AlertCircle className="h-3 w-3 mr-1" />
