@@ -9,6 +9,7 @@ import {
   CheckCircle,
   XCircle,
   Upload,
+  RotateCcw,
 } from "lucide-react";
 import CreateBOM from "./CreateBOM";
 import BOMViewModal from "./BOMViewModal";
@@ -25,7 +26,7 @@ interface BOM {
   createdDate: string;
   bom_type: string;
   bomNumber: string;
-  status: "draft" | "pending_approval" | "approved" | "rejected";
+  status: "draft" | "pending_for_approval" | "approved" | "rejected" | "revisit";
 }
 
 interface BOMListProps {
@@ -235,8 +236,10 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
         return "bg-green-100 text-green-800";
       case "rejected":
         return "bg-red-100 text-red-800";
-      case "pending_approval":
+      case "pending_for_approval":
         return "bg-yellow-100 text-yellow-800";
+      case "revisit":
+        return "bg-orange-100 text-orange-800";
       case "draft":
         return "bg-gray-100 text-gray-800";
       default:
@@ -250,8 +253,10 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
         return <CheckCircle className="h-4 w-4 text-green-600 mr-1" />;
       case "rejected":
         return <XCircle className="h-4 w-4 text-red-600 mr-1" />;
-      case "pending_approval":
+      case "pending_for_approval":
         return <Calendar className="h-4 w-4 text-yellow-600 mr-1" />;
+      case "revisit":
+        return <RotateCcw className="h-4 w-4 text-orange-600 mr-1" />;
       case "draft":
         return <Edit className="h-4 w-4 text-gray-600 mr-1" />;
       default:
@@ -406,26 +411,26 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
 
   // Handler for saving edited BOM
   const handleEditSave = async (updatedBOM: any) => {
-    // ------------------------------------------------------------------------------------------For notifications
-    try {
-      await sendNotification({
-        receiver_ids: ['admin'],
-        title: `CRM BOM Update : ${updatedBOM?.bomName || 'New Lead'}`,
-        message: `CRM BOM ${updatedBOM?.bomName || 'New Lead'} successfully Updated by ${userData?.name || 'a user'}`,
-        service_type: 'CRM',
-        link: '/bom',
-        sender_id: userRole || 'user',
-        access: {
-          module: "CRM",
-          menu: "BOM",
-        }
-      });
-      console.log(`Notification sent for CRM BOM Update ${updatedBOM?.bomName || 'New Lead'}`);
-    } catch (notifError) {
-      console.error('Failed to send notification:', notifError);
-      // Continue with the flow even if notification fails
-    }
-    // ------------------------------------------------------------------------------------------
+    // // ------------------------------------------------------------------------------------------For notifications
+    // try {
+    //   await sendNotification({
+    //     receiver_ids: ['admin'],
+    //     title: `CRM BOM Update : ${updatedBOM?.bomName || 'New Lead'}`,
+    //     message: `CRM BOM ${updatedBOM?.bomName || 'New Lead'} successfully Updated by ${userData?.name || 'a user'}`,
+    //     service_type: 'CRM',
+    //     link: '/bom',
+    //     sender_id: userRole || 'user',
+    //     access: {
+    //       module: "CRM",
+    //       menu: "BOM",
+    //     }
+    //   });
+    //   console.log(`Notification sent for CRM BOM Update ${updatedBOM?.bomName || 'New Lead'}`);
+    // } catch (notifError) {
+    //   console.error('Failed to send notification:', notifError);
+    //   // Continue with the flow even if notification fails
+    // }
+    // // ------------------------------------------------------------------------------------------
 
     setBoms((prev) =>
       prev.map((b) => (b.id === updatedBOM.id ? { ...b, ...updatedBOM } : b))
@@ -532,12 +537,12 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                 >
                   Work Type
                 </th>
-                <th
+                {/* <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Items
-                </th>
+                </th> */}
                 <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -596,9 +601,9 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                       {bom.workType}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {bom.itemCount} items
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-green-600">
                       {bom.totalValue}
@@ -618,7 +623,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                     <div className="flex space-x-2">
                       {hasActionAccess('Edit ', 'Boms', 'BOM') && (
                         <button
-                          className={`text-blue-600 hover:text-blue-900 ${bom.status === "approved" || bom.status === "rejected"
+                          className={`text-blue-600 hover:text-blue-900 ${bom.status === "approved" || bom.status === "rejected" || bom.status === "pending_for_approval"
                             ? "opacity-50 cursor-not-allowed pointer-events-none"
                             : ""
                             }`}
@@ -627,7 +632,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                             handleEditClick(e, bom);
                           }}
                           disabled={
-                            bom.status === "approved" || bom.status === "rejected"
+                            bom.status === "approved" || bom.status === "rejected" || bom.status === "pending_for_approval"
                           }
                         >
                           <Edit className="h-4 w-4" />
