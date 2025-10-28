@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Tag, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, FileText, Tag, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { createBulkBOMApprovals } from '../../../utils/bomApprovalApi';
+import { useCRM } from "../../../context/CRMContext";
+import useNotifications from '../../../hook/useNotifications';
 
 interface BOMViewModalProps {
   isOpen: boolean;
@@ -41,9 +44,21 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
   onClose, 
   bomId 
 }) => {
+  //----------------------------------------------------------------------------------- For Notification
+  const token = localStorage.getItem('auth_token') || '';
+  const { userData } = useCRM();
+  const userRole = userData?.role || '';
+  const { sendNotification } = useNotifications(userRole, token);
+  //------------------------------------------------------------------------------------
   const [bomDetail, setBomDetail] = useState<BOMDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sendingForApproval, setSendingForApproval] = useState(false);
+
+  const roleHierarchy = {
+    level1: "design engineer",
+    level2: "sales manager"
+  };
 
   useEffect(() => {
     const fetchBOMDetail = async () => {
@@ -142,6 +157,78 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
         )
       };
     });
+  };
+
+  const handleSendForApproval = async () => {
+    if (!bomDetail) return;
+
+    try {
+      setSendingForApproval(true);
+      
+      // Create approval records for both levels in the hierarchy
+      const approvals = [
+        {
+          bom_id: bomDetail.id,
+          approver_role: roleHierarchy.level1,
+          approval_status: "PENDING"
+        },
+        {
+          bom_id: bomDetail.id,
+          approver_role: roleHierarchy.level2,
+          approval_status: "PENDING"
+        }
+      ];
+
+      await createBulkBOMApprovals({ approvals });
+
+      // Update the BOM approval status to PENDING
+      const updateResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/${bomDetail.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify({
+          approval_status: 'PENDING_FOR_APPROVAL'
+        })
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update BOM status');
+      }
+
+      // Update local state
+      setBomDetail(prev => prev ? { ...prev, approvalStatus: 'PENDING' } : prev);
+      
+      // ------------------------------------------------------------------------------------------For notifications
+      try {
+        await sendNotification({
+          receiver_ids: ['admin'],
+          title: `Send for approval : ${bomDetail.bomNumber || 'BOM'}`,
+          message: `Send for approval ${bomDetail.bomNumber || 'BOM'} successfully to ${roleHierarchy.level1} and ${roleHierarchy.level2}.`,
+          service_type: 'CRM',
+          link: '/bom',
+          sender_id: userRole || 'user',
+          access: {
+            module: "CRM",
+            menu: "BOM",
+            submenu: "Bom approval",
+          }
+        });
+        console.log(`Notification sent for CRM BOM Update ${bomDetail.bomNumber || 'BOM'}`);
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Continue with the flow even if notification fails
+      }
+      // ------------------------------------------------------------------------------------------
+
+      alert('BOM sent for approval successfully!');
+    } catch (error) {
+      console.error('Error sending BOM for approval:', error);
+      alert('Failed to send BOM for approval. Please try again.');
+    } finally {
+      setSendingForApproval(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -321,7 +408,28 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
           )}
         </div>
 
-        <div className="flex justify-end p-6 border-t border-gray-200">
+        <div className="flex justify-between p-6 border-t border-gray-200">
+          <div>
+            {bomDetail && (bomDetail.approvalStatus.toLowerCase() === 'revisit'|| bomDetail.approvalStatus.toLowerCase() === 'pending') && (
+              <button
+                onClick={handleSendForApproval}
+                disabled={sendingForApproval}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {sendingForApproval ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send for Approval
+                  </>
+                )}
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
