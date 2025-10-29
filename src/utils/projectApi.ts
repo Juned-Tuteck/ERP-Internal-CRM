@@ -4,9 +4,10 @@ export interface Project {
   id: string;
   project_number: string;
   project_name: string;
-  lead_id: string;
+  lead_number: string;
   project_type: string;
   customer_id: string;
+  customer_name: string;
   created_at: string;
   project_manager: string;
   est_start_date: string;

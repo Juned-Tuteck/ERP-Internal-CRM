@@ -60,9 +60,9 @@ const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onViewProject }) 
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Created At
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Project Manager
-                            </th>
+                            </th> */}
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Est. Start Date
                             </th>
@@ -96,20 +96,20 @@ const ProjectTable: React.FC<ProjectTableProps> = ({ projects, onViewProject }) 
                                     {project.project_name}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
-                                    {project.lead_id}
+                                    {project.lead_number}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {project.project_type}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {project.customer_id}
+                                    {project.customer_name}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {formatDate(project.created_at)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {project.project_manager}
-                                </td>
+                                </td> */}
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {formatDate(project.est_start_date)}
                                 </td>
