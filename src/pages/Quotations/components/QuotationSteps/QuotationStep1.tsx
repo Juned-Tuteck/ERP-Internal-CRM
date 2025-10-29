@@ -268,7 +268,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
 
       // Step 1: Get BOM by lead ID
       const bomResponse = await getBOMByLeadId(leadId);
-      const bomArray = bomResponse.data || [];
+      const bomArray = (bomResponse.data || []).filter((bom: any) => bom.approval_status === "APPROVED");
 
       if (bomArray.length === 0) {
         console.log("No BOM found for lead ID:", leadId);
