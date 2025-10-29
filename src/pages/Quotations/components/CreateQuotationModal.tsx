@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Save, ChevronRight } from "lucide-react";
 import QuotationStep1 from "./QuotationSteps/QuotationStep1";
 import QuotationStep2 from "./QuotationSteps/QuotationStep2";
 import QuotationStep3 from "./QuotationSteps/QuotationStep3";
@@ -24,7 +24,7 @@ import {
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
-import { log } from "console";
+
 
 interface CreateQuotationModalProps {
   isOpen: boolean;
@@ -50,6 +50,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const [createdQuotationId, setCreatedQuotationId] = useState<string | null>(
     null
   );
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const getDefaultFormData = () => ({
     // Step 1: Costing Sheet
@@ -649,27 +650,48 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     }
   };
 
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
+
 
 
   const handleNext = async () => {
     let stepCompleted = false;
 
+    // In create mode, check if step is already completed to avoid duplicate API calls
+    if (!isEditMode && completedSteps.has(currentStep)) {
+      // Step already completed, just move to next step
+      if (currentStep < 5) {
+        setCurrentStep(currentStep + 1);
+      }
+      return;
+    }
+
     if (currentStep === 1) {
       await handleStep1Submit();
+      // Mark step as completed after successful API call
+      if (!isEditMode) {
+        setCompletedSteps(prev => new Set(prev).add(1));
+      }
       // stepCompleted = true;
     } else if (currentStep === 2) {
       await handleStep2Submit();
+      // Mark step as completed after successful API call
+      if (!isEditMode) {
+        setCompletedSteps(prev => new Set(prev).add(2));
+      }
       stepCompleted = true;
     } else if (currentStep === 3) {
       await handleStep3Submit();
+      // Mark step as completed after successful API call
+      if (!isEditMode) {
+        setCompletedSteps(prev => new Set(prev).add(3));
+      }
       stepCompleted = true;
     } else if (currentStep === 4) {
       await handleStep4Submit();
+      // Mark step as completed after successful API call
+      if (!isEditMode) {
+        setCompletedSteps(prev => new Set(prev).add(4));
+      }
       stepCompleted = true;
     } else if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
@@ -716,6 +738,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     // Reset form
     setCurrentStep(1);
     setCreatedQuotationId(null);
+    setCompletedSteps(new Set());
     setFormData(getDefaultFormData());
   };
 
@@ -1156,6 +1179,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     setCurrentStep(1);
     setIsSubmitting(false);
     setCreatedQuotationId(null);
+    setCompletedSteps(new Set());
     setFormData(getDefaultFormData());
 
     // Call the original onClose function
@@ -1165,12 +1189,15 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
   const handleBreadcrumbClick = (stepId: number) => {
     // Allow navigation to previous steps in both create and edit modes
     // In edit mode, allow navigation to any step
-    // In create mode, only allow navigation to previous/completed steps
+    // In create mode, only allow navigation to completed steps or current step
     if (isEditMode) {
       setCurrentStep(stepId);
     } else {
-      // In create mode, only allow going back to previous steps
-      if (stepId < currentStep) {
+      // In create mode, allow navigation to completed steps or current step
+      if (stepId <= currentStep && (completedSteps.has(stepId) || stepId === currentStep)) {
+        setCurrentStep(stepId);
+      } else if (stepId < currentStep) {
+        // Also allow navigation to any previous step (even if not completed via API)
         setCurrentStep(stepId);
       }
     }
@@ -1205,25 +1232,29 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                   type="button"
                   onClick={() => handleBreadcrumbClick(step.id)}
                   style={{
-                    cursor: isEditMode || step.id < currentStep ? "pointer" : "default"
+                    cursor: isEditMode || step.id < currentStep || (!isEditMode && completedSteps.has(step.id)) ? "pointer" : "default"
                   }}
                   className={`group flex items-center space-x-2 focus:outline-none transition-colors ${currentStep === step.id
                     ? "text-blue-600"
-                    : currentStep > step.id
+                    : (!isEditMode && completedSteps.has(step.id))
                       ? "text-green-600 hover:text-green-700"
-                      : isEditMode
+                      : currentStep > step.id
                         ? "text-blue-400 hover:text-blue-500"
-                        : "text-gray-400"
+                        : isEditMode
+                          ? "text-blue-400 hover:text-blue-500"
+                          : "text-gray-400"
                     }`}
                 >
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${currentStep === step.id
                       ? "bg-blue-100 text-blue-600"
-                      : currentStep > step.id
+                      : (!isEditMode && completedSteps.has(step.id))
                         ? "bg-green-100 text-green-600 group-hover:bg-green-200"
-                        : isEditMode
+                        : currentStep > step.id
                           ? "bg-blue-50 text-blue-400 group-hover:bg-blue-100"
-                          : "bg-gray-100 text-gray-400"
+                          : isEditMode
+                            ? "bg-blue-50 text-blue-400 group-hover:bg-blue-100"
+                            : "bg-gray-100 text-gray-400"
                       }`}
                   >
                     {step.id}
