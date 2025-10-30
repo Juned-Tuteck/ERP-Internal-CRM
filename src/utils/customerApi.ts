@@ -92,3 +92,21 @@ export const rejectCustomer = async (
 
   return response.data;
 };
+
+// Update arbitrary customer fields using PUT /customer/:id
+export const updateCustomer = async (
+  customerId: string,
+  fields: Record<string, unknown>
+): Promise<unknown> => {
+  if (!customerId) throw new Error('customerId is required');
+
+  const response = await axios.put(
+    `${import.meta.env.VITE_API_BASE_URL}/customer/${customerId}`,
+    fields,
+    {
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
+
+  return response.data;
+};
