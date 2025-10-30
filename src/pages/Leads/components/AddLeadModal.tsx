@@ -12,6 +12,7 @@ import axios from "axios";
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
+import { updateCustomer } from '../../../utils/customerApi';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -408,7 +409,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           ...initialData,
           projectValue:
             initialData.projectValue !== undefined &&
-            initialData.projectValue !== null
+              initialData.projectValue !== null
               ? String(initialData.projectValue).replace(/[^\d.]/g, "")
               : "",
           leadGeneratedDate: normalizedDate,
@@ -429,7 +430,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           try {
             // Fetch users for Referenced By dropdown
             fetchUsers();
-            
+
             const response = await axios.get(
               `${import.meta.env.VITE_API_BASE_URL}/customer`
             );
@@ -454,8 +455,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               setSelectedCustomerId(selectedCustomer.id);
               // Fetch branches for this customer
               const branchResponse = await axios.get(
-                `${
-                  import.meta.env.VITE_API_BASE_URL
+                `${import.meta.env.VITE_API_BASE_URL
                 }/customer-branch?customer_id=${selectedCustomer.id}`
               );
               const branchData = branchResponse.data.data;
@@ -475,10 +475,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   }));
                   // Fetch contacts for this branch
                   const contactResponse = await axios.get(
-                    `${
-                      import.meta.env.VITE_API_BASE_URL
-                    }/customer-branch-contact?customer_branch_id=${
-                      selectedBranch.id
+                    `${import.meta.env.VITE_API_BASE_URL
+                    }/customer-branch-contact?customer_branch_id=${selectedBranch.id
                     }`
                   );
                   const contactData = contactResponse.data.data;
@@ -524,7 +522,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
       console.log("Customer DATA **********", customerData);
       const approvedCustomers = customerData.filter(
-        (customer: any) => customer.approval_status === "APPROVED"
+        (customer: any) => customer.approval_status === "APPROVED" && customer.is_lead_generated !== true
       );
       console.log("Approved Customers:", approvedCustomers);
 
@@ -543,8 +541,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const fetchCustomerBranches = async (customerId: string) => {
     try {
       const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_BASE_URL
+        `${import.meta.env.VITE_API_BASE_URL
         }/customer-branch?customer_id=${customerId}`
       );
       console.log("Customer Branches:", response);
@@ -565,8 +562,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const fetchContactPersons = async (branchId: string) => {
     try {
       const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_BASE_URL
+        `${import.meta.env.VITE_API_BASE_URL
         }/customer-branch-contact?customer_branch_id=${branchId}`
       );
       const contactData = response.data.data;
@@ -588,13 +584,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         `${import.meta.env.VITE_AUTH_BASE_URL}/users/basic`,
         {
           headers: {
-        Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`
           }
         }
       );
       const userData = response.data.data;
       console.log("Users Data:", userData);
-      
+
       setUsers(
         userData.map((user: any) => ({
           id: user.id || user.user_id,
@@ -792,26 +788,26 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setUploadedFiles([]);
       setNewComment("");
 
-    // ------------------------------------------------------------------------------------------For notifications
+      // ------------------------------------------------------------------------------------------For notifications
       try {
-          await sendNotification({
-            receiver_ids: ['admin'],
-            title: `New Lead Updated Successfully : ${formData.businessName||'Lead'}`,
-            message: `Lead ${formData.businessName||'Lead'} updated successfully by ${userData?.name || 'a user'}`,
-            service_type: 'CRM',
-            link: '/leads',
-            sender_id: userRole || 'user',
-            access: {
-              module: "CRM",
-              menu: "Lead",
-            }
-          });
-          console.log(`Notification sent for CRM Lead ${formData.businessName||'Lead'}`);
+        await sendNotification({
+          receiver_ids: ['admin'],
+          title: `New Lead Updated Successfully : ${formData.businessName || 'Lead'}`,
+          message: `Lead ${formData.businessName || 'Lead'} updated successfully by ${userData?.name || 'a user'}`,
+          service_type: 'CRM',
+          link: '/leads',
+          sender_id: userRole || 'user',
+          access: {
+            module: "CRM",
+            menu: "Lead",
+          }
+        });
+        console.log(`Notification sent for CRM Lead ${formData.businessName || 'Lead'}`);
       } catch (notifError) {
         console.error('Failed to send notification:', notifError);
         // Continue with the flow even if notification fails
       }
-    // ----------------------------------------------------------------------------------------
+      // ----------------------------------------------------------------------------------------
 
     } catch (error) {
       console.error("Error updating lead:", error);
@@ -873,6 +869,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
       setCreatedLeadId(leadId);
 
+      // If a customer was selected, mark is_lead_generated = true on the customer record
+      if (selectedCustomerId) {
+        try {
+          await updateCustomer(selectedCustomerId, { is_lead_generated: true });
+        } catch (custErr) {
+          console.error('Failed to update customer is_lead_generated flag:', custErr);
+          // Not blocking: continue the flow even if customer update fails
+        }
+      }
+
       // If there are associates, create lead-associate entries
       if (
         formData.involvedAssociates &&
@@ -894,24 +900,24 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       }
 
       // ------------------------------------------------------------------------------------------For notifications
-        try {
-            await sendNotification({
-              receiver_ids: ['admin'],
-              title: `New Lead Created Successfully : ${formData.businessName||'Lead'}`,
-              message: `Lead ${formData.businessName||'Lead'} registered successfully and sent for approval!by ${userData?.name || 'a user'}`,
-              service_type: 'CRM',
-              link: '/leads',
-              sender_id: userRole || 'user',
-              access: {
-                module: "CRM",
-                menu: "Lead",
-              }
-            });
-            console.log(`Notification sent for CRM Lead ${formData.businessName||'Lead'}`);
-        } catch (notifError) {
-          console.error('Failed to send notification:', notifError);
-          // Continue with the flow even if notification fails
-        }
+      try {
+        await sendNotification({
+          receiver_ids: ['admin'],
+          title: `New Lead Created Successfully : ${formData.businessName || 'Lead'}`,
+          message: `Lead ${formData.businessName || 'Lead'} registered successfully and sent for approval!by ${userData?.name || 'a user'}`,
+          service_type: 'CRM',
+          link: '/leads',
+          sender_id: userRole || 'user',
+          access: {
+            module: "CRM",
+            menu: "Lead",
+          }
+        });
+        console.log(`Notification sent for CRM Lead ${formData.businessName || 'Lead'}`);
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Continue with the flow even if notification fails
+      }
       // ----------------------------------------------------------------------------------------
 
       // Move to next step
@@ -1135,22 +1141,20 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       setCurrentStep(step.id);
                     }
                   }}
-                  className={`flex items-center space-x-2 ${
-                    currentStep === step.id
-                      ? "text-blue-600"
-                      : currentStep > step.id
+                  className={`flex items-center space-x-2 ${currentStep === step.id
+                    ? "text-blue-600"
+                    : currentStep > step.id
                       ? "text-green-600"
                       : "text-gray-400"
-                  } ${isEditMode ? "cursor-pointer hover:text-blue-700" : ""}`}
+                    } ${isEditMode ? "cursor-pointer hover:text-blue-700" : ""}`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      currentStep === step.id
-                        ? "bg-blue-100 text-blue-600"
-                        : currentStep > step.id
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id
+                      ? "bg-blue-100 text-blue-600"
+                      : currentStep > step.id
                         ? "bg-green-100 text-green-600"
                         : "bg-gray-100 text-gray-400"
-                    }`}
+                      }`}
                   >
                     {step.id}
                   </div>
@@ -1199,11 +1203,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.businessName}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.businessName
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.businessName
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     >
                       <option value="">Select Business</option>
                       {customers.map((customer) => (
@@ -1225,11 +1228,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       disabled={!formData.businessName}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
-                        validationErrors.customerBranch
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.customerBranch
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     >
                       <option value="">Select Branch</option>
                       {customerBranches.map((branch) => (
@@ -1268,11 +1270,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       disabled={!formData.customerBranch}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${
-                        validationErrors.contactPerson
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.contactPerson
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     >
                       <option value="">Select Contact Person</option>
                       {contactPersons.map((person) => (
@@ -1295,11 +1296,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="+91 98765 43210"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.contactNo
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.contactNo
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     />
                     <ValidationError fieldName="contactNo" />
                   </div>
@@ -1314,11 +1314,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadGeneratedDate}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.leadGeneratedDate
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadGeneratedDate
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     />
                     <ValidationError fieldName="leadGeneratedDate" />
                   </div>
@@ -1331,11 +1330,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       name="referencedBy"
                       value={formData.referencedBy}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.referencedBy
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.referencedBy
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     >
                       <option value="">Select User</option>
                       {users.map((user) => (
@@ -1358,11 +1356,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="Enter project name"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.projectName
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.projectName
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     />
                     <ValidationError fieldName="projectName" />
                   </div>
@@ -1378,11 +1375,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="Enter value in selected currency"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.projectValue
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.projectValue
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     />
                     <ValidationError fieldName="projectValue" />
                   </div>
@@ -1396,11 +1392,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadType}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.leadType
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadType
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     >
                       <option value="">Select Lead Type</option>
                       {leadTypes.map((type) => (
@@ -1440,11 +1435,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadCriticality}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.leadCriticality
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadCriticality
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     >
                       <option value="">Select Criticality</option>
                       {leadCriticalities.map((criticality) => (
@@ -1465,11 +1459,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadSource}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.leadSource
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     >
                       <option value="">Select Source</option>
                       {leadSources.map((source) => (
@@ -1511,11 +1504,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       onChange={handleInputChange}
                       required
                       placeholder="Enter days"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.approximateResponseTime
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.approximateResponseTime
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     />
                     <ValidationError fieldName="approximateResponseTime" />
                   </div>
@@ -1529,11 +1521,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       name="eta"
                       value={formData.eta}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.eta
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.eta
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
                     />
                     <ValidationError fieldName="eta" />
                   </div>
@@ -1549,11 +1540,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     onChange={handleInputChange}
                     rows={4}
                     placeholder="Enter detailed description of the lead..."
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      validationErrors.leadDetails
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadDetails
+                      ? "border-red-500"
+                      : "border-gray-300"
+                      }`}
                   />
                   <ValidationError fieldName="leadDetails" />
                   {formData.leadDetails && (
@@ -1792,11 +1782,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         }}
                         rows={3}
                         placeholder="Enter follow-up notes, meeting details, customer feedback..."
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          validationErrors.newComment
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.newComment
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
                       />
                       <ValidationError fieldName="newComment" />
                       {newComment && (
