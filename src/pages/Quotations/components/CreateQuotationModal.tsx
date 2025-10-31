@@ -312,6 +312,18 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       console.log("Created Quotation ID:", quotationId);
       console.log("Quotation State:", createdQuotationId)
 
+      // After creating quotation, mark lead as having a quotation
+      try {
+        await fetch(`${import.meta.env.VITE_API_BASE_URL}/lead/${formData.leadId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_quotation_created: true }),
+        });
+      } catch (err) {
+        console.error("Failed to update lead is_quotation_created:", err);
+        // don't block quotation creation flow on this failure
+      }
+
       // Step 2: Create specs
       const specsPayload = formData.specs.map((spec: any) => ({
         customer_quotation_id: quotationId,
