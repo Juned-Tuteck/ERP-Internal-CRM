@@ -681,7 +681,18 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
 
       if (bomId) {
         setCreatedBOMId(bomId);
-        // setCurrentStep(2);
+        // After creating BOM, update the lead to mark BOM generated
+        try {
+          await fetch(`${import.meta.env.VITE_API_BASE_URL}/lead/${formData.leadId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_bom_generated: true }),
+          });
+        } catch (err) {
+          // Log but don't block BOM creation flow
+          console.error("Failed to update lead is_bom_generated:", err);
+        }
+
         return bomId;
       } else {
         throw new Error("BOM ID not received from API");

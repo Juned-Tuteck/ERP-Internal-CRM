@@ -226,9 +226,9 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
     const hasError = validationErrors[fieldName];
     return hasError
       ? baseClassName
-          .replace("border-gray-300", "border-red-500")
-          .replace("focus:ring-blue-500", "focus:ring-red-500")
-          .replace("focus:border-blue-500", "focus:border-red-500")
+        .replace("border-gray-300", "border-red-500")
+        .replace("focus:ring-blue-500", "focus:ring-red-500")
+        .replace("focus:border-blue-500", "focus:border-red-500")
       : baseClassName;
   };
 
@@ -239,15 +239,17 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
         setLoading(true);
         const response = await getLeads();
         const apiLeads = response.data || [];
+        console.log("API leads response:", apiLeads);
 
         // Map API response to UI format
-        const mappedLeads = apiLeads.map((lead: any) => ({
+        const mappedLeads = apiLeads.filter(i => i.is_bom_generated === true && i.is_quotation_created === false).map((lead: any) => ({
           id: lead.lead_id,
           name: lead.project_name,
           businessName: lead.business_name,
           workType: lead.work_type,
           approvalStatus: lead.approval_status,
         }));
+        console.log("Fetched leads:", mappedLeads);
 
         setLeads(mappedLeads);
       } catch (error) {
@@ -447,139 +449,139 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
         prev.specs?.map((spec: any) =>
           spec.id === specId
             ? {
-                ...spec,
-                items: spec.items.map((item: any) => {
-                  if (item.id === itemId) {
-                    const updatedItem = { ...item, [field]: numValue };
+              ...spec,
+              items: spec.items.map((item: any) => {
+                if (item.id === itemId) {
+                  const updatedItem = { ...item, [field]: numValue };
 
-                    // Recalculate based on field changes
-                    if (field === "quantity") {
-                      updatedItem.supplyOwnAmount =
-                        updatedItem.quantity * (updatedItem.supplyRate || 0);
-                      updatedItem.installationOwnAmount =
-                        updatedItem.quantity *
-                        (updatedItem.installationRate || 0);
-                    }
-
-                    if (field === "basicSupplyRate") {
-                      // Always update supply rate when basic rate changes
-                      // If no cost details exist or all cost details are zero, use the basic rate directly
-                      if (
-                        !updatedItem.costDetails ||
-                        Object.values(updatedItem.costDetails).every(
-                          (v) => v === 0
-                        )
-                      ) {
-                        updatedItem.supplyRate = numValue;
-                        updatedItem.supplyOwnAmount =
-                          updatedItem.quantity * numValue;
-                      } else {
-                        // If cost details exist, recalculate based on the new basic rate
-                        // This ensures edit mode works properly
-                        const tempCostDetails = updatedItem.costDetails;
-
-                        // Apply discount first
-                        const supplyDiscountPercent =
-                          tempCostDetails.supplyDiscount || 0;
-                        const discountedBaseSupplyRate =
-                          numValue * (1 - supplyDiscountPercent / 100);
-
-                        // Recalculate supply costs with new basic rate
-                        const supplyWastageAmount =
-                          discountedBaseSupplyRate *
-                          (tempCostDetails.supplyWastage / 100);
-                        const supplyTransportationAmount =
-                          discountedBaseSupplyRate *
-                          (tempCostDetails.supplyTransportation / 100);
-                        const supplyContingencyAmount =
-                          discountedBaseSupplyRate *
-                          (tempCostDetails.supplyContingency / 100);
-                        const supplyMiscellaneousAmount =
-                          discountedBaseSupplyRate *
-                          (tempCostDetails.supplyMiscellaneous / 100);
-                        const supplyOutstationAmount =
-                          discountedBaseSupplyRate *
-                          (tempCostDetails.supplyOutstation / 100);
-                        const supplyOfficeOverheadAmount =
-                          discountedBaseSupplyRate *
-                          (tempCostDetails.supplyOfficeOverhead / 100);
-
-                        const totalSupplyCost =
-                          supplyWastageAmount +
-                          supplyTransportationAmount +
-                          supplyContingencyAmount +
-                          supplyMiscellaneousAmount +
-                          supplyOutstationAmount +
-                          supplyOfficeOverheadAmount;
-
-                        const totalSupplyOwnCost =
-                          discountedBaseSupplyRate + totalSupplyCost;
-
-                        updatedItem.supplyRate = totalSupplyOwnCost;
-                        updatedItem.supplyOwnAmount =
-                          updatedItem.quantity * totalSupplyOwnCost;
-                      }
-                    }
-
-                    if (field === "basicInstallationRate") {
-                      // Always update installation rate when basic rate changes
-                      // If no cost details exist or all cost details are zero, use the basic rate directly
-                      if (
-                        !updatedItem.costDetails ||
-                        Object.values(updatedItem.costDetails).every(
-                          (v) => v === 0
-                        )
-                      ) {
-                        updatedItem.installationRate = numValue;
-                        updatedItem.installationOwnAmount =
-                          updatedItem.quantity * numValue;
-                      } else {
-                        // If cost details exist, recalculate based on the new basic rate
-                        // This ensures edit mode works properly
-                        const tempCostDetails = updatedItem.costDetails;
-
-                        // Recalculate installation costs with new basic rate
-                        const installationWastageAmount =
-                          numValue *
-                          (tempCostDetails.installationWastage / 100);
-                        const installationTransportationAmount =
-                          numValue *
-                          (tempCostDetails.installationTransportation / 100);
-                        const installationContingencyAmount =
-                          numValue *
-                          (tempCostDetails.installationContingency / 100);
-                        const installationMiscellaneousAmount =
-                          numValue *
-                          (tempCostDetails.installationMiscellaneous / 100);
-                        const installationOutstationAmount =
-                          numValue *
-                          (tempCostDetails.installationOutstation / 100);
-                        const installationOfficeOverheadAmount =
-                          numValue *
-                          (tempCostDetails.installationOfficeOverhead / 100);
-
-                        const totalInstallationCost =
-                          installationWastageAmount +
-                          installationTransportationAmount +
-                          installationContingencyAmount +
-                          installationMiscellaneousAmount +
-                          installationOutstationAmount +
-                          installationOfficeOverheadAmount;
-
-                        const totalInstallationOwnCost =
-                          numValue + totalInstallationCost;
-
-                        updatedItem.installationRate = totalInstallationOwnCost;
-                        updatedItem.installationOwnAmount =
-                          updatedItem.quantity * totalInstallationOwnCost;
-                      }
-                    }
-
-                    return updatedItem;
+                  // Recalculate based on field changes
+                  if (field === "quantity") {
+                    updatedItem.supplyOwnAmount =
+                      updatedItem.quantity * (updatedItem.supplyRate || 0);
+                    updatedItem.installationOwnAmount =
+                      updatedItem.quantity *
+                      (updatedItem.installationRate || 0);
                   }
-                  return item;
-                }),
-              }
+
+                  if (field === "basicSupplyRate") {
+                    // Always update supply rate when basic rate changes
+                    // If no cost details exist or all cost details are zero, use the basic rate directly
+                    if (
+                      !updatedItem.costDetails ||
+                      Object.values(updatedItem.costDetails).every(
+                        (v) => v === 0
+                      )
+                    ) {
+                      updatedItem.supplyRate = numValue;
+                      updatedItem.supplyOwnAmount =
+                        updatedItem.quantity * numValue;
+                    } else {
+                      // If cost details exist, recalculate based on the new basic rate
+                      // This ensures edit mode works properly
+                      const tempCostDetails = updatedItem.costDetails;
+
+                      // Apply discount first
+                      const supplyDiscountPercent =
+                        tempCostDetails.supplyDiscount || 0;
+                      const discountedBaseSupplyRate =
+                        numValue * (1 - supplyDiscountPercent / 100);
+
+                      // Recalculate supply costs with new basic rate
+                      const supplyWastageAmount =
+                        discountedBaseSupplyRate *
+                        (tempCostDetails.supplyWastage / 100);
+                      const supplyTransportationAmount =
+                        discountedBaseSupplyRate *
+                        (tempCostDetails.supplyTransportation / 100);
+                      const supplyContingencyAmount =
+                        discountedBaseSupplyRate *
+                        (tempCostDetails.supplyContingency / 100);
+                      const supplyMiscellaneousAmount =
+                        discountedBaseSupplyRate *
+                        (tempCostDetails.supplyMiscellaneous / 100);
+                      const supplyOutstationAmount =
+                        discountedBaseSupplyRate *
+                        (tempCostDetails.supplyOutstation / 100);
+                      const supplyOfficeOverheadAmount =
+                        discountedBaseSupplyRate *
+                        (tempCostDetails.supplyOfficeOverhead / 100);
+
+                      const totalSupplyCost =
+                        supplyWastageAmount +
+                        supplyTransportationAmount +
+                        supplyContingencyAmount +
+                        supplyMiscellaneousAmount +
+                        supplyOutstationAmount +
+                        supplyOfficeOverheadAmount;
+
+                      const totalSupplyOwnCost =
+                        discountedBaseSupplyRate + totalSupplyCost;
+
+                      updatedItem.supplyRate = totalSupplyOwnCost;
+                      updatedItem.supplyOwnAmount =
+                        updatedItem.quantity * totalSupplyOwnCost;
+                    }
+                  }
+
+                  if (field === "basicInstallationRate") {
+                    // Always update installation rate when basic rate changes
+                    // If no cost details exist or all cost details are zero, use the basic rate directly
+                    if (
+                      !updatedItem.costDetails ||
+                      Object.values(updatedItem.costDetails).every(
+                        (v) => v === 0
+                      )
+                    ) {
+                      updatedItem.installationRate = numValue;
+                      updatedItem.installationOwnAmount =
+                        updatedItem.quantity * numValue;
+                    } else {
+                      // If cost details exist, recalculate based on the new basic rate
+                      // This ensures edit mode works properly
+                      const tempCostDetails = updatedItem.costDetails;
+
+                      // Recalculate installation costs with new basic rate
+                      const installationWastageAmount =
+                        numValue *
+                        (tempCostDetails.installationWastage / 100);
+                      const installationTransportationAmount =
+                        numValue *
+                        (tempCostDetails.installationTransportation / 100);
+                      const installationContingencyAmount =
+                        numValue *
+                        (tempCostDetails.installationContingency / 100);
+                      const installationMiscellaneousAmount =
+                        numValue *
+                        (tempCostDetails.installationMiscellaneous / 100);
+                      const installationOutstationAmount =
+                        numValue *
+                        (tempCostDetails.installationOutstation / 100);
+                      const installationOfficeOverheadAmount =
+                        numValue *
+                        (tempCostDetails.installationOfficeOverhead / 100);
+
+                      const totalInstallationCost =
+                        installationWastageAmount +
+                        installationTransportationAmount +
+                        installationContingencyAmount +
+                        installationMiscellaneousAmount +
+                        installationOutstationAmount +
+                        installationOfficeOverheadAmount;
+
+                      const totalInstallationOwnCost =
+                        numValue + totalInstallationCost;
+
+                      updatedItem.installationRate = totalInstallationOwnCost;
+                      updatedItem.installationOwnAmount =
+                        updatedItem.quantity * totalInstallationOwnCost;
+                    }
+                  }
+
+                  return updatedItem;
+                }
+                return item;
+              }),
+            }
             : spec
         ) || [],
     }));
@@ -736,25 +738,25 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
           prev.specs?.map((spec: any) =>
             spec.id === selectedItem.specId
               ? {
-                  ...spec,
-                  items: spec.items.map((item: any, index: number) =>
-                    index === selectedItem.itemIndex
-                      ? {
-                          ...item,
-                          costDetails: { ...costDetails },
-                          supplyRate: calculations.supplyRate,
-                          installationRate: calculations.installationRate,
-                          supplyOwnAmount:
-                            item.quantity * calculations.supplyRate,
-                          installationOwnAmount:
-                            item.quantity * calculations.installationRate,
-                          finalSupplyAmount: calculations.finalSupplyAmount,
-                          finalInstallationAmount:
-                            calculations.finalInstallationAmount,
-                        }
-                      : item
-                  ),
-                }
+                ...spec,
+                items: spec.items.map((item: any, index: number) =>
+                  index === selectedItem.itemIndex
+                    ? {
+                      ...item,
+                      costDetails: { ...costDetails },
+                      supplyRate: calculations.supplyRate,
+                      installationRate: calculations.installationRate,
+                      supplyOwnAmount:
+                        item.quantity * calculations.supplyRate,
+                      installationOwnAmount:
+                        item.quantity * calculations.installationRate,
+                      finalSupplyAmount: calculations.finalSupplyAmount,
+                      finalInstallationAmount:
+                        calculations.finalInstallationAmount,
+                    }
+                    : item
+                ),
+              }
               : spec
           ) || [],
       }));
@@ -1098,13 +1100,12 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                             </td>
                             <td className="px-4 py-3">
                               <span
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  item.materialType === "HIGH SIDE SUPPLY"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : item.materialType === "LOW SIDE SUPPLY"
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.materialType === "HIGH SIDE SUPPLY"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : item.materialType === "LOW SIDE SUPPLY"
                                     ? "bg-green-100 text-green-800"
                                     : "bg-purple-100 text-purple-800"
-                                }`}
+                                  }`}
                               >
                                 {item.materialType}
                               </span>
@@ -1313,38 +1314,38 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
           {/* Final Amounts Summary */}
           {(totals.totalFinalSupplyAmount > 0 ||
             totals.totalFinalInstallationAmount > 0) && (
-            <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
-              <h4 className="text-lg font-medium text-gray-900 mb-3">
-                Final Variance Amounts
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">
-                    Total Final Supply Amount (Variance):
-                  </span>
-                  <span className="text-sm font-medium text-green-600">
-                    ₹
-                    {totals.totalFinalSupplyAmount.toLocaleString("en-IN", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">
-                    Total Final Installation Amount (Variance):
-                  </span>
-                  <span className="text-sm font-medium text-green-600">
-                    ₹
-                    {totals.totalFinalInstallationAmount.toLocaleString(
-                      "en-IN",
-                      { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                    )}
-                  </span>
+              <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
+                <h4 className="text-lg font-medium text-gray-900 mb-3">
+                  Final Variance Amounts
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">
+                      Total Final Supply Amount (Variance):
+                    </span>
+                    <span className="text-sm font-medium text-green-600">
+                      ₹
+                      {totals.totalFinalSupplyAmount.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">
+                      Total Final Installation Amount (Variance):
+                    </span>
+                    <span className="text-sm font-medium text-green-600">
+                      ₹
+                      {totals.totalFinalInstallationAmount.toLocaleString(
+                        "en-IN",
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       )}
 
@@ -1377,9 +1378,9 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                         {field.includes("-")
                           ? `Spec Item (${field.split("-")[2]})`
                           : field
-                              .replace("costDetail-", "")
-                              .replace(/([A-Z])/g, " $1")
-                              .toLowerCase()}
+                            .replace("costDetail-", "")
+                            .replace(/([A-Z])/g, " $1")
+                            .toLowerCase()}
                         :
                       </span>{" "}
                       {error}
@@ -1586,10 +1587,9 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                                 disabled={isReadOnly}
                                 className={getInputClassName(
                                   `costDetail-${key}`,
-                                  `w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                    isReadOnly
-                                      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                      : ""
+                                  `w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${isReadOnly
+                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                    : ""
                                   }`
                                 )}
                               />
@@ -1797,10 +1797,9 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                                 disabled={isReadOnly}
                                 className={getInputClassName(
                                   `costDetail-${key}`,
-                                  `w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                    isReadOnly
-                                      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                      : ""
+                                  `w-20 px-2 py-1 border border-gray-300 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 ${isReadOnly
+                                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                    : ""
                                   }`
                                 )}
                               />
