@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Tag, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { X, FileText, Tag, ChevronDown, ChevronUp, Send, Info } from 'lucide-react';
 import { createBulkBOMApprovals } from '../../../utils/bomApprovalApi';
 import { useCRM } from "../../../context/CRMContext";
 import useNotifications from '../../../hook/useNotifications';
@@ -21,6 +21,16 @@ interface BOMDetail {
   approvalStatus: string;
   createdAt: string;
   createdBy: string;
+  approvalDetails: Array<{
+    id: string;
+    bom_id: string;
+    approver_role: string;
+    approval_status: string;
+    approved_by: string;
+    approval_comment: string;
+    created_at: string;
+    updated_at: string;
+  }>;
   specs: Array<{
     id: string;
     name: string;
@@ -54,6 +64,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sendingForApproval, setSendingForApproval] = useState(false);
+  const [showApprovalHistory, setShowApprovalHistory] = useState(false);
 
   const roleHierarchy = {
     level1: "design engineer",
@@ -83,6 +94,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
           approvalStatus: apiBOM.approval_status || 'draft',
           createdAt: apiBOM.created_at || '',
           createdBy: apiBOM.created_by || 'Unknown',
+          approvalDetails: apiBOM.approval_details || [],
           specs: (apiBOM.specs || []).map((spec: any) => ({
             id: spec.spec_id,
             name: spec.spec_description,
@@ -125,6 +137,8 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
         return 'bg-red-100 text-red-800';
       case 'Retrofit':
         return 'bg-amber-100 text-amber-800';
+      case 'TYPE2':
+        return 'bg-purple-100 text-purple-800';
       case 'Chiller':
         return 'bg-cyan-100 text-cyan-800';
       default:
@@ -133,6 +147,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
   };
 
   const getStatusColor = (status: string) => {
+    status = status.toLowerCase();
     switch (status) {
       case 'approved':
         return 'bg-green-100 text-green-800';
@@ -140,6 +155,8 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
         return 'bg-red-100 text-red-800';
       case 'pending_approval':
         return 'bg-yellow-100 text-yellow-800';
+      case 'pending':
+        return 'bg-gray-100 text-gray-800';
       case 'draft':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -277,10 +294,20 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getWorkTypeColor(bomDetail.workType)}`}>
                       {bomDetail.workType}
                     </span>
-                    <div className="mt-2">
+                    <div className="mt-2 flex items-center space-x-2">
+                      {(
+                        <button
+                          onClick={() => setShowApprovalHistory(true)}
+                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="View Approval History"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      )}
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(bomDetail.approvalStatus)}`}>
                         {bomDetail.approvalStatus}
                       </span>
+                      
                     </div>
                   </div>
                 </div>
@@ -438,6 +465,98 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Approval History Modal */}
+      {showApprovalHistory && bomDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Approval History</h3>
+                <p className="text-sm text-gray-500">BOM: {bomDetail.bomNumber}</p>
+              </div>
+              <button
+                onClick={() => setShowApprovalHistory(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {bomDetail.approvalDetails.length > 0 ? (
+                <div className="space-y-4">
+                  {bomDetail.approvalDetails
+                    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                    .map((approval) => (
+                    <div 
+                      key={approval.id} 
+                      className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-medium text-gray-900 capitalize">
+                                {approval.approver_role.replace('_', ' ')}
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(approval.approval_status)}`}>
+                                {approval.approval_status}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                            <div>
+                              <span className="text-xs font-medium text-gray-500">Approved By:</span>
+                              <p className="text-sm text-gray-900">{approval.approved_by || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <span className="text-xs font-medium text-gray-500">Date:</span>
+                              <p className="text-sm text-gray-900">
+                                {new Date(approval.updated_at).toLocaleString('en-IN', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {approval.approval_comment && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-500">Comment:</span>
+                              <p className="text-sm text-gray-700 mt-1 p-2 bg-white rounded border">
+                                {approval.approval_comment}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Info className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No approval history found</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowApprovalHistory(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

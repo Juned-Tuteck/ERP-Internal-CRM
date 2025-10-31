@@ -731,7 +731,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 >
                   {quotation.status.replace("_", " ")}
                 </span>
-                {(quotation.status === "PENDING_FOR_APPROVAL" || quotation.status === "REVISIT") && (
+                {(
                   <button
                     onClick={() => setIsApprovalHistoryModalOpen(true)}
                     className="inline-flex items-center justify-center w-4 h-4 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
