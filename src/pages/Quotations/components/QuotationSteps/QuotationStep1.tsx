@@ -753,6 +753,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                       finalSupplyAmount: calculations.finalSupplyAmount,
                       finalInstallationAmount:
                         calculations.finalInstallationAmount,
+                      calculations: { ...calculations },
                     }
                     : item
                 ),

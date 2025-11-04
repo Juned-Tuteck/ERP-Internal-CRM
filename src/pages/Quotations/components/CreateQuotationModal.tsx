@@ -346,7 +346,9 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         const specId = createdSpecs[specIndex]?.id;
         if (specId) {
           spec.items.forEach((item: any) => {
+            console.log("Processing item for spec ID:", item);
             const costDetails = item.costDetails || {};
+            const calculations = item.calculations || {};
             itemDetailsPayload.push({
               customer_quotation_id: quotationId,
               spec_id: specId,
@@ -360,16 +362,16 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
               installation_rate: item.installationRate,
               supply_price: item.supplyOwnAmount,
               installation_price: item.installationOwnAmount,
-              supply_wastage_amt: costDetails.supplyWastageAmount || 0,
+              supply_wastage_amt: calculations.supplyWastageAmount || 0,
               supply_transportation_amt:
-                costDetails.supplyTransportationAmount || 0,
-              supply_contingency_amt: costDetails.supplyContingencyAmount || 0,
+                calculations.supplyTransportationAmount || 0,
+              supply_contingency_amt: calculations.supplyContingencyAmount || 0,
               supply_miscellaneous_amt:
-                costDetails.supplyMiscellaneousAmount || 0,
-              supply_povariance_amt: costDetails.supplyPOVarianceAmount || 0,
-              supply_outstation_amt: costDetails.supplyOutstationAmount || 0,
+                calculations.supplyMiscellaneousAmount || 0,
+              supply_povariance_amt: calculations.supplyPOVarianceAmount || 0,
+              supply_outstation_amt: calculations.supplyOutstationAmount || 0,
               supply_office_overhead_amt:
-                costDetails.supplyOfficeOverheadAmount || 0,
+                calculations.supplyOfficeOverheadAmount || 0,
               supply_wastage_pct: costDetails.supplyWastage || 0,
               supply_transportation_pct: costDetails.supplyTransportation || 0,
               supply_contingency_pct: costDetails.supplyContingency || 0,
@@ -378,19 +380,19 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
               supply_outstation_pct: costDetails.supplyOutstation || 0,
               supply_office_overhead_pct: costDetails.supplyOfficeOverhead || 0,
               installation_wastage_amt:
-                costDetails.installationWastageAmount || 0,
+                calculations.installationWastageAmount || 0,
               installation_transportation_amt:
-                costDetails.installationTransportationAmount || 0,
+                calculations.installationTransportationAmount || 0,
               installation_contingency_amt:
-                costDetails.installationContingencyAmount || 0,
+                calculations.installationContingencyAmount || 0,
               installation_miscellaneous_amt:
-                costDetails.installationMiscellaneousAmount || 0,
+                calculations.installationMiscellaneousAmount || 0,
               installation_povariance_amt:
-                costDetails.installationPOVarianceAmount || 0,
+                calculations.installationPOVarianceAmount || 0,
               installation_outstation_amt:
-                costDetails.installationOutstationAmount || 0,
+                calculations.installationOutstationAmount || 0,
               installation_office_overhead_amt:
-                costDetails.installationOfficeOverheadAmount || 0,
+                calculations.installationOfficeOverheadAmount || 0,
               installation_wastage_pct: costDetails.installationWastage || 0,
               installation_transportation_pct:
                 costDetails.installationTransportation || 0,
@@ -413,6 +415,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
           });
         }
       });
+
+      console.log("Item Details Payload:---", itemDetailsPayload);
 
       if (itemDetailsPayload.length > 0) {
         await createQuotationItemDetails(itemDetailsPayload);

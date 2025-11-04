@@ -1192,7 +1192,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                               </span>
                               <span className="text-sm font-medium">
                                 {parseFloat(item.required_qty || 0)}{" "}
-                                {item.uom_value || "Nos"}
+                                {/* {item.uom_value || "Nos"} */}
                               </span>
                             </div>
                             <div className="flex justify-between">
@@ -1306,7 +1306,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                               </span>
                               <span className="text-sm font-medium">
                                 {parseFloat(item.required_qty || 0)}{" "}
-                                {item.uom_value || "Nos"}
+                                {/* {item.uom_value || "Nos"} */}
                               </span>
                             </div>
                             <div className="flex justify-between">
