@@ -1,3 +1,4 @@
+import { read } from "fs";
 import React, { useEffect, useState } from "react";
 
 interface QuotationStep3Props {
@@ -351,6 +352,9 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({
             <div className="flex justify-between items-center">
               <label className="text-sm text-gray-600">Margin (%):</label>
               <div className="flex flex-col items-end">
+                {title === "SITC (OVERALL) SUMMARY" ? (
+                <span className="text-sm font-medium"> - </span>
+                ) : (
                 <input
                   type="number"
                   value={data?.marginPercentage || ""}
@@ -367,6 +371,7 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({
                   aria-invalid={hasError}
                   aria-describedby={hasError ? `${fieldName}-error` : undefined}
                 />
+                )}
               </div>
             </div>
             {hasError && (

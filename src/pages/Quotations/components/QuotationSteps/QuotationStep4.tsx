@@ -5,12 +5,14 @@ interface QuotationStep4Props {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   onValidationChange?: (isValid: boolean) => void; // Optional callback for validation status
+  isEditMode?: boolean;
 }
 
 const QuotationStep4: React.FC<QuotationStep4Props> = ({
   formData,
   setFormData,
   onValidationChange,
+  isEditMode,
 }) => {
   const [expandedSpecs, setExpandedSpecs] = React.useState<
     Record<string, boolean>
@@ -18,6 +20,7 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
   const [validationErrors, setValidationErrors] = React.useState<
     Record<string, string>
   >({});
+  console.log("Quotation Step 4 - Form Data:", formData);
 
   // Initialize GST rates if not exists
   useEffect(() => {
@@ -335,10 +338,10 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                             <td className="px-4 py-3">
                               <span
                                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.materialType === "HIGH SIDE SUPPLY"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : item.materialType === "LOW SIDE SUPPLY"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-purple-100 text-purple-800"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : item.materialType === "LOW SIDE SUPPLY"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-purple-100 text-purple-800"
                                   }`}
                               >
                                 {item.materialType}
@@ -442,8 +445,8 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                       step="0.01"
                       placeholder=""
                       className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${validationErrors.highSideSupply
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
                         }`}
                     />
                     {validationErrors.highSideSupply && (
@@ -501,8 +504,8 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                       step="0.01"
                       placeholder=""
                       className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${validationErrors.lowSideSupply
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
                         }`}
                     />
                     {validationErrors.lowSideSupply && (
@@ -560,8 +563,8 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
                       step="0.01"
                       placeholder=""
                       className={`w-20 px-2 py-1 border rounded-md text-right focus:outline-none focus:ring-1 ${validationErrors.installation
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
                         }`}
                     />
                     {validationErrors.installation && (
@@ -671,11 +674,15 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
             Final Selling Amount
           </h5>
           <p className="text-lg font-bold text-gray-900">
-            ₹
-            {(formData.sitcSummary?.sellingAmount || 0).toLocaleString("en-IN", {
+            ₹{isEditMode ? Number(formData.final_selling_amt || 0).toLocaleString("en-IN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
-            })}
+            }) : (
+              (formData.sitcSummary?.sellingAmount || 0).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            )}
           </p>
         </div>
 
@@ -684,12 +691,16 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
             Profit Percentage
           </h5>
           <p className="text-lg font-bold text-purple-600">
-            {(() => {
-              const marginAmount = formData.sitcSummary?.marginAmount || 0;
-              const subTotal = formData.sitcSummary?.subTotal || 0;
-              const profitPercentage = subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
-              return profitPercentage.toFixed(2);
-            })()}%
+            {isEditMode
+              ? (formData.profit_percentage || 0)
+              : (
+                (() => {
+                  const marginAmount = formData.sitcSummary?.marginAmount || 0;
+                  const subTotal = formData.sitcSummary?.subTotal || 0;
+                  const profitPercentage = subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
+                  return profitPercentage.toFixed(2);
+                })()
+              )}%
           </p>
         </div>
 
@@ -698,16 +709,21 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
             Grand Total With GST
           </h5>
           <p className="text-xl font-bold text-green-600">
-            ₹
-            {(() => {
-              const sellingAmount = formData.sitcSummary?.sellingAmount || 0;
-              const gstAmount = totalWithGST - totalWithoutGST;
-              const grandTotal = sellingAmount + gstAmount;
-              return grandTotal.toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              });
-            })()}
+            ₹{isEditMode
+              ? Number(formData.grand_total_gst || 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
+              : (() => {
+                const sellingAmount = formData.sitcSummary?.sellingAmount || 0;
+                const gstAmount = totalWithGST - totalWithoutGST;
+                const grandTotal = sellingAmount + gstAmount;
+                return grandTotal.toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+              })()
+            }
           </p>
         </div>
       </div>
@@ -740,7 +756,7 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
           },
         }));
       }, [
-        groupedItems,
+        // groupedItems,
         highSideAmount,
         lowSideAmount,
         installationAmount,

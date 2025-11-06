@@ -64,8 +64,8 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
               [BOM_TEMPLATE_DETAIL_KEY_MAP.item_code]: detail.item_code || '',
               [BOM_TEMPLATE_DETAIL_KEY_MAP.item_name]: detail.item_name || '',
               [BOM_TEMPLATE_DETAIL_KEY_MAP.required_quantity]: detail.required_quantity,
-              uomName: '-',
-              brand: '-'
+              [BOM_TEMPLATE_DETAIL_KEY_MAP.uom_name]: detail.uom_name || '-',
+              [BOM_TEMPLATE_DETAIL_KEY_MAP.brand]: detail.brand_name || '-'
             }))
           })),
           [BOM_TEMPLATE_RESPONSE_KEY_MAP.created_at]: apiData.created_at,
@@ -216,6 +216,7 @@ const BOMTemplateViewModal: React.FC<BOMTemplateViewModalProps> = ({
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                   {spec.items.map((item) => (
+                                    console.log(item),
                                     <tr key={item.id} className="hover:bg-gray-50">
                                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemCode}</td>
                                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.itemName}</td>

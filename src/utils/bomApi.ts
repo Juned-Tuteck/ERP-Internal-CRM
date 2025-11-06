@@ -50,6 +50,8 @@ export const BOM_TEMPLATE_DETAIL_KEY_MAP = {
   latest_lowest_basic_supply_rate: "supplyRate",
   latest_lowest_basic_installation_rate: "installationRate",
   latest_lowest_net_rate: "netRate",
+  uom_name: "uomName",
+  brand: "brand",
 };
 
 // Get all leads for dropdown

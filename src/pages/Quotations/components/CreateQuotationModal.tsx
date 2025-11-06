@@ -179,6 +179,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         finalCosting: {
           ...defaultData.finalCosting,
           ...(initialData.finalCosting || {}),
+          final_selling_amt: initialData.final_selling_amt || 0,
+          grand_total_gst: initialData.grand_total_gst || 0,
         },
         // Step 5: Comments
         comments: initialData.comments || [],
@@ -239,6 +241,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         finalCosting: {
           ...defaultData.finalCosting,
           ...(initialData.finalCosting || {}),
+          final_selling_amt: initialData.final_selling_amt || 0,
+          grand_total_gst: initialData.grand_total_gst || 0,
         },
         // Step 5: Comments
         comments: initialData.comments || [],
@@ -249,6 +253,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         setCreatedQuotationId(initialData.id);
       }
     }
+    console.log("Initial Data on Effect:", formData.finalCosting.final_selling_amt);
   }, [initialData]);
 
 
@@ -584,6 +589,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         installation_gst_percentage: formData.gstRates?.installation || 18,
         installation_cost_with_gst: finalCosting.installationWithGST || 0,
         profit_percentage: profitPercentage,
+        final_selling_amt: finalCosting.finalSellingAmount || 0,
+        grand_total_gst: finalCosting.grandTotalWithGST || 0,
       };
 
       await updateQuotation(createdQuotationId, gstPayload);
@@ -1310,7 +1317,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
 
           {/* Step 4: Final Costing */}
           {currentStep === 4 && (
-            <QuotationStep4 formData={formData} setFormData={setFormData} />
+            <QuotationStep4 formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
           )}
 
           {/* Step 5: Comments */}

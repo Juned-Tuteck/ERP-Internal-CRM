@@ -223,6 +223,8 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           installationCostWithGst: parseFloat(
             apiQuotation.installation_cost_with_gst || 0
           ),
+          final_selling_amt: apiQuotation.final_selling_amt || 0,
+          grand_total_gst: apiQuotation.grand_total_gst || 0,
           specs: apiQuotation.bom_specs || [],
           pocExpenses: apiQuotation.poc_expenses || {},
           costMargins: apiQuotation.cost_margins || [],
@@ -376,6 +378,9 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
               ? new Date(quotation.expiryDate).toLocaleDateString("en-CA")
               : "",
           bomId: apiQuotation.bom_id || "",
+          final_selling_amt: apiQuotation.final_selling_amt || 0,
+          grand_total_gst: apiQuotation.grand_total_gst || 0,
+          profit_percentage: apiQuotation.profit_percentage || 0,
           specs: mappedSpecs || [],
           items: [], // Keep for backward compatibility
           note: apiQuotation.note || "",
@@ -1892,6 +1897,32 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                   </tr>
                 </tfoot>
               </table>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                <h5 className="text-sm font-medium text-gray-600 mb-2">Final Selling Amount</h5>
+                <p className="text-lg font-bold text-gray-900">
+                  ₹ {displayQuotation.final_selling_amt}
+                </p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                <h5 className="text-sm font-medium text-gray-600 mb-2">Profit Percentage</h5>
+                <p className="text-lg font-bold text-purple-600">
+                  {displayQuotation.profitPercentage}%
+                </p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                <h5 className="text-sm font-medium text-gray-600 mb-2">Grand Total With GST</h5>
+                <p className="text-xl font-bold text-green-600">
+                  ₹ {Number(displayQuotation.grand_total_gst || 0).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+
+                </p>
+              </div>
             </div>
           </div>
         )}

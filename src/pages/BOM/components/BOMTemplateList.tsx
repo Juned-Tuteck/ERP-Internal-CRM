@@ -323,12 +323,12 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                 >
                   Work Type
                 </th>
-                <th
+                {/* <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Items
-                </th>
+                </th> */}
                 {/* <th
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -345,6 +345,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTemplates.map((template) => (
+                console.log("bom template",template),
                 <tr
                   key={template.id}
                   className={`hover:bg-gray-50 cursor-pointer ${selectedTemplate?.id === template.id ? "bg-blue-50" : ""
@@ -381,9 +382,9 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                       {template.workType}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {template.itemCount} items
-                  </td>
+                  </td> */}
                   {/* <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       {template.createdBy}
