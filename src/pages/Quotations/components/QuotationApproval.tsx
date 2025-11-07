@@ -396,10 +396,10 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                 {searchTerm ? "found" : "awaiting approval"}
               </p>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-amber-600">
+            {/* <div className="flex items-center space-x-2 text-sm text-amber-600">
               <Clock className="h-4 w-4" />
               <span>Requires Sales Manager Approval</span>
-            </div>
+            </div> */}
           </div>
 
           {/* Search Bar */}

@@ -26,6 +26,7 @@ interface BOM {
   createdDate: string;
   bom_type: string;
   bomNumber: string;
+  lead_number:string;
   status: "draft" | "pending_for_approval" | "approved" | "rejected" | "revisit";
 }
 
@@ -69,6 +70,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
         const mappedBOMs: BOM[] = apiBOMs.map((apiBOM: any) => ({
           id: apiBOM.id,
           leadName: apiBOM.name,
+          lead_number: apiBOM.lead_number,
           bomNumber: apiBOM.bom_number,
           bomTemplateNumber: apiBOM.bom_template_number,
           workType: apiBOM.work_type || "Unknown",
@@ -529,7 +531,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Lead Name
+                  BOM Name
                 </th>
                 <th
                   scope="col"
@@ -588,6 +590,9 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                         </div>
                         <div className="text-xs font-bold text-blue-600">
                           BOM : {bom.bomNumber || "-"}
+                        </div>
+                        <div className="text-xs font-bold text-blue-600">
+                          LEAD : {bom.lead_number || "-"}
                         </div>
                       </div>
                     </div>

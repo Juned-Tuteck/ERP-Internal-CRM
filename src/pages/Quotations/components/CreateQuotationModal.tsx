@@ -659,8 +659,6 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
     };
   };
 
-
-
   // Helper function to handle step increment
   const handleStepIncrement = async (quotationId: string) => {
     try {
@@ -672,7 +670,6 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
       throw error;
     }
   };
-
 
 
 
