@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Eye, Clock, AlertTriangle, ShoppingCart, Building2, Calendar } from 'lucide-react';
+import { getAllSalesOrders, approveSalesOrder, rejectSalesOrder } from '../../../utils/salesOrderApi';
 
 interface SalesOrderApprovalProps {
   onApprovalAction: (salesOrderId: string, action: 'approve' | 'reject', reason?: string) => void;
@@ -10,9 +11,67 @@ const SalesOrderApproval: React.FC<SalesOrderApprovalProps> = ({ onApprovalActio
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
   const [reason, setReason] = useState('');
+  const [pendingSalesOrders, setPendingSalesOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for pending sales orders
-  const pendingSalesOrders = [
+  useEffect(() => {
+    fetchPendingSalesOrders();
+  }, []);
+
+  const fetchPendingSalesOrders = async () => {
+    try {
+      setLoading(true);
+      const allOrders = await getAllSalesOrders();
+      const pending = allOrders.filter(
+        (order: any) => order.approval_status === 'PENDING'
+      ).map((order: any) => ({
+        id: order.sales_order_id,
+        orderNumber: order.sales_order_number,
+        businessName: order.business_name,
+        quotationNumber: order.quotation_number,
+        bomNumber: order.bom_number,
+        totalValue: order.total_cost,
+        createdBy: order.created_by,
+        createdDate: order.created_at,
+        status: 'pending_approval',
+        customerBranch: order.customer_branch || '',
+        contactPerson: order.contact_person || '',
+        workOrderNumber: order.work_order_number || '',
+        projectCategory: order.project_category || '',
+        projectAddress: order.project_address || ''
+      }));
+      setPendingSalesOrders(pending);
+    } catch (error) {
+      console.error('Error fetching pending sales orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (salesOrderId: string, approvalReason?: string) => {
+    try {
+      await approveSalesOrder(salesOrderId, approvalReason);
+      onApprovalAction(salesOrderId, 'approve', approvalReason);
+      fetchPendingSalesOrders();
+    } catch (error) {
+      console.error('Error approving sales order:', error);
+      alert('Error approving sales order');
+    }
+  };
+
+  const handleReject = async (salesOrderId: string, rejectionReason: string) => {
+    try {
+      await rejectSalesOrder(salesOrderId, rejectionReason);
+      onApprovalAction(salesOrderId, 'reject', rejectionReason);
+      fetchPendingSalesOrders();
+    } catch (error) {
+      console.error('Error rejecting sales order:', error);
+      alert('Error rejecting sales order');
+    }
+  };
+
+  // Mock data preserved for UI structure reference
+  const mockPendingSalesOrders = [
     {
       id: '1',
       orderNumber: 'SO-2024-002',
@@ -75,9 +134,13 @@ const SalesOrderApproval: React.FC<SalesOrderApprovalProps> = ({ onApprovalActio
     setShowReasonModal(true);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (selectedSalesOrder) {
-      onApprovalAction(selectedSalesOrder.id, actionType, reason);
+      if (actionType === 'approve') {
+        await handleApprove(selectedSalesOrder.id, reason);
+      } else {
+        await handleReject(selectedSalesOrder.id, reason);
+      }
       setShowReasonModal(false);
       setReason('');
       setSelectedSalesOrder(null);

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import CreateSalesOrderModal from './CreateSalesOrderModal';
+import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder } from '../../../utils/salesOrderApi';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
@@ -10,6 +11,62 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
   const [activeTab, setActiveTab] = useState('general');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [fullSalesOrder, setFullSalesOrder] = useState<any>(null);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!salesOrder?.id) return;
+
+      try {
+        setLoading(true);
+        const [details, contactsData, commentsData] = await Promise.all([
+          getSalesOrderById(salesOrder.id),
+          getSalesOrderContactDetails(salesOrder.id),
+          getSalesOrderComments(salesOrder.id)
+        ]);
+
+        setFullSalesOrder(details);
+        setContacts(contactsData);
+        setComments(commentsData);
+      } catch (error) {
+        console.error('Error fetching sales order details:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [salesOrder?.id]);
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !salesOrder?.id) return;
+
+    try {
+      await addSalesOrderComment(salesOrder.id, newComment);
+      const updatedComments = await getSalesOrderComments(salesOrder.id);
+      setComments(updatedComments);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!salesOrder?.id) return;
+
+    try {
+      await deleteSalesOrder(salesOrder.id);
+      setIsDeleteModalOpen(false);
+      alert('Sales order deleted successfully');
+    } catch (error) {
+      console.error('Error deleting sales order:', error);
+      alert('Error deleting sales order');
+    }
+  };
 
   if (!salesOrder) {
     return (

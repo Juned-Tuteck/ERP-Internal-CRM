@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Calendar, Tag, Edit, Trash2, Download, CheckCircle, XCircle, Building2 } from 'lucide-react';
+import { getAllSalesOrders } from '../../../utils/salesOrderApi';
 
 interface SalesOrder {
   id: string;
@@ -21,73 +22,65 @@ interface SalesOrderListProps {
 }
 
 const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onSelectSalesOrder }) => {
-  const salesOrders: SalesOrder[] = [
-    {
-      id: '1',
-      orderNumber: 'SO-2024-001',
-      businessName: 'TechCorp Solutions Pvt Ltd',
-      quotationNumber: 'QT-2024-001',
-      bomNumber: 'BOM-2024-001',
-      totalValue: '₹24,75,000',
-      createdBy: 'Rajesh Kumar',
-      createdDate: '2024-01-15',
-      projectStartDate: '2024-02-01',
-      projectEndDate: '2024-06-30',
-      status: 'approved',
-    },
-    {
-      id: '2',
-      orderNumber: 'SO-2024-002',
-      businessName: 'Innovate India Limited',
-      quotationNumber: 'QT-2024-002',
-      bomNumber: 'BOM-2024-002',
-      totalValue: '₹18,50,000',
-      createdBy: 'Priya Sharma',
-      createdDate: '2024-01-10',
-      projectStartDate: '2024-02-15',
-      projectEndDate: '2024-05-15',
-      status: 'pending_approval',
-    },
-    {
-      id: '3',
-      orderNumber: 'SO-2024-003',
-      businessName: 'Digital Solutions Enterprise',
-      quotationNumber: 'QT-2024-003',
-      bomNumber: 'BOM-2024-003',
-      totalValue: '₹32,80,000',
-      createdBy: 'Amit Singh',
-      createdDate: '2024-01-05',
-      projectStartDate: '2024-03-01',
-      projectEndDate: '2024-08-20',
-      status: 'in_progress',
-    },
-    {
-      id: '4',
-      orderNumber: 'SO-2023-045',
-      businessName: 'Manufacturing Industries Co',
-      quotationNumber: 'QT-2023-045',
-      bomNumber: 'BOM-2023-045',
-      totalValue: '₹12,45,000',
-      createdBy: 'Sneha Patel',
-      createdDate: '2023-12-28',
-      projectStartDate: '2024-01-15',
-      projectEndDate: '2024-07-10',
-      status: 'draft',
-    },
-    {
-      id: '5',
-      orderNumber: 'SO-2023-044',
-      businessName: 'FinTech Innovations Pvt Ltd',
-      quotationNumber: 'QT-2023-044',
-      bomNumber: 'BOM-2023-044',
-      totalValue: '₹19,30,000',
-      createdBy: 'Vikram Gupta',
-      createdDate: '2023-12-20',
-      projectStartDate: '2024-01-10',
-      projectEndDate: '2024-04-25',
-      status: 'rejected',
-    },
-  ];
+  const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSalesOrders = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllSalesOrders();
+        const mappedData = data.map((so: any) => ({
+          id: so.sales_order_id,
+          orderNumber: so.sales_order_number,
+          businessName: so.business_name,
+          quotationNumber: so.quotation_number,
+          bomNumber: so.bom_number,
+          totalValue: so.total_cost,
+          createdBy: so.created_by,
+          createdDate: so.created_at,
+          projectStartDate: so.project_start_date || '',
+          projectEndDate: so.project_end_date || '',
+          status: so.status || 'draft',
+        }));
+        setSalesOrders(mappedData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching sales orders:', err);
+        setError('Failed to load sales orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSalesOrders();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <div className="text-gray-500">Loading sales orders...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <div className="text-red-600">
+          {error}
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-2 text-blue-600 underline"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
