@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
-import { getMaterialTypes, getPaymentTermTypes, createSalesOrder, MaterialType, PaymentTermType } from '../../../utils/salesOrderApi';
+import { createSalesOrder } from '../../../utils/salesOrderApi';
 
 interface CreateSalesOrderModalProps {
   isOpen: boolean;
@@ -20,14 +20,13 @@ interface PaymentTerm {
   id: string;
   description: string;
   termType: string;
+  materialType: string;
   percentage: number;
   amount: number;
 }
 
 const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
-  const [paymentTermTypes, setPaymentTermTypes] = useState<PaymentTermType[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: General Information
@@ -76,8 +75,6 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     expiryDate: '',
     purpose: '',
     guaranteeType: '',
-    // Material Type
-    materialTypeId: '',
     // Material Costs
     materialCosts: [
       { type: 'High Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
@@ -91,25 +88,6 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     // Step 3: Comments
     orderComments: ''
   });
-
-  useEffect(() => {
-    const fetchDropdownData = async () => {
-      if (!isOpen) return;
-
-      try {
-        const [materialTypesData, paymentTermTypesData] = await Promise.all([
-          getMaterialTypes(),
-          getPaymentTermTypes()
-        ]);
-        setMaterialTypes(materialTypesData);
-        setPaymentTermTypes(paymentTermTypesData);
-      } catch (error) {
-        console.error('Error fetching dropdown data:', error);
-      }
-    };
-
-    fetchDropdownData();
-  }, [isOpen]);
 
   const steps = [
     { id: 1, name: 'General Information', description: 'Order and project details' },
@@ -140,6 +118,9 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const guaranteeTypes = ['ADVANCE PAYMENT GUARANTEE', 'BID BOND', 'FINANCIAL GUARANTEE', 'PERFORMANCE GUARANTEE'];
   const projectTemplates = ['Standard Ventilation Project', 'Commercial HVAC Project', 'Healthcare AMC Project', 'Residential Retrofit Project', 'Commercial Chiller Project'];
   const purposes = ['Performance Guarantee', 'Advance Payment Guarantee', 'Retention Money Guarantee', 'Bid Bond'];
+
+  const materialTypes = ['High Side Supply', 'Low Side Supply'];
+  const paymentTermTypes = ['After Commissioning', 'after DP', 'after handing over', 'after installation', 'before dispatch against PI'];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -189,6 +170,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       id: Date.now().toString(),
       description: '',
       termType: '',
+      materialType: '',
       percentage: 0,
       amount: 0
     };
@@ -324,13 +306,13 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           purpose: formData.purpose,
         } : undefined,
         materialCosts: formData.materialCosts.map(cost => ({
-          material_type_id: formData.materialTypeId,
           gst_percentage: cost.gstPercentage,
           amount_basic: cost.amountBasic,
           amount_with_gst: cost.amountWithGst,
         })),
         paymentTerms: formData.paymentTerms.map(term => ({
-          payment_term_type_id: term.termType,
+          payment_term_type: term.termType,
+          material_type: term.materialType,
           description: term.description,
           percentage: term.percentage,
           amount: term.amount,
@@ -388,7 +370,6 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
         expiryDate: '',
         purpose: '',
         guaranteeType: '',
-        materialTypeId: '',
         materialCosts: [
           { type: 'High Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
           { type: 'Low Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
@@ -1113,25 +1094,6 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                     {/* Material Type Cost */}
                     <div>
                       <h4 className="text-lg font-medium text-gray-900 mb-4">Material Type Cost</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Material Type *
-                          </label>
-                          <select
-                            name="materialTypeId"
-                            value={formData.materialTypeId}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select Material Type</option>
-                            {materialTypes.map(type => (
-                              <option key={type.id} value={type.id}>{type.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
                       <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
                         <table className="min-w-full divide-y divide-gray-300">
                           <thead className="bg-gray-50">
@@ -1203,6 +1165,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             <thead className="bg-gray-50">
                               <tr>
                                 <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Description</th>
+                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Material Type</th>
                                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Term Type</th>
                                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Percentage</th>
                                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
@@ -1223,13 +1186,25 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                                   </td>
                                   <td className="whitespace-nowrap px-3 py-4 text-sm">
                                     <select
+                                      value={term.materialType}
+                                      onChange={(e) => updatePaymentTerm(term.id, 'materialType', e.target.value)}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                      <option value="">Select Material Type</option>
+                                      {materialTypes.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                    <select
                                       value={term.termType}
                                       onChange={(e) => updatePaymentTerm(term.id, 'termType', e.target.value)}
                                       className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
                                       <option value="">Select Term Type</option>
                                       {paymentTermTypes.map(type => (
-                                        <option key={type.id} value={type.id}>{type.name}</option>
+                                        <option key={type} value={type}>{type}</option>
                                       ))}
                                     </select>
                                   </td>
@@ -1260,7 +1235,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             {formData.paymentTerms.length > 0 && (
                               <tfoot className="bg-gray-50">
                                 <tr>
-                                  <td colSpan={2} className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6">Total:</td>
+                                  <td colSpan={3} className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6">Total:</td>
                                   <td className="px-3 py-3.5 text-sm font-semibold text-gray-900">
                                     {formData.paymentTerms.reduce((sum, term) => sum + term.percentage, 0)}%
                                   </td>
