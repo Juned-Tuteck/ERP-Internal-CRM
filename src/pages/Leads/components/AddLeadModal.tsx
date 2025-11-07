@@ -522,7 +522,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
       console.log("Customer DATA **********", customerData);
       const approvedCustomers = customerData.filter(
-        (customer: any) => customer.approval_status === "APPROVED" && customer.is_lead_generated !== true
+        (customer: any) => customer.approval_status === "APPROVED"
       );
       console.log("Approved Customers:", approvedCustomers);
 

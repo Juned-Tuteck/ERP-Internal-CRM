@@ -242,7 +242,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
         console.log("API leads response:", apiLeads);
 
         // Map API response to UI format
-        const mappedLeads = apiLeads.filter(i => i.is_bom_generated === true && i.is_quotation_created === false).map((lead: any) => ({
+        const mappedLeads = apiLeads.filter(i => i.is_bom_generated === true).map((lead: any) => ({
           id: lead.lead_id,
           name: lead.project_name,
           businessName: lead.business_name,

@@ -13,6 +13,8 @@ interface BOMViewModalProps {
 interface BOMDetail {
   id: string;
   name: string;
+  lead_number: string;
+  lead_business_name: string;
   workType: string;
   description: string;
   totalPrice: number;
@@ -86,6 +88,8 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
         const mappedBOM: BOMDetail = {
           id: apiBOM.id,
           name: apiBOM.name,
+          lead_number:apiBOM.lead_number,
+          lead_business_name:apiBOM.business_name,
          bomTemplateNumber: apiBOM.bom_template_number,
           workType: apiBOM.work_type || 'Unknown',
           description: apiBOM.description || '',
@@ -286,6 +290,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                       <h2 className="text-xl font-bold text-gray-900">{bomDetail.name}</h2>
                      <div>
                        <p className="text-sm font-bold text-blue-600">BOM : {bomDetail.bomNumber || '-'}</p>
+                       <p className="text-sm font-bold text-blue-600">LEAD : {bomDetail.lead_number || '-'} - {bomDetail.lead_business_name}</p>
                        <p className="text-sm font-bold text-green-600">Template : {bomDetail.bomTemplateNumber || '-'}</p>
                      </div>
                     </div>
