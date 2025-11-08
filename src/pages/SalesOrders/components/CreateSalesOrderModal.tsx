@@ -80,9 +80,9 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     guaranteeType: '',
     // Material Costs
     materialCosts: [
-      { type: 'High Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-      { type: 'Low Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-      { type: 'Installation', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 }
+      { type: 'HIGH SIDE SUPPLY', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
+      { type: 'LOW SIDE SUPPLY', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
+      { type: 'INSTALLATION', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 }
     ],
     // Payment Terms
     paymentTerms: [] as PaymentTerm[],
@@ -172,8 +172,8 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const projectTemplates = ['Standard Ventilation Project', 'Commercial HVAC Project', 'Healthcare AMC Project', 'Residential Retrofit Project', 'Commercial Chiller Project'];
   const purposes = ['Performance Guarantee', 'Advance Payment Guarantee', 'Retention Money Guarantee', 'Bid Bond'];
 
-  const materialTypes = ['High Side Supply', 'Low Side Supply'];
-  const paymentTermTypes = ['After Commissioning', 'after DP', 'after handing over', 'after installation', 'before dispatch against PI'];
+  const materialTypes = ['HIGH SIDE SUPPLY', 'LOW SIDE SUPPLY', 'INSTALLATION'];
+  const paymentTermTypes = ['Advance along with order', 'After Commissioning', 'After DLP', 'After Handing over', 'After Installation', 'Before dispatch against PI'];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
