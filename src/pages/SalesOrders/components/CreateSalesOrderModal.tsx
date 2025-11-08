@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
-import { createSalesOrder } from '../../../utils/salesOrderApi';
+import { createSalesOrder, getLeadWonQuotations, getQuotationById, LeadWonQuotation } from '../../../utils/salesOrderApi';
 
 interface CreateSalesOrderModalProps {
   isOpen: boolean;
@@ -28,6 +28,8 @@ interface PaymentTerm {
 const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [quotations, setQuotations] = useState<LeadWonQuotation[]>([]);
+  const [loadingQuotations, setLoadingQuotations] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: General Information
     salesOrderType: 'Sales Order',
@@ -89,17 +91,55 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     orderComments: ''
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchQuotations();
+    }
+  }, [isOpen]);
+
+  const fetchQuotations = async () => {
+    try {
+      setLoadingQuotations(true);
+      const data = await getLeadWonQuotations();
+      setQuotations(data);
+    } catch (error) {
+      console.error('Error fetching quotations:', error);
+    } finally {
+      setLoadingQuotations(false);
+    }
+  };
+
+  const handleQuotationChange = async (quotationId: string) => {
+    if (!quotationId) return;
+
+    try {
+      setLoading(true);
+      const details = await getQuotationById(quotationId);
+
+      setFormData(prev => ({
+        ...prev,
+        quotationId: details.quotationId,
+        quotationNumber: details.customerQuotationNumber,
+        leadNumber: details.lead.leadNumber,
+        businessName: details.lead.businessName,
+        customerBranch: details.customerBranch.name,
+        contactPerson: details.contactPerson.name,
+        bomNumber: details.bomNumber,
+        totalCost: details.grandTotalGst,
+        projectName: details.lead.projectName,
+      }));
+    } catch (error) {
+      console.error('Error fetching quotation details:', error);
+      alert('Error loading quotation details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const steps = [
     { id: 1, name: 'General Information', description: 'Order and project details' },
     { id: 2, name: 'SO Contact Info', description: 'Contact information' },
     { id: 3, name: 'SO Comments', description: 'Additional notes' }
-  ];
-
-  // Mock data for dropdowns
-  const quotations = [
-    { id: '1', number: 'QT-2024-001', businessName: 'TechCorp Solutions Pvt Ltd', bomNumber: 'BOM-2024-001', totalValue: '₹24,75,000', isGovernment: true },
-    { id: '2', number: 'QT-2024-002', businessName: 'Innovate India Limited', bomNumber: 'BOM-2024-002', totalValue: '₹18,50,000', isGovernment: false },
-    { id: '3', number: 'QT-2024-003', businessName: 'Digital Solutions Enterprise', bomNumber: 'BOM-2024-003', totalValue: '₹32,80,000', isGovernment: false }
   ];
 
   const branches = {
@@ -124,20 +164,9 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (name === 'quotationId') {
-      const selectedQuotation = quotations.find(q => q.id === value);
-      if (selectedQuotation) {
-        setFormData(prev => ({
-          ...prev,
-          quotationId: value,
-          quotationNumber: selectedQuotation.number,
-          businessName: selectedQuotation.businessName,
-          bomNumber: selectedQuotation.bomNumber,
-          totalCost: selectedQuotation.totalValue,
-          isGovernment: selectedQuotation.isGovernment
-        }));
-      }
+      handleQuotationChange(value);
     } else {
       setFormData(prev => ({
         ...prev,
@@ -444,6 +473,29 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Quotation *
+                      </label>
+                      <select
+                        name="quotationId"
+                        value={formData.quotationId}
+                        onChange={handleInputChange}
+                        required
+                        disabled={loadingQuotations}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">
+                          {loadingQuotations ? 'Loading quotations...' : 'Select Quotation'}
+                        </option>
+                        {quotations.map(quotation => (
+                          <option key={quotation.quotation_id} value={quotation.quotation_id}>
+                            {quotation.customer_quotation_number}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Sales Order Type *
                       </label>
                       <select
@@ -466,28 +518,10 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                         type="text"
                         name="leadNumber"
                         value={formData.leadNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter lead number"
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
+                        placeholder="Auto-filled from quotation"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quotation *
-                      </label>
-                      <select
-                        name="quotationId"
-                        value={formData.quotationId}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select Quotation</option>
-                        {quotations.map(quotation => (
-                          <option key={quotation.id} value={quotation.id}>{quotation.number} - {quotation.businessName}</option>
-                        ))}
-                      </select>
                     </div>
 
                     {formData.quotationId && (
@@ -520,39 +554,28 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Customer Branch *
+                            Customer Branch
                           </label>
-                          <select
+                          <input
+                            type="text"
                             name="customerBranch"
                             value={formData.customerBranch}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select Branch</option>
-                            {formData.businessName && branches[formData.businessName as keyof typeof branches]?.map(branch => (
-                              <option key={branch} value={branch}>{branch}</option>
-                            ))}
-                          </select>
+                            readOnly
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
+                          />
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Contact Person *
+                            Contact Person
                           </label>
-                          <select
+                          <input
+                            type="text"
                             name="contactPerson"
                             value={formData.contactPerson}
-                            onChange={handleInputChange}
-                            required
-                            disabled={!formData.customerBranch}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                          >
-                            <option value="">Select Contact Person</option>
-                            {formData.customerBranch && contactPersons[formData.customerBranch as keyof typeof contactPersons]?.map(person => (
-                              <option key={person} value={person}>{person}</option>
-                            ))}
-                          </select>
+                            readOnly
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
+                          />
                         </div>
 
                         <div>

@@ -91,6 +91,78 @@ export interface PaymentTermType {
   description?: string;
 }
 
+export interface LeadWonQuotation {
+  lead_id: string;
+  lead_number: string;
+  business_name: string;
+  customer_id: string;
+  customer_branch_id: string;
+  contact_person: string;
+  project_name: string;
+  quotation_id: string;
+  customer_quotation_number: string;
+  final_selling_amt: string;
+  grand_total_gst: string;
+  latest_bom_number: string;
+  customer_branch_name: string;
+  contact_person_name: string;
+  contact_person_email: string;
+  contact_person_phone: string;
+}
+
+export interface QuotationDetails {
+  quotationId: string;
+  quotationDate: string;
+  expiryDate: string;
+  customerQuotationNumber: string;
+  finalSellingAmt: string;
+  grandTotalGst: string;
+  lead: {
+    leadId: string;
+    leadNumber: string;
+    businessName: string;
+    projectName: string;
+    projectValue: string;
+    contactNo: string;
+    leadStage: string;
+  };
+  bomNumber: string;
+  customerBranch: {
+    id: string;
+    name: string;
+    branchNumber: string | null;
+    contactNumber: string;
+    email: string;
+  };
+  contactPerson: {
+    id: string;
+    name: string;
+    designation: string | null;
+    email: string;
+    phone: string;
+  };
+}
+
+export const getLeadWonQuotations = async (): Promise<LeadWonQuotation[]> => {
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/sales-order/lead_won_quotations`,
+    {
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
+  return response.data.data;
+};
+
+export const getQuotationById = async (quotationId: string): Promise<QuotationDetails> => {
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/sales-order/${quotationId}/quotation`,
+    {
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
+  return response.data.data;
+};
+
 export const getAllSalesOrders = async (): Promise<SalesOrder[]> => {
   const response = await axios.get(
     `${import.meta.env.VITE_API_BASE_URL}/sales-order`,
