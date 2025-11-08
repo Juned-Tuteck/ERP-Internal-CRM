@@ -306,9 +306,12 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
         return;
       }
 
+      // Map Sales Order Type to enum values (SO or WO)
+      const salesOrderTypeEnum = formData.salesOrderType === 'Sales Order' ? 'SO' : 'WO';
+
       const salesOrderData = {
         salesOrder: {
-          sales_order_type: formData.salesOrderType,
+          sales_order_type: salesOrderTypeEnum,
           lead_id: selectedQuotation.lead_id,
           quotation_id: formData.quotationId,
           customer_id: selectedQuotation.customer_id,
