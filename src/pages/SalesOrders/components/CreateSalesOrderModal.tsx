@@ -30,7 +30,8 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const [loading, setLoading] = useState(false);
   const [quotations, setQuotations] = useState<LeadWonQuotation[]>([]);
   const [loadingQuotations, setLoadingQuotations] = useState(false);
-  const [formData, setFormData] = useState({
+
+  const getInitialFormData = () => ({
     // Step 1: General Information
     salesOrderType: 'Sales Order',
     leadNumber: '',
@@ -90,6 +91,18 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     // Step 3: Comments
     orderComments: ''
   });
+
+  const [formData, setFormData] = useState(getInitialFormData());
+
+  const resetForm = () => {
+    setFormData(getInitialFormData());
+    setCurrentStep(1);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -284,35 +297,40 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     setLoading(true);
 
     try {
+      // Get the selected quotation to extract lead_id, customer_id, bom_id
+      const selectedQuotation = quotations.find(q => q.quotation_id === formData.quotationId);
+
+      if (!selectedQuotation) {
+        alert('Please select a valid quotation');
+        setLoading(false);
+        return;
+      }
+
       const salesOrderData = {
         salesOrder: {
           sales_order_type: formData.salesOrderType,
-          lead_number: formData.leadNumber,
+          lead_id: selectedQuotation.lead_id,
           quotation_id: formData.quotationId,
-          quotation_number: formData.quotationNumber,
-          business_name: formData.businessName,
-          customer_branch: formData.customerBranch,
-          contact_person: formData.contactPerson,
-          bom_number: formData.bomNumber,
-          total_cost: formData.totalCost,
-          currency: formData.currency,
+          customer_id: selectedQuotation.customer_id,
+          customer_branch_id: selectedQuotation.customer_branch_id,
+          customer_contact_person: selectedQuotation.contact_person,
+          bom_id: null, // Set if you have BOM ID from quotation
           so_date: formData.soDate,
-          comments: formData.comments,
+          so_comments: formData.comments,
         },
         projectDetails: {
           work_order_number: formData.workOrderNumber,
-          work_order_tenure_months: formData.workOrderTenureMonths ? parseInt(formData.workOrderTenureMonths) : undefined,
+          workorder_tenure_months: formData.workOrderTenureMonths ? parseInt(formData.workOrderTenureMonths) : null,
           project_name: formData.projectName,
           work_order_amount: formData.workOrderAmount,
           work_order_date: formData.workOrderDate,
-          project_start_date: formData.projectStartDate,
-          project_end_date: formData.projectEndDate,
+          estimated_start_date: formData.projectStartDate,
+          estimated_end_date: formData.projectEndDate,
           project_category: formData.projectCategory,
           project_template: formData.projectTemplate,
           project_address: formData.projectAddress,
         },
         bankGuaranteeInfo: formData.isGovernment ? {
-          is_government: formData.isGovernment,
           issue_date: formData.issueDate,
           guarantee_type: formData.guaranteeType,
           beneficiary_name: formData.beneficiaryName,
@@ -335,6 +353,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           purpose: formData.purpose,
         } : undefined,
         materialCosts: formData.materialCosts.map(cost => ({
+          material_type: cost.type,
           gst_percentage: cost.gstPercentage,
           amount_basic: cost.amountBasic,
           amount_with_gst: cost.amountWithGst,
@@ -353,61 +372,8 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       const response = await createSalesOrder(salesOrderData);
       onSubmit(response.data);
 
-      // Reset form
-      setCurrentStep(1);
-      setFormData({
-        salesOrderType: 'Sales Order',
-        leadNumber: '',
-        quotationId: '',
-        quotationNumber: '',
-        businessName: '',
-        customerBranch: '',
-        contactPerson: '',
-        bomNumber: '',
-        totalCost: '',
-        currency: 'INR',
-        soDate: new Date().toISOString().split('T')[0],
-        comments: '',
-        workOrderNumber: '',
-        workOrderTenureMonths: '',
-        projectName: '',
-        workOrderAmount: '',
-        workOrderDate: new Date().toISOString().split('T')[0],
-        projectStartDate: '',
-        projectEndDate: '',
-        projectCategory: '',
-        projectTemplate: '',
-        projectAddress: '',
-        isGovernment: false,
-        issueDate: '',
-        beneficiaryName: '',
-        beneficiaryAddress: '',
-        beneficiaryContactNumber: '',
-        beneficiaryEmail: '',
-        applicantName: '',
-        applicantAddress: '',
-        applicantContactNumber: '',
-        applicantEmail: '',
-        bankName: '',
-        bankAddress: '',
-        bankContactNumber: '',
-        bankEmail: '',
-        guaranteeNumber: '',
-        guaranteeCurrency: 'INR',
-        guaranteeAmount: '',
-        effectiveDate: '',
-        expiryDate: '',
-        purpose: '',
-        guaranteeType: '',
-        materialCosts: [
-          { type: 'High Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-          { type: 'Low Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-          { type: 'Installation', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 }
-        ],
-        paymentTerms: [],
-        contacts: [],
-        orderComments: ''
-      });
+      // Reset form after successful submission
+      resetForm();
     } catch (error) {
       console.error('Error creating sales order:', error);
       alert('Error creating sales order. Please try again.');
@@ -427,7 +393,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
             <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -1420,7 +1386,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel

@@ -184,22 +184,111 @@ export const getSalesOrderById = async (salesOrderId: string): Promise<any> => {
 };
 
 export const createSalesOrder = async (salesOrderData: {
-  salesOrder: Partial<SalesOrder>;
-  projectDetails: ProjectDetails;
-  bankGuaranteeInfo?: BankGuaranteeInfo;
-  materialCosts: MaterialTypeCost[];
-  paymentTerms: PaymentTerm[];
-  contacts: ContactDetail[];
+  salesOrder: any;
+  projectDetails: any;
+  bankGuaranteeInfo?: any;
+  materialCosts: any[];
+  paymentTerms: any[];
+  contacts: any[];
   orderComments?: string;
 }): Promise<any> => {
-  const response = await axios.post(
-    `${import.meta.env.VITE_API_BASE_URL}/sales-order`,
-    salesOrderData,
-    {
-      headers: { "Content-Type": "application/json" },
+  try {
+    // Step 1: Create the main sales order with project details
+    const mainPayload = {
+      ...salesOrderData.salesOrder,
+      ...salesOrderData.projectDetails,
+      ...salesOrderData.bankGuaranteeInfo,
+      approval_status: 'PENDING'
+    };
+
+    const soResponse = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/sales-order`,
+      mainPayload,
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    const createdSO = soResponse.data.data;
+    const soId = createdSO.id;
+
+    // Step 2: Create material type details
+    if (salesOrderData.materialCosts && salesOrderData.materialCosts.length > 0) {
+      for (const material of salesOrderData.materialCosts) {
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/sales-order-material-type-details`,
+          {
+            so_id: soId,
+            material_type: material.material_type,
+            gst: material.gst_percentage,
+            amount_basic: material.amount_basic,
+            amount_with_gst: material.amount_with_gst,
+          },
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
     }
-  );
-  return response.data;
+
+    // Step 3: Create payment terms
+    if (salesOrderData.paymentTerms && salesOrderData.paymentTerms.length > 0) {
+      for (const term of salesOrderData.paymentTerms) {
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/sales-order-payment-terms`,
+          {
+            so_id: soId,
+            payment_terms_type: term.payment_term_type,
+            material_type: term.material_type,
+            percentage: term.percentage,
+            amount: term.amount,
+            term_comments: term.description,
+          },
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
+    // Step 4: Create contact details
+    if (salesOrderData.contacts && salesOrderData.contacts.length > 0) {
+      for (const contact of salesOrderData.contacts) {
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/sales-order-contact-details`,
+          {
+            so_id: soId,
+            contact_designation: contact.designation,
+            contact_name: contact.name,
+            contact_email: contact.email,
+            contact_no: contact.phone,
+          },
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
+    // Step 5: Create comments
+    if (salesOrderData.orderComments && salesOrderData.orderComments.trim()) {
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/sales-order-comments`,
+        {
+          so_id: soId,
+          comments: salesOrderData.orderComments,
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    return soResponse.data;
+  } catch (error) {
+    console.error('Error creating sales order:', error);
+    throw error;
+  }
 };
 
 export const updateSalesOrder = async (
