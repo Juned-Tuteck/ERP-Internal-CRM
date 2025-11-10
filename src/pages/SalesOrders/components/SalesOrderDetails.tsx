@@ -80,82 +80,96 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
     );
   }
 
-  // Mock data for sales order details
-  const enhancedSalesOrder = {
-    ...salesOrder,
-    customerBranch: 'Mumbai Head Office',
-    contactPerson: 'Amit Patel',
-    contactEmail: 'amit.patel@techcorp.in',
-    contactPhone: '+91 98765 43210',
-    workOrderNumber: 'WO-2024-001',
-    workOrderAmount: '₹24,75,000',
-    workOrderDate: '2024-01-20',
-    projectCategory: 'Commercial',
-    projectTemplate: 'Standard Ventilation Project',
-    projectAddress: 'Andheri East, Mumbai, Maharashtra - 400069',
-    bgInformation: {
+  // Map API response to UI format
+  const enhancedSalesOrder = fullSalesOrder ? {
+    ...fullSalesOrder,
+    // Map API fields to UI fields
+    customerBranch: fullSalesOrder.customer_branch_id || 'N/A',
+    contactPerson: fullSalesOrder.customer_contact_person || 'N/A',
+    workOrderNumber: fullSalesOrder.work_order_number || 'N/A',
+    workOrderAmount: fullSalesOrder.work_order_amount ? `₹${parseFloat(fullSalesOrder.work_order_amount).toLocaleString('en-IN')}` : 'N/A',
+    workOrderDate: fullSalesOrder.work_order_date || 'N/A',
+    projectCategory: fullSalesOrder.project_category || 'N/A',
+    projectTemplate: fullSalesOrder.project_template || 'N/A',
+    projectAddress: fullSalesOrder.project_address || 'N/A',
+    projectStartDate: fullSalesOrder.estimated_start_date || 'N/A',
+    projectEndDate: fullSalesOrder.estimated_end_date || 'N/A',
+    projectName: fullSalesOrder.project_name || 'N/A',
+    workOrderTenure: fullSalesOrder.workorder_tenure_months || 'N/A',
+    // Bank Guarantee Information
+    bgInformation: fullSalesOrder.beneficiary_name ? {
       beneficiary: {
-        name: 'TechCorp Solutions Pvt Ltd',
-        address: 'Andheri East, Mumbai, Maharashtra - 400069',
-        contactNumber: '+91 98765 43210',
-        email: 'finance@techcorp.in'
+        name: fullSalesOrder.beneficiary_name || '',
+        address: fullSalesOrder.beneficiary_address || '',
+        contactNumber: fullSalesOrder.beneficiary_contact_number || '',
+        email: fullSalesOrder.beneficiary_email || ''
       },
       applicant: {
-        name: 'TuTeck Engineering Ltd',
-        address: 'Powai, Mumbai, Maharashtra - 400076',
-        contactNumber: '+91 22 2857 3000',
-        email: 'finance@tutech.in'
+        name: fullSalesOrder.applicant_name || '',
+        address: fullSalesOrder.applicant_address || '',
+        contactNumber: fullSalesOrder.applicant_contact_number || '',
+        email: fullSalesOrder.applicant_email || ''
       },
       bank: {
-        name: 'State Bank of India',
-        address: 'Andheri Branch, Mumbai, Maharashtra - 400069',
-        contactNumber: '+91 22 2836 9000',
-        email: 'andheri.mumbai@sbi.co.in'
+        name: fullSalesOrder.bank_name || '',
+        address: fullSalesOrder.bank_address || '',
+        contactNumber: fullSalesOrder.bank_contact_number || '',
+        email: fullSalesOrder.bank_email || ''
       },
-      guaranteeNumber: 'BG-2024-0045',
-      currency: 'INR',
-      guaranteeAmount: '₹2,47,500',
-      effectiveDate: '2024-01-25',
-      expiryDate: '2024-07-30',
-      purpose: 'Performance Guarantee',
-      exemptionType: 'None'
-    },
-    materialCosts: [
-      { type: 'High Side Supply', gstPercentage: 18, amountBasic: 1000000, amountWithGst: 1180000 },
-      { type: 'Low Side Supply', gstPercentage: 18, amountBasic: 800000, amountWithGst: 944000 },
-      { type: 'Installation', gstPercentage: 18, amountBasic: 675000, amountWithGst: 796500 }
-    ],
-    paymentTerms: [
-      { description: 'Advance Payment', termType: 'On Order', percentage: 30, amount: 742500 },
-      { description: 'On Material Delivery', termType: 'On Delivery', percentage: 40, amount: 990000 },
-      { description: 'On Installation', termType: 'On Installation', percentage: 20, amount: 495000 },
-      { description: 'After Commissioning', termType: 'After Commissioning', percentage: 10, amount: 247500 }
-    ],
-    contacts: [
-      { name: 'Amit Patel', designation: 'Project Manager', email: 'amit.patel@techcorp.in', phone: '+91 98765 43210' },
-      { name: 'Priya Sharma', designation: 'Finance Manager', email: 'priya.sharma@techcorp.in', phone: '+91 87654 32109' },
-      { name: 'Vikram Singh', designation: 'Site Engineer', email: 'vikram.singh@techcorp.in', phone: '+91 76543 21098' }
-    ],
-    comments: [
-      { author: 'Rajesh Kumar', timestamp: '2024-01-15T10:30:00', text: 'Sales Order created from accepted quotation QT-2024-001.' },
-      { author: 'Priya Sharma', timestamp: '2024-01-16T14:45:00', text: 'Payment terms confirmed with client. Advance payment expected by Jan 25.' },
-      { author: 'Amit Singh', timestamp: '2024-01-17T09:15:00', text: 'Project timeline reviewed and approved by engineering team.' }
-    ]
-  };
+      guaranteeNumber: fullSalesOrder.guarantee_number || '',
+      currency: fullSalesOrder.guarantee_currency || '',
+      guaranteeAmount: fullSalesOrder.guarantee_amount ? `₹${parseFloat(fullSalesOrder.guarantee_amount).toLocaleString('en-IN')}` : '',
+      effectiveDate: fullSalesOrder.effective_date || '',
+      expiryDate: fullSalesOrder.expiry_date || '',
+      issueDate: fullSalesOrder.issue_date || '',
+      purpose: fullSalesOrder.purpose || '',
+      guaranteeType: fullSalesOrder.guarantee_type || ''
+    } : null,
+    // Material Costs from API
+    materialCosts: fullSalesOrder.material_type_details?.map((item: any) => ({
+      type: item.material_type,
+      gstPercentage: item.gst,
+      amountBasic: parseFloat(item.amount_basic),
+      amountWithGst: parseFloat(item.amount_with_gst)
+    })) || [],
+    // Payment Terms from API
+    paymentTerms: fullSalesOrder.payment_terms?.map((term: any) => ({
+      description: term.term_comments || '',
+      termType: term.payment_terms_type,
+      materialType: term.material_type,
+      percentage: term.percentage,
+      amount: parseFloat(term.amount)
+    })) || [],
+    // Contacts from API
+    contacts: fullSalesOrder.contact_details?.map((contact: any) => ({
+      name: contact.contact_name,
+      designation: contact.contact_designation,
+      email: contact.contact_email,
+      phone: contact.contact_no
+    })) || [],
+    // Comments from API
+    comments: fullSalesOrder.comments?.map((comment: any) => ({
+      text: comment.comments,
+      timestamp: comment.created_at,
+      author: 'System' // You might want to add author info in API
+    })) || []
+  } : salesOrder;
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
+    const upperStatus = status?.toUpperCase();
+    switch (upperStatus) {
+      case 'APPROVED':
         return 'bg-green-100 text-green-800';
-      case 'rejected':
+      case 'REJECTED':
         return 'bg-red-100 text-red-800';
-      case 'pending_approval':
+      case 'PENDING':
+      case 'PENDING_APPROVAL':
         return 'bg-yellow-100 text-yellow-800';
-      case 'draft':
+      case 'DRAFT':
         return 'bg-gray-100 text-gray-800';
-      case 'in_progress':
+      case 'IN_PROGRESS':
         return 'bg-blue-100 text-blue-800';
-      case 'completed':
+      case 'COMPLETED':
         return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -178,14 +192,14 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-gray-900">{salesOrder.orderNumber}</h2>
-            <p className="text-sm text-gray-600">{salesOrder.businessName}</p>
+            <h2 className="text-xl font-bold text-gray-900">{enhancedSalesOrder.so_number || salesOrder.orderNumber}</h2>
+            <p className="text-sm text-gray-600">{enhancedSalesOrder.customer_id || salesOrder.businessName}</p>
             <div className="flex items-center space-x-2 mt-1">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(salesOrder.status)}`}>
-                {salesOrder.status.replace('_', ' ')}
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(enhancedSalesOrder.approval_status || salesOrder.status)}`}>
+                {(enhancedSalesOrder.approval_status || salesOrder.status || '').replace('_', ' ')}
               </span>
               <span className="text-xs text-gray-500">
-                Created: {new Date(salesOrder.createdDate).toLocaleDateString('en-IN')}
+                Created: {new Date(enhancedSalesOrder.created_at || salesOrder.createdDate).toLocaleDateString('en-IN')}
               </span>
             </div>
           </div>

@@ -32,17 +32,17 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
         setLoading(true);
         const data = await getAllSalesOrders();
         const mappedData = data.map((so: any) => ({
-          id: so.sales_order_id,
-          orderNumber: so.sales_order_number,
-          businessName: so.business_name,
-          quotationNumber: so.quotation_number,
-          bomNumber: so.bom_number,
-          totalValue: so.total_cost,
+          id: so.id,
+          orderNumber: so.so_number,
+          businessName: so.customer_id, // You may want to fetch customer name
+          quotationNumber: so.quotation_id,
+          bomNumber: so.bom_id || 'N/A',
+          totalValue: so.total_cost ? `₹${parseFloat(so.total_cost).toLocaleString('en-IN')}` : '₹0',
           createdBy: so.created_by,
           createdDate: so.created_at,
-          projectStartDate: so.project_start_date || '',
-          projectEndDate: so.project_end_date || '',
-          status: so.status || 'draft',
+          projectStartDate: so.estimated_start_date || '',
+          projectEndDate: so.estimated_end_date || '',
+          status: so.approval_status?.toLowerCase() || 'draft',
         }));
         setSalesOrders(mappedData);
         setError(null);
