@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
-import { createSalesOrder, getLeadWonQuotations, getQuotationById, LeadWonQuotation } from '../../../utils/salesOrderApi';
+import { createSalesOrder, updateSalesOrderStep1, updateSalesOrderContacts, updateSalesOrderComments, getLeadWonQuotations, getQuotationById, LeadWonQuotation } from '../../../utils/salesOrderApi';
 
 interface CreateSalesOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (salesOrderData: any) => void;
+  editMode?: boolean;
+  salesOrderData?: any;
 }
 
 interface ContactPerson {
@@ -25,7 +27,7 @@ interface PaymentTerm {
   amount: number;
 }
 
-const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, onClose, onSubmit, editMode = false, salesOrderData = null }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [quotations, setQuotations] = useState<LeadWonQuotation[]>([]);
@@ -106,9 +108,89 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
 
   useEffect(() => {
     if (isOpen) {
-      fetchQuotations();
+      if (editMode && salesOrderData) {
+        prefillFormData(salesOrderData);
+      } else {
+        fetchQuotations();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editMode, salesOrderData]);
+
+  const prefillFormData = (data: any) => {
+    setFormData({
+      // Step 1: General Information
+      salesOrderType: data.sales_order_type || 'SO',
+      leadNumber: data.lead_id || '',
+      quotationId: data.quotation_id || '',
+      quotationNumber: data.quotation_id || '',
+      businessName: data.customer_id || '',
+      customerBranch: data.customer_branch_id || '',
+      contactPerson: data.customer_contact_person || '',
+      bomNumber: data.bom_id || '',
+      totalCost: data.total_cost || '',
+      currency: 'INR',
+      soDate: data.so_date ? new Date(data.so_date).toISOString().split('T')[0] : '',
+      comments: data.so_comments || '',
+      // Project Details
+      workOrderNumber: data.work_order_number || '',
+      workOrderTenureMonths: data.workorder_tenure_months || '',
+      workOrderAmount: data.work_order_amount || '',
+      workOrderDate: data.work_order_date ? new Date(data.work_order_date).toISOString().split('T')[0] : '',
+      projectName: data.project_name || '',
+      projectCategory: data.project_category || '',
+      projectTemplate: data.project_template || '',
+      projectAddress: data.project_address || '',
+      projectStartDate: data.estimated_start_date ? new Date(data.estimated_start_date).toISOString().split('T')[0] : '',
+      projectEndDate: data.estimated_end_date ? new Date(data.estimated_end_date).toISOString().split('T')[0] : '',
+      // BG Information
+      beneficiaryName: data.beneficiary_name || '',
+      beneficiaryAddress: data.beneficiary_address || '',
+      beneficiaryContact: data.beneficiary_contact_number || '',
+      beneficiaryEmail: data.beneficiary_email || '',
+      applicantName: data.applicant_name || '',
+      applicantAddress: data.applicant_address || '',
+      applicantContact: data.applicant_contact_number || '',
+      applicantEmail: data.applicant_email || '',
+      bankName: data.bank_name || '',
+      bankAddress: data.bank_address || '',
+      bankContact: data.bank_contact_number || '',
+      bankEmail: data.bank_email || '',
+      guaranteeNumber: data.guarantee_number || '',
+      guaranteeCurrency: data.guarantee_currency || '',
+      guaranteeAmount: data.guarantee_amount || '',
+      issueDate: data.issue_date ? new Date(data.issue_date).toISOString().split('T')[0] : '',
+      effectiveDate: data.effective_date ? new Date(data.effective_date).toISOString().split('T')[0] : '',
+      expiryDate: data.expiry_date ? new Date(data.expiry_date).toISOString().split('T')[0] : '',
+      purpose: data.purpose || '',
+      guaranteeType: data.guarantee_type || '',
+      // Material Costs
+      materialCosts: data.material_type_details?.map((item: any) => ({
+        type: item.material_type,
+        gstPercentage: item.gst,
+        amountBasic: item.amount_basic,
+        amountWithGst: item.amount_with_gst
+      })) || [],
+      // Payment Terms
+      paymentTerms: data.payment_terms?.map((term: any) => ({
+        id: term.id,
+        description: term.term_comments || '',
+        termType: term.payment_terms_type,
+        materialType: term.material_type,
+        percentage: term.percentage,
+        amount: term.amount
+      })) || [],
+      // Contacts
+      contacts: data.contact_details?.map((contact: any) => ({
+        id: contact.id,
+        name: contact.contact_name,
+        designation: contact.contact_designation,
+        email: contact.contact_email,
+        phone: contact.contact_no
+      })) || [],
+      // Comments
+      orderComments: data.comments?.map((c: any) => c.comments).join('\n') || ''
+    });
+  };
 
   const fetchQuotations = async () => {
     try {
@@ -299,8 +381,85 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     }
   };
 
+  const handleSaveStep = async () => {
+    if (!editMode || !salesOrderData?.id) return;
+
+    setLoading(true);
+    try {
+      if (currentStep === 1) {
+        // Update Step 1: General Information + Project Details + BG Info
+        const updateData = {
+          sales_order_type: formData.salesOrderType === 'Sales Order' ? 'SO' : 'WO',
+          so_date: formData.soDate,
+          so_comments: formData.comments,
+          work_order_number: formData.workOrderNumber,
+          workorder_tenure_months: formData.workOrderTenureMonths ? parseInt(formData.workOrderTenureMonths) : null,
+          project_name: formData.projectName,
+          work_order_amount: formData.workOrderAmount,
+          work_order_date: formData.workOrderDate,
+          estimated_start_date: formData.projectStartDate,
+          estimated_end_date: formData.projectEndDate,
+          project_category: formData.projectCategory,
+          project_template: formData.projectTemplate,
+          project_address: formData.projectAddress,
+          beneficiary_name: formData.beneficiaryName,
+          beneficiary_address: formData.beneficiaryAddress,
+          beneficiary_contact_number: formData.beneficiaryContact,
+          beneficiary_email: formData.beneficiaryEmail,
+          applicant_name: formData.applicantName,
+          applicant_address: formData.applicantAddress,
+          applicant_contact_number: formData.applicantContact,
+          applicant_email: formData.applicantEmail,
+          bank_name: formData.bankName,
+          bank_address: formData.bankAddress,
+          bank_contact_number: formData.bankContact,
+          bank_email: formData.bankEmail,
+          guarantee_number: formData.guaranteeNumber,
+          guarantee_currency: formData.guaranteeCurrency,
+          guarantee_amount: formData.guaranteeAmount,
+          issue_date: formData.issueDate,
+          effective_date: formData.effectiveDate,
+          expiry_date: formData.expiryDate,
+          purpose: formData.purpose,
+          guarantee_type: formData.guaranteeType,
+        };
+        await updateSalesOrderStep1(salesOrderData.id, updateData);
+        alert('Step 1 updated successfully!');
+      } else if (currentStep === 2) {
+        // Update Step 2: Contacts
+        const contactsData = formData.contacts.map(contact => ({
+          contact_name: contact.name,
+          contact_designation: contact.designation,
+          contact_email: contact.email,
+          contact_no: contact.phone,
+        }));
+        await updateSalesOrderContacts(salesOrderData.id, contactsData);
+        alert('Contacts updated successfully!');
+      } else if (currentStep === 3) {
+        // Update Step 3: Comments
+        if (formData.orderComments.trim()) {
+          await updateSalesOrderComments(salesOrderData.id, formData.orderComments);
+          alert('Comments updated successfully!');
+        }
+      }
+
+      onSubmit({ success: true });
+    } catch (error) {
+      console.error('Error updating sales order:', error);
+      alert('Error updating sales order. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (editMode) {
+      await handleSaveStep();
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -401,7 +560,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Create Sales Order</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{editMode ? 'Edit Sales Order' : 'Create Sales Order'}</h3>
             <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
           </div>
           <button
@@ -417,9 +576,13 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           <nav className="flex space-x-4">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-2 ${currentStep === step.id ? 'text-blue-600' :
+                <div
+                  className={`flex items-center space-x-2 ${
+                    currentStep === step.id ? 'text-blue-600' :
                     currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                  }`}>
+                  } ${editMode ? 'cursor-pointer hover:opacity-80' : ''}`}
+                  onClick={() => editMode && setCurrentStep(step.id)}
+                >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id ? 'bg-blue-100 text-blue-600' :
                       currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
                     }`}>

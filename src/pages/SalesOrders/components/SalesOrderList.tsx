@@ -20,9 +20,10 @@ interface SalesOrder {
 interface SalesOrderListProps {
   selectedSalesOrder: SalesOrder | null;
   onSelectSalesOrder: (salesOrder: SalesOrder) => void;
+  refreshTrigger?: number;
 }
 
-const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onSelectSalesOrder }) => {
+const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onSelectSalesOrder, refreshTrigger }) => {
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +38,7 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
           orderNumber: so.so_number,
           businessName: so.customer_id, // You may want to fetch customer name
           quotationNumber: so.quotation_id,
-          bomNumber: so.bom_number || 'N/A',
-          leadNumber: so.lead_number || 'N/A',
+          bomNumber: so.bom_id || 'N/A',
           totalValue: so.total_cost ? `₹${parseFloat(so.total_cost).toLocaleString('en-IN')}` : '₹0',
           createdBy: so.created_by,
           createdDate: so.created_at,
@@ -57,7 +57,7 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
     };
 
     fetchSalesOrders();
-  }, []);
+  }, [refreshTrigger]);
 
   if (loading) {
     return (

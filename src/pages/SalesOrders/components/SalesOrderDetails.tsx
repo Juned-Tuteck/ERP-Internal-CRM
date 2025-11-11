@@ -747,12 +747,19 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
         <CreateSalesOrderModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          onSubmit={(updatedSalesOrder) => {
+          onSubmit={async (updatedSalesOrder) => {
             console.log('Updated sales order:', updatedSalesOrder);
-            // In a real app, this would update the sales order in the database
             setIsEditModalOpen(false);
+            // Refresh the sales order details
+            try {
+              const details = await getSalesOrderById(salesOrder.id);
+              setFullSalesOrder(details);
+            } catch (error) {
+              console.error('Error refreshing sales order:', error);
+            }
           }}
-          initialData={salesOrder}
+          editMode={true}
+          salesOrderData={fullSalesOrder}
         />
       )}
       

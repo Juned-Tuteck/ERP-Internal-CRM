@@ -323,6 +323,43 @@ export const updateSalesOrder = async (
   return response.data;
 };
 
+export const updateSalesOrderStep1 = async (salesOrderId: string, data: any): Promise<any> => {
+  const response = await axios.put(
+    `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}`,
+    data,
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+  return response.data;
+};
+
+export const updateSalesOrderContacts = async (salesOrderId: string, contacts: any[]): Promise<any> => {
+  // Delete existing contacts and add new ones
+  const response = await axios.put(
+    `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}/contacts`,
+    { contacts },
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+  return response.data;
+};
+
+export const updateSalesOrderComments = async (salesOrderId: string, comments: string): Promise<any> => {
+  const response = await axios.post(
+    `${import.meta.env.VITE_API_BASE_URL}/sales-order-comments`,
+    {
+      so_id: salesOrderId,
+      comments: comments
+    },
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+  return response.data;
+};
+
 export const deleteSalesOrder = async (salesOrderId: string): Promise<any> => {
   const response = await axios.delete(
     `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}`,

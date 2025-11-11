@@ -10,15 +10,18 @@ const SalesOrders: React.FC = () => {
   const [selectedSalesOrder, setSelectedSalesOrder] = useState<any>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('salesOrders');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { addNotification, hasSubmenuAccess } = useCRM();
 
   const handleCreateSalesOrder = (salesOrderData: any) => {
     console.log('Creating new sales order:', salesOrderData);
     addNotification({
       type: 'success',
-      message: `Sales Order for ${salesOrderData.businessName} created successfully and sent for approval!`,
+      message: `Sales Order created successfully and sent for approval!`,
     });
     setIsCreateModalOpen(false);
+    // Trigger refresh of the sales order list
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleApprovalAction = (salesOrderId: string, action: 'approve' | 'reject', reason?: string) => {
@@ -126,6 +129,7 @@ const SalesOrders: React.FC = () => {
             <SalesOrderList
               selectedSalesOrder={selectedSalesOrder}
               onSelectSalesOrder={setSelectedSalesOrder}
+              refreshTrigger={refreshTrigger}
             />
           </div>
           <div className="lg:col-span-2">
