@@ -23,15 +23,15 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
 
       try {
         setLoading(true);
-        const [details, contactsData, commentsData] = await Promise.all([
+        const [details] = await Promise.all([
           getSalesOrderById(salesOrder.id),
-          getSalesOrderContactDetails(salesOrder.id),
-          getSalesOrderComments(salesOrder.id)
+          // getSalesOrderContactDetails(salesOrder.id),
+          // getSalesOrderComments(salesOrder.id)
         ]);
 
         setFullSalesOrder(details);
-        setContacts(contactsData);
-        setComments(commentsData);
+        // setContacts(contactsData);
+        // setComments(commentsData);
       } catch (error) {
         console.error('Error fetching sales order details:', error);
       } finally {
@@ -84,8 +84,10 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
   const enhancedSalesOrder = fullSalesOrder ? {
     ...fullSalesOrder,
     // Map API fields to UI fields
-    customerBranch: fullSalesOrder.customer_branch_id || 'N/A',
-    contactPerson: fullSalesOrder.customer_contact_person || 'N/A',
+    customerBranch: fullSalesOrder.customer_branch_name || 'N/A',
+    businessName: fullSalesOrder.business_name || 'N/A',
+    quotationNumber: fullSalesOrder.quotation_number || 'N/A',
+    contactPerson: fullSalesOrder.contact_person_name || 'N/A',
     workOrderNumber: fullSalesOrder.work_order_number || 'N/A',
     workOrderAmount: fullSalesOrder.work_order_amount ? `₹${parseFloat(fullSalesOrder.work_order_amount).toLocaleString('en-IN')}` : 'N/A',
     workOrderDate: fullSalesOrder.work_order_date || 'N/A',
@@ -193,7 +195,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900">{enhancedSalesOrder.so_number || salesOrder.orderNumber}</h2>
-            <p className="text-sm text-gray-600">{enhancedSalesOrder.customer_id || salesOrder.businessName}</p>
+            <p className="text-sm text-gray-600">{enhancedSalesOrder.lead_number}</p>
             <div className="flex items-center space-x-2 mt-1">
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(enhancedSalesOrder.approval_status || salesOrder.status)}`}>
                 {(enhancedSalesOrder.approval_status || salesOrder.status || '').replace('_', ' ')}
@@ -267,7 +269,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Business Name</div>
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.businessName}</div>
+                      <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.businessName}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Customer Branch</div>
@@ -279,15 +281,15 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Quotation Number</div>
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.quotationNumber}</div>
+                      <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.quotationNumber}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">BOM Number</div>
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.bomNumber}</div>
+                      <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bom_number}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Total Cost</div>
-                      <div className="text-sm font-medium text-green-600">{salesOrder.totalValue}</div>
+                      <div className="text-sm font-medium text-green-600">{enhancedSalesOrder.total_cost}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">SO Date</div>
@@ -445,28 +447,28 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.name || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.address}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.address || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.contactNumber}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.contactNumber || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.email || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -479,28 +481,28 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.name || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.address}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.address || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.contactNumber}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.contactNumber || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.email || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -513,28 +515,28 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.name || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.address}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.address || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.contactNumber}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.contactNumber || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.email || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -546,35 +548,35 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Guarantee Number</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.guaranteeNumber}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.guaranteeNumber || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Currency</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.currency}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.currency || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Guarantee Amount</div>
-                  <div className="text-sm font-medium text-green-600">{enhancedSalesOrder.bgInformation.guaranteeAmount}</div>
+                  <div className="text-sm font-medium text-green-600">{enhancedSalesOrder?.bgInformation?.guaranteeAmount || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Effective Date</div>
                   <div className="text-sm font-medium text-gray-900">
-                    {new Date(enhancedSalesOrder.bgInformation.effectiveDate).toLocaleDateString('en-IN')}
+                    {new Date(enhancedSalesOrder?.bgInformation?.effectiveDate).toLocaleDateString('en-IN')}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Expiry Date</div>
                   <div className="text-sm font-medium text-gray-900">
-                    {new Date(enhancedSalesOrder.bgInformation.expiryDate).toLocaleDateString('en-IN')}
+                    {new Date(enhancedSalesOrder?.bgInformation?.expiryDate).toLocaleDateString('en-IN')}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Purpose</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.purpose}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.purpose || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Exemption Type</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.exemptionType}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.exemptionType || '-'}</div>
                 </div>
               </div>
             </div>

@@ -96,6 +96,7 @@ export interface LeadWonQuotation {
   lead_number: string;
   business_name: string;
   customer_id: string;
+  quotation_bom_id: string;
   customer_branch_id: string;
   contact_person: string;
   project_name: string;
@@ -117,6 +118,15 @@ export interface QuotationDetails {
   customerQuotationNumber: string;
   finalSellingAmt: string;
   grandTotalGst: string;
+  highSideGstPercentage: number;
+  highSideCostWithoutGst: number;
+  highSideCostWithGst: number;
+  lowSideGstPercentage: number;
+  lowSideCostWithoutGst: number;
+  lowSideCostWithGst: number;
+  installationGstPercentage: number;
+  installationCostWithoutGst: number;
+  installationCostWithGst: number;
   lead: {
     leadId: string;
     leadNumber: string;

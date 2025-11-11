@@ -57,7 +57,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     projectTemplate: '',
     projectAddress: '',
     // BG Information
-    isGovernment: false,
+    isGovernment: true,
     issueDate: '',
     beneficiaryName: '',
     beneficiaryAddress: '',
@@ -128,6 +128,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     try {
       setLoading(true);
       const details = await getQuotationById(quotationId);
+      console.log('Quotation Details:', details);
 
       setFormData(prev => ({
         ...prev,
@@ -140,7 +141,13 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
         bomNumber: details.bomNumber,
         totalCost: details.grandTotalGst,
         projectName: details.lead.projectName,
+        materialCosts: [
+          { type: 'HIGH SIDE SUPPLY', gstPercentage: details.highSideGstPercentage || 0, amountBasic: details.highSideCostWithoutGst || 0, amountWithGst: details.highSideCostWithGst || 0 },
+          { type: 'LOW SIDE SUPPLY', gstPercentage: details.lowSideGstPercentage || 0, amountBasic: details.lowSideCostWithoutGst || 0, amountWithGst: details.lowSideCostWithGst || 0 },
+          { type: 'INSTALLATION', gstPercentage: details.installationGstPercentage || 0, amountBasic: details.installationCostWithoutGst || 0, amountWithGst: details.installationCostWithGst || 0 }
+        ]
       }));
+      console.log('Form Data to Submit:', formData);
     } catch (error) {
       console.error('Error fetching quotation details:', error);
       alert('Error loading quotation details. Please try again.');
@@ -191,7 +198,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const handleMaterialCostChange = (index: number, field: string, value: string) => {
     const updatedCosts = [...formData.materialCosts];
     const numValue = parseFloat(value) || 0;
-    
+
     if (field === 'amountBasic') {
       updatedCosts[index].amountBasic = numValue;
       updatedCosts[index].amountWithGst = numValue * (1 + updatedCosts[index].gstPercentage / 100);
@@ -199,7 +206,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       updatedCosts[index].gstPercentage = numValue;
       updatedCosts[index].amountWithGst = updatedCosts[index].amountBasic * (1 + numValue / 100);
     }
-    
+
     setFormData(prev => ({
       ...prev,
       materialCosts: updatedCosts
@@ -225,16 +232,16 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const updatePaymentTerm = (id: string, field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
-      paymentTerms: prev.paymentTerms.map(term => {
+      paymentTerms: prev.paymentTerms?.map(term => {
         if (term.id === id) {
           const updatedTerm = { ...term, [field]: value };
-          
+
           // If percentage is updated, recalculate amount
           if (field === 'percentage') {
-            const totalCostValue = parseFloat(prev.totalCost.replace(/[₹,]/g, '')) || 0;
+            const totalCostValue = parseFloat(String(prev.totalCost || '0').replace(/[₹,]/g, '')) || 0;
             updatedTerm.amount = totalCostValue * (updatedTerm.percentage / 100);
           }
-          
+
           return updatedTerm;
         }
         return term;
@@ -267,7 +274,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const updateContact = (id: string, field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      contacts: prev.contacts.map(contact => 
+      contacts: prev.contacts.map(contact =>
         contact.id === id ? { ...contact, [field]: value } : contact
       )
     }));
@@ -299,6 +306,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     try {
       // Get the selected quotation to extract lead_id, customer_id, bom_id
       const selectedQuotation = quotations.find(q => q.quotation_id === formData.quotationId);
+      console.log('Selected Quotation:', selectedQuotation);
 
       if (!selectedQuotation) {
         alert('Please select a valid quotation');
@@ -317,7 +325,8 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           customer_id: selectedQuotation.customer_id,
           customer_branch_id: selectedQuotation.customer_branch_id,
           customer_contact_person: selectedQuotation.contact_person,
-          bom_id: null, // Set if you have BOM ID from quotation
+          total_cost: formData.totalCost,
+          bom_id: selectedQuotation.quotation_bom_id,
           so_date: formData.soDate,
           so_comments: formData.comments,
         },
@@ -408,14 +417,12 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           <nav className="flex space-x-4">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-2 ${
-                  currentStep === step.id ? 'text-blue-600' : 
-                  currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                    currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                <div className={`flex items-center space-x-2 ${currentStep === step.id ? 'text-blue-600' :
+                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
                   }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id ? 'bg-blue-100 text-blue-600' :
+                      currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
                     {step.id}
                   </div>
                   <div>
@@ -847,7 +854,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Applicant Details */}
                           <div className="border border-gray-200 rounded-lg p-4">
                             <h5 className="text-sm font-medium text-gray-900 mb-3">Applicant Details</h5>
@@ -910,7 +917,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Bank Details */}
                           <div className="border border-gray-200 rounded-lg p-4">
                             <h5 className="text-sm font-medium text-gray-900 mb-3">Bank Details</h5>
@@ -974,7 +981,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -989,7 +996,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               placeholder="Enter guarantee number"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Currency
@@ -1005,7 +1012,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               <option value="EUR">Euro (€)</option>
                             </select>
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Guarantee Amount
@@ -1019,7 +1026,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               placeholder="Enter amount"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Effective Date
@@ -1032,7 +1039,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Expiry Date
@@ -1045,7 +1052,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Purpose
@@ -1062,7 +1069,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               ))}
                             </select>
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Guarantee Type
@@ -1123,7 +1130,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             ))}
                           </tbody>
                           <tfoot className="bg-gray-50">
-                            <tr>
+                            {/* <tr>
                               <td colSpan={2} className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6">Total:</td>
                               <td className="px-3 py-3.5 text-sm font-semibold text-gray-900">
                                 ₹{formData.materialCosts.reduce((sum, cost) => sum + cost.amountBasic, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
@@ -1131,7 +1138,32 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               <td className="px-3 py-3.5 text-sm font-semibold text-green-600">
                                 ₹{formData.materialCosts.reduce((sum, cost) => sum + cost.amountWithGst, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                               </td>
+                            </tr> */}
+                            <tr>
+                              <td
+                                colSpan={2}
+                                className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6"
+                              >
+                                Total:
+                              </td>
+
+                              {/* Total Basic Amount */}
+                              <td className="px-3 py-3.5 text-sm font-semibold text-gray-900">
+                                ₹
+                                {formData.materialCosts
+                                  .reduce((sum, cost) => sum + Number(cost.amountBasic || 0), 0)
+                                  .toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                              </td>
+
+                              {/* Total With GST */}
+                              <td className="px-3 py-3.5 text-sm font-semibold text-green-600">
+                                ₹
+                                {formData.materialCosts
+                                  .reduce((sum, cost) => sum + Number(cost.amountWithGst || 0), 0)
+                                  .toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                              </td>
                             </tr>
+
                           </tfoot>
                         </table>
                       </div>
@@ -1150,7 +1182,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                           Add Payment Term
                         </button>
                       </div>
-                      
+
                       {formData.paymentTerms.length > 0 ? (
                         <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
                           <table className="min-w-full divide-y divide-gray-300">
@@ -1265,7 +1297,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                     Add Contact
                   </button>
                 </div>
-                
+
                 {formData.contacts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {formData.contacts.map((contact) => (
@@ -1348,7 +1380,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
             {currentStep === 3 && (
               <div className="space-y-6">
                 <h4 className="text-lg font-medium text-gray-900 mb-4">Sales Order Comments</h4>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Add Comment
@@ -1362,7 +1394,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                     placeholder="Enter any comments or notes related to this sales order..."
                   />
                 </div>
-                
+
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">
                     These comments are for internal use only and will not be visible to the customer. Use this space to add any important notes, special instructions, or context about this sales order.
@@ -1394,7 +1426,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
             >
               Cancel
             </button>
-            
+
             {currentStep < 3 ? (
               <button
                 type="button"
