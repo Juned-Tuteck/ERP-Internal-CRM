@@ -129,7 +129,7 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
         <h3 className="text-lg font-semibold text-gray-900">All Sales Orders</h3>
         <p className="text-sm text-gray-500">{salesOrders.length} total sales orders</p>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -137,39 +137,44 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Order Details
               </th>
-              
+
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {salesOrders.map((salesOrder) => (
-              <tr 
-                key={salesOrder.id} 
+              <tr
+                key={salesOrder.id}
                 className={`hover:bg-gray-50 cursor-pointer ${selectedSalesOrder?.id === salesOrder.id ? 'bg-blue-50' : ''}`}
                 onClick={() => onSelectSalesOrder(salesOrder)}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <ShoppingCart className="h-5 w-5 text-gray-500" />
+                    <div className='flex items-center'>
+                      <div className="flex-shrink-0">
+                        <ShoppingCart className="h-5 w-5 text-gray-500" />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{salesOrder.orderNumber}</div>
+                        <div className="text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {salesOrder.leadNumber}
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <div className="flex items-center">
+                            <Tag className="h-3 w-3 mr-1" />
+                            BOM: {salesOrder.bomNumber}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.orderNumber}</div>
-                      <div className="text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {salesOrder.leadNumber}
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        <div className="flex items-center">
-                          <Tag className="h-3 w-3 mr-1" />
-                          BOM: {salesOrder.bomNumber}
-                        </div>
-                      </div>
+                    <div className="ml-auto text-right">
+                      <span>{salesOrder.status}</span>
                     </div>
                   </div>
                 </td>
-                
+
               </tr>
             ))}
           </tbody>

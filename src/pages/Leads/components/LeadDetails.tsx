@@ -282,81 +282,81 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       console.log("Lead status updated successfully:", response.data);
 
       // If marked as Won, instantly create project via PMS API
-      if (selectedOutcome === "Won") {
-        try {
-          const projectData: CreateProjectRequest = {
-            // Required fields
-            name: displayLead.projectName || "Untitled Project",
-            created_by: displayLead.created_by || "00000000-0000-0000-0000-000000000000",
+      // if (selectedOutcome === "Won") {
+      //   try {
+      //     const projectData: CreateProjectRequest = {
+      //       // Required fields
+      //       name: displayLead.projectName || "Untitled Project",
+      //       created_by: displayLead.created_by || "00000000-0000-0000-0000-000000000000",
 
-            // UUID fields
-            lead_id: displayLead.id,
-            warehouse_id: displayLead.warehouse_id || undefined,
-            project_template_id: displayLead.project_template_id || undefined,
-            customer_id: displayLead.customer_id || undefined,
-            location: displayLead.location || undefined,
-            approved_by: displayLead.approved_by || undefined,
-            updated_by: displayLead.updated_by || undefined,
+      //       // UUID fields
+      //       lead_id: displayLead.id,
+      //       warehouse_id: displayLead.warehouse_id || undefined,
+      //       project_template_id: displayLead.project_template_id || undefined,
+      //       customer_id: displayLead.customer_id || undefined,
+      //       location: displayLead.location || undefined,
+      //       approved_by: displayLead.approved_by || undefined,
+      //       updated_by: displayLead.updated_by || undefined,
 
-            // VARCHAR fields
-            project_species: displayLead.project_species || undefined,
-            project_type: displayLead.leadType || undefined,
-            project_status: displayLead.project_status || "IN PROGRESS",
-            comment_baseline: displayLead.comment_baseline || undefined,
-            comment_other: winLossReason || "Lead converted to project",
-            project_number: displayLead.project_number || undefined,
-            insurance_no: displayLead.insurance_no || undefined,
+      //       // VARCHAR fields
+      //       project_species: displayLead.project_species || undefined,
+      //       project_type: displayLead.leadType || undefined,
+      //       project_status: displayLead.project_status || "IN PROGRESS",
+      //       comment_baseline: displayLead.comment_baseline || undefined,
+      //       comment_other: winLossReason || "Lead converted to project",
+      //       project_number: displayLead.project_number || undefined,
+      //       insurance_no: displayLead.insurance_no || undefined,
 
-            // DATE fields (ISO date format)
-            estimated_start: displayLead.estimated_start || undefined,
-            estimated_end: displayLead.estimated_end || undefined,
-            actual_start: displayLead.actual_start || undefined,
-            actual_end: displayLead.actual_end || undefined,
-            kick_off: displayLead.kick_off || undefined,
-            insurance_from_date: displayLead.insurance_from_date || undefined,
-            insurance_to_date: displayLead.insurance_to_date || undefined,
+      //       // DATE fields (ISO date format)
+      //       estimated_start: displayLead.estimated_start || undefined,
+      //       estimated_end: displayLead.estimated_end || undefined,
+      //       actual_start: displayLead.actual_start || undefined,
+      //       actual_end: displayLead.actual_end || undefined,
+      //       kick_off: displayLead.kick_off || undefined,
+      //       insurance_from_date: displayLead.insurance_from_date || undefined,
+      //       insurance_to_date: displayLead.insurance_to_date || undefined,
 
-            // NUMERIC fields
-            price_customer: displayLead.projectValue ? parseFloat(displayLead.projectValue.replace(/[₹,]/g, '')) : undefined,
-            estimated_price: displayLead.estimated_price || undefined,
-            actual_price: displayLead.actual_price || undefined,
+      //       // NUMERIC fields
+      //       price_customer: displayLead.projectValue ? parseFloat(displayLead.projectValue.replace(/[₹,]/g, '')) : undefined,
+      //       estimated_price: displayLead.estimated_price || undefined,
+      //       actual_price: displayLead.actual_price || undefined,
 
-            // INTEGER fields
-            completion: displayLead.completion || 0,
+      //       // INTEGER fields
+      //       completion: displayLead.completion || 0,
 
-            // BOOLEAN fields
-            is_insured: displayLead.is_insured || false,
-            is_active: true,
-            is_deleted: false,
+      //       // BOOLEAN fields
+      //       is_insured: displayLead.is_insured || false,
+      //       is_active: true,
+      //       is_deleted: false,
 
-            // TEXT fields
-            project_address: displayLead.project_address || undefined,
-            approval_comment: displayLead.approval_comment || undefined,
+      //       // TEXT fields
+      //       project_address: displayLead.project_address || undefined,
+      //       approval_comment: displayLead.approval_comment || undefined,
 
-            // ENUM and TIMESTAMP fields
-            approval_status: "PENDING" as const, // Use proper enum value
-            approved_on: displayLead.approved_on || undefined
-          };
+      //       // ENUM and TIMESTAMP fields
+      //       approval_status: "PENDING" as const, // Use proper enum value
+      //       approved_on: displayLead.approved_on || undefined
+      //     };
 
-          console.log("Creating project with data:", projectData);
+      //     console.log("Creating project with data:", projectData);
 
-          const projectResult = await createProjectFromLead(projectData);
+      //     const projectResult = await createProjectFromLead(projectData);
 
-          if (projectResult.success) {
-            console.log("Project created successfully:", projectResult.data);
-            alert(`Lead marked as Won and Project created successfully!`);
+      //     if (projectResult.success) {
+      //       console.log("Project created successfully:", projectResult.data);
+      //       alert(`Lead marked as Won and Project created successfully!`);
 
-            // Also trigger the parent conversion handler
-            onConvert(displayLead.id);
-          } else {
-            console.error("Error creating project:", projectResult.error);
-            alert(`Lead marked as Won but failed to create project: ${projectResult.error}`);
-          }
-        } catch (projectError) {
-          console.error("Unexpected error during project creation:", projectError);
-          alert("Lead marked as Won but an unexpected error occurred while creating the project.");
-        }
-      }
+      //       // Also trigger the parent conversion handler
+      //       onConvert(displayLead.id);
+      //     } else {
+      //       console.error("Error creating project:", projectResult.error);
+      //       alert(`Lead marked as Won but failed to create project: ${projectResult.error}`);
+      //     }
+      //   } catch (projectError) {
+      //     console.error("Unexpected error during project creation:", projectError);
+      //     alert("Lead marked as Won but an unexpected error occurred while creating the project.");
+      //   }
+      // }
 
       console.log(`Lead marked as ${selectedOutcome}:`, winLossReason);
 

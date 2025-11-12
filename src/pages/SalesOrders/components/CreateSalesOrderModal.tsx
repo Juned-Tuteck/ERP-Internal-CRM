@@ -705,7 +705,6 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
             {currentStep === 1 && (
               <div className="space-y-8">
                 {/* Sales Order Details */}
-                {console.log(formData)}
                 <div>
                   <h4 className="text-lg font-medium text-gray-900 mb-4">Sales Order Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -831,7 +830,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                           />
                         </div>
 
-                        <div>
+                        {/* <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Currency
                           </label>
@@ -845,7 +844,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             <option value="USD">US Dollar ($)</option>
                             <option value="EUR">Euro (€)</option>
                           </select>
-                        </div>
+                        </div> */}
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
