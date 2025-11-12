@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle, FolderPlus } from 'lucide-react';
+import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle, FolderPlus, Send } from 'lucide-react';
 import CreateSalesOrderModal from './CreateSalesOrderModal';
-import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder } from '../../../utils/salesOrderApi';
+import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder, submitSalesOrderForApproval } from '../../../utils/salesOrderApi';
+import { getAllRolesInOrder } from '../../../utils/roleHierarchy';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
@@ -70,6 +71,42 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
     } catch (error) {
       console.error('Error deleting sales order:', error);
       alert('Error deleting sales order');
+    }
+  };
+
+  const handleSalesForApproval = async () => {
+    if (!salesOrder?.id) return;
+
+    try {
+      setLoading(true);
+
+      // Get all roles in hierarchy
+      const roles = getAllRolesInOrder();
+
+      // Create approval records for all roles with PENDING status
+      const approvals = roles.map(role => ({
+        approver_role: role,
+        approval_status: 'PENDING',
+        approval_comment: 'Submitted for approval'
+      }));
+
+      await submitSalesOrderForApproval(salesOrder.id, approvals);
+
+      alert('Sales Order submitted for approval successfully!');
+
+      // Refresh the sales order details
+      const details = await getSalesOrderById(salesOrder.id);
+      setFullSalesOrder(details);
+
+      // Trigger parent refresh
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Error submitting for approval:', error);
+      alert('Error submitting sales order for approval. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -221,6 +258,16 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                 <Printer className="h-3 w-3 mr-1" />
                 Print
               </button>
+              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
+                <button
+                  onClick={handleSalesForApproval}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-1 border border-purple-300 rounded-md text-xs font-medium text-purple-700 bg-white hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="h-3 w-3 mr-1" />
+                  {loading ? 'Submitting...' : 'Sales for Approval'}
+                </button>
+              )}
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'APPROVED' && (
                 <button
                   onClick={() => {

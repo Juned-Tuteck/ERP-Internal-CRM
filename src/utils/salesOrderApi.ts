@@ -541,6 +541,27 @@ export const rejectSalesOrder = async (
   return response.data;
 };
 
+export const submitSalesOrderForApproval = async (
+  salesOrderId: string,
+  approvals: Array<{
+    approver_role: string;
+    approval_status: string;
+    approved_by?: string;
+    approval_comment?: string;
+  }>
+): Promise<any> => {
+  const response = await axios.post(
+    `${import.meta.env.VITE_API_BASE_URL}/sales-order-approval/${salesOrderId}/approvals`,
+    {
+      approvals
+    },
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+  return response.data;
+};
+
 export const getMaterialTypes = async (): Promise<MaterialType[]> => {
   const response = await axios.get(
     `${import.meta.env.VITE_API_BASE_URL}/sales-order-material-type-details`,
