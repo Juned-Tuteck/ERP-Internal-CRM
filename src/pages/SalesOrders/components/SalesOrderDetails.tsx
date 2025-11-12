@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle, FolderPlus } from 'lucide-react';
 import CreateSalesOrderModal from './CreateSalesOrderModal';
 import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder } from '../../../utils/salesOrderApi';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
+  onRefresh?: () => void;
 }
 
-const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => {
+const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRefresh }) => {
   const [activeTab, setActiveTab] = useState('general');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -62,6 +63,10 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
       await deleteSalesOrder(id);
       setIsDeleteModalOpen(false);
       alert('Sales order deleted successfully');
+      // Trigger refresh
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       console.error('Error deleting sales order:', error);
       alert('Error deleting sales order');
@@ -216,14 +221,27 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                 <Printer className="h-3 w-3 mr-1" />
                 Print
               </button>
-              <button 
+              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'APPROVED' && (
+                <button
+                  onClick={() => {
+                    // Navigate to create project with SO data
+                    console.log('Create project from SO:', enhancedSalesOrder.id);
+                    alert('Create Project functionality - Will navigate to project creation with pre-filled SO data');
+                  }}
+                  className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-xs font-medium text-green-700 bg-white hover:bg-green-50"
+                >
+                  <FolderPlus className="h-3 w-3 mr-1" />
+                  Create Project
+                </button>
+              )}
+              <button
                 onClick={() => setIsEditModalOpen(true)}
                 className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
               >
                 <Edit className="h-3 w-3 mr-1" />
                 Edit
               </button>
-              <button 
+              <button
                 onClick={() => setIsDeleteModalOpen(true)}
                 className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50"
               >
@@ -754,6 +772,10 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
             try {
               const details = await getSalesOrderById(salesOrder.id);
               setFullSalesOrder(details);
+              // Trigger parent refresh for list
+              if (onRefresh) {
+                onRefresh();
+              }
             } catch (error) {
               console.error('Error refreshing sales order:', error);
             }

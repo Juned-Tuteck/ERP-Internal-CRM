@@ -321,10 +321,22 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
         if (term.id === id) {
           const updatedTerm = { ...term, [field]: value };
 
-          // If percentage is updated, recalculate amount
-          if (field === 'percentage') {
-            const totalCostValue = parseFloat(String(prev.totalCost || '0').replace(/[₹,]/g, '')) || 0;
-            updatedTerm.amount = totalCostValue * (updatedTerm.percentage / 100);
+          // If percentage or materialType is updated, recalculate amount based on material cost
+          if (field === 'percentage' || field === 'materialType') {
+            const materialType = field === 'materialType' ? value : term.materialType;
+            const percentage = field === 'percentage' ? Number(value) : term.percentage;
+
+            // Find the material cost for the selected material type
+            const materialCost = prev.materialCosts.find(
+              cost => cost.type === materialType
+            );
+
+            if (materialCost && materialCost.amountWithGst) {
+              // Calculate amount based on material's amountWithGst
+              updatedTerm.amount = materialCost.amountWithGst * (percentage / 100);
+            } else {
+              updatedTerm.amount = 0;
+            }
           }
 
           return updatedTerm;
@@ -1423,8 +1435,11 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
 
                     {/* Payment Terms */}
                     <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-lg font-medium text-gray-900">Sales Order Payment Terms</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">Sales Order Payment Terms</h4>
+                          <p className="text-xs text-gray-500 mt-1">Amount is calculated as percentage of selected Material Type's Amount with GST</p>
+                        </div>
                         <button
                           type="button"
                           onClick={addPaymentTerm}

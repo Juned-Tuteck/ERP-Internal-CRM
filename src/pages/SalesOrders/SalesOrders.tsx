@@ -133,7 +133,10 @@ const SalesOrders: React.FC = () => {
             />
           </div>
           <div className="lg:col-span-2">
-            <SalesOrderDetails salesOrder={selectedSalesOrder} />
+            <SalesOrderDetails
+              salesOrder={selectedSalesOrder}
+              onRefresh={() => setRefreshTrigger(prev => prev + 1)}
+            />
           </div>
         </div>
       ) : (
