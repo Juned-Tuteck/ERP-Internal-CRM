@@ -38,7 +38,8 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
           orderNumber: so.so_number,
           businessName: so.customer_id, // You may want to fetch customer name
           quotationNumber: so.quotation_id,
-          bomNumber: so.bom_id || 'N/A',
+          leadNumber: so.lead_number || 'N/A',
+          bomNumber: so.bom_number || 'N/A',
           totalValue: so.total_cost ? `₹${parseFloat(so.total_cost).toLocaleString('en-IN')}` : '₹0',
           createdBy: so.created_by,
           createdDate: so.created_at,

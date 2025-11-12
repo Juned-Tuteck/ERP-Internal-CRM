@@ -55,11 +55,11 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
     }
   };
 
-  const handleDelete = async () => {
-    if (!salesOrder?.id) return;
+  const handleDelete = async (id: string) => {
+    if (!id) return;
 
     try {
-      await deleteSalesOrder(salesOrder.id);
+      await deleteSalesOrder(id);
       setIsDeleteModalOpen(false);
       alert('Sales order deleted successfully');
     } catch (error) {
@@ -793,7 +793,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
               <button
                 onClick={() => {
                   console.log('Deleting sales order:', salesOrder.id);
-                  // In a real app, this would delete the sales order from the database
+                  handleDelete(salesOrder.id);
                   setIsDeleteModalOpen(false);
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"

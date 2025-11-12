@@ -44,7 +44,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     contactPerson: '',
     bomNumber: '',
     totalCost: '',
-    currency: 'INR',
+    currency: '',
     soDate: new Date().toISOString().split('T')[0],
     comments: '',
     // Project Details
@@ -74,7 +74,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     bankContactNumber: '',
     bankEmail: '',
     guaranteeNumber: '',
-    guaranteeCurrency: 'INR',
+    guaranteeCurrency: '',
     guaranteeAmount: '',
     effectiveDate: '',
     expiryDate: '',
@@ -109,6 +109,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   useEffect(() => {
     if (isOpen) {
       if (editMode && salesOrderData) {
+        console.log('Prefilling form data for edit mode:', salesOrderData);
         prefillFormData(salesOrderData);
       } else {
         fetchQuotations();
@@ -120,15 +121,15 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     setFormData({
       // Step 1: General Information
       salesOrderType: data.sales_order_type || 'SO',
-      leadNumber: data.lead_id || '',
+      leadNumber: data.lead_number || '',
       quotationId: data.quotation_id || '',
-      quotationNumber: data.quotation_id || '',
-      businessName: data.customer_id || '',
-      customerBranch: data.customer_branch_id || '',
-      contactPerson: data.customer_contact_person || '',
-      bomNumber: data.bom_id || '',
+      quotationNumber: data.quotation_number || '',
+      businessName: data.business_name || '',
+      customerBranch: data.customer_branch_name || '',
+      contactPerson: data.contact_person_name || '',
+      bomNumber: data.bom_number || '',
       totalCost: data.total_cost || '',
-      currency: 'INR',
+      currency: data.guarantee_currency || 'INR',
       soDate: data.so_date ? new Date(data.so_date).toISOString().split('T')[0] : '',
       comments: data.so_comments || '',
       // Project Details
@@ -143,17 +144,18 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       projectStartDate: data.estimated_start_date ? new Date(data.estimated_start_date).toISOString().split('T')[0] : '',
       projectEndDate: data.estimated_end_date ? new Date(data.estimated_end_date).toISOString().split('T')[0] : '',
       // BG Information
+      isGovernment: true,
       beneficiaryName: data.beneficiary_name || '',
       beneficiaryAddress: data.beneficiary_address || '',
-      beneficiaryContact: data.beneficiary_contact_number || '',
+      beneficiaryContactNumber: data.beneficiary_contact_number || '',
       beneficiaryEmail: data.beneficiary_email || '',
       applicantName: data.applicant_name || '',
       applicantAddress: data.applicant_address || '',
-      applicantContact: data.applicant_contact_number || '',
+      applicantContactNumber: data.applicant_contact_number || '',
       applicantEmail: data.applicant_email || '',
       bankName: data.bank_name || '',
       bankAddress: data.bank_address || '',
-      bankContact: data.bank_contact_number || '',
+      bankContactNumber: data.bank_contact_number || '',
       bankEmail: data.bank_email || '',
       guaranteeNumber: data.guarantee_number || '',
       guaranteeCurrency: data.guarantee_currency || '',
@@ -165,6 +167,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       guaranteeType: data.guarantee_type || '',
       // Material Costs
       materialCosts: data.material_type_details?.map((item: any) => ({
+        id: item.id,
         type: item.material_type,
         gstPercentage: item.gst,
         amountBasic: item.amount_basic,
@@ -369,7 +372,14 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+
+    if (editMode) {
+      console.log('Edit mode - saving current step');
+      await handleSaveStep();
+      return;
+    }
+
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -381,38 +391,108 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     }
   };
 
+  // const handleSaveStep = async () => {
+  //   if (!editMode || !salesOrderData?.id) return;
+
+  //   setLoading(true);
+  //   try {
+  //     if (currentStep === 1) {
+  //       // Update Step 1: General Information + Project Details + BG Info
+  //       const updateData = {
+  //         sales_order_type: formData.salesOrderType === 'Sales Order' ? 'SO' : 'WO',
+  //         so_date: formData.soDate,
+  //         so_comments: formData.comments,
+  //         work_order_number: formData.workOrderNumber,
+  //         workorder_tenure_months: formData.workOrderTenureMonths ? parseInt(formData.workOrderTenureMonths) : null,
+  //         project_name: formData.projectName,
+  //         work_order_amount: formData.workOrderAmount,
+  //         work_order_date: formData.workOrderDate,
+  //         estimated_start_date: formData.projectStartDate,
+  //         estimated_end_date: formData.projectEndDate,
+  //         project_category: formData.projectCategory,
+  //         project_template: formData.projectTemplate,
+  //         project_address: formData.projectAddress,
+  //         beneficiary_name: formData.beneficiaryName,
+  //         beneficiary_address: formData.beneficiaryAddress,
+  //         beneficiary_contact_number: formData.beneficiaryContactNumber,
+  //         beneficiary_email: formData.beneficiaryEmail,
+  //         applicant_name: formData.applicantName,
+  //         applicant_address: formData.applicantAddress,
+  //         applicant_contact_number: formData.applicantContactNumber,
+  //         applicant_email: formData.applicantEmail,
+  //         bank_name: formData.bankName,
+  //         bank_address: formData.bankAddress,
+  //         bank_contact_number: formData.bankContactNumber,
+  //         bank_email: formData.bankEmail,
+  //         guarantee_number: formData.guaranteeNumber,
+  //         guarantee_currency: formData.guaranteeCurrency,
+  //         guarantee_amount: formData.guaranteeAmount,
+  //         issue_date: formData.issueDate,
+  //         effective_date: formData.effectiveDate,
+  //         expiry_date: formData.expiryDate,
+  //         purpose: formData.purpose,
+  //         guarantee_type: formData.guaranteeType,
+  //       };
+  //       await updateSalesOrderStep1(salesOrderData.id, updateData);
+  //       alert('Step 1 updated successfully!');
+  //     } else if (currentStep === 2) {
+  //       // Update Step 2: Contacts
+  //       const contactsData = formData.contacts.map(contact => ({
+  //         contact_name: contact.name,
+  //         contact_designation: contact.designation,
+  //         contact_email: contact.email,
+  //         contact_no: contact.phone,
+  //       }));
+  //       await updateSalesOrderContacts(salesOrderData.id, contactsData);
+  //       alert('Contacts updated successfully!');
+  //     } else if (currentStep === 3) {
+  //       // Update Step 3: Comments
+  //       if (formData.orderComments.trim()) {
+  //         await updateSalesOrderComments(salesOrderData.id, formData.orderComments);
+  //         alert('Comments updated successfully!');
+  //       }
+  //     }
+
+  //     onSubmit({ success: true });
+  //   } catch (error) {
+  //     console.error('Error updating sales order:', error);
+  //     alert('Error updating sales order. Please try again.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleSaveStep = async () => {
     if (!editMode || !salesOrderData?.id) return;
-
     setLoading(true);
+
     try {
       if (currentStep === 1) {
-        // Update Step 1: General Information + Project Details + BG Info
-        const updateData = {
-          sales_order_type: formData.salesOrderType === 'Sales Order' ? 'SO' : 'WO',
+        const salesOrderPayload = {
+          sales_order_type: formData.salesOrderType === "Sales Order" ? "SO" : "WO",
           so_date: formData.soDate,
           so_comments: formData.comments,
           work_order_number: formData.workOrderNumber,
-          workorder_tenure_months: formData.workOrderTenureMonths ? parseInt(formData.workOrderTenureMonths) : null,
-          project_name: formData.projectName,
+          workorder_tenure_months: Number(formData.workOrderTenureMonths) || null,
           work_order_amount: formData.workOrderAmount,
           work_order_date: formData.workOrderDate,
           estimated_start_date: formData.projectStartDate,
           estimated_end_date: formData.projectEndDate,
+          project_name: formData.projectName,
           project_category: formData.projectCategory,
           project_template: formData.projectTemplate,
           project_address: formData.projectAddress,
           beneficiary_name: formData.beneficiaryName,
           beneficiary_address: formData.beneficiaryAddress,
-          beneficiary_contact_number: formData.beneficiaryContact,
+          beneficiary_contact_number: formData.beneficiaryContactNumber,
           beneficiary_email: formData.beneficiaryEmail,
           applicant_name: formData.applicantName,
           applicant_address: formData.applicantAddress,
-          applicant_contact_number: formData.applicantContact,
+          applicant_contact_number: formData.applicantContactNumber,
           applicant_email: formData.applicantEmail,
           bank_name: formData.bankName,
           bank_address: formData.bankAddress,
-          bank_contact_number: formData.bankContact,
+          bank_contact_number: formData.bankContactNumber,
           bank_email: formData.bankEmail,
           guarantee_number: formData.guaranteeNumber,
           guarantee_currency: formData.guaranteeCurrency,
@@ -423,11 +503,18 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           purpose: formData.purpose,
           guarantee_type: formData.guaranteeType,
         };
-        await updateSalesOrderStep1(salesOrderData.id, updateData);
-        alert('Step 1 updated successfully!');
-      } else if (currentStep === 2) {
+
+        await updateSalesOrderStep1(salesOrderData.id, {
+          salesOrder: salesOrderPayload,
+          materialCosts: formData.materialCosts,
+          paymentTerms: formData.paymentTerms,
+        });
+
+        alert("Step 1 updated successfully!");
+      }else if (currentStep === 2) {
         // Update Step 2: Contacts
         const contactsData = formData.contacts.map(contact => ({
+          id: contact.id,
           contact_name: contact.name,
           contact_designation: contact.designation,
           contact_email: contact.email,
@@ -442,20 +529,20 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           alert('Comments updated successfully!');
         }
       }
-
-      onSubmit({ success: true });
-    } catch (error) {
-      console.error('Error updating sales order:', error);
-      alert('Error updating sales order. Please try again.');
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to update sales order");
     } finally {
       setLoading(false);
     }
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (editMode) {
+      console.log('Edit mode - saving current step');
       await handleSaveStep();
       return;
     }
@@ -577,14 +664,13 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`flex items-center space-x-2 ${
-                    currentStep === step.id ? 'text-blue-600' :
+                  className={`flex items-center space-x-2 ${currentStep === step.id ? 'text-blue-600' :
                     currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                  } ${editMode ? 'cursor-pointer hover:opacity-80' : ''}`}
+                    } ${editMode ? 'cursor-pointer hover:opacity-80' : ''}`}
                   onClick={() => editMode && setCurrentStep(step.id)}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id ? 'bg-blue-100 text-blue-600' :
-                      currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
                     }`}>
                     {step.id}
                   </div>
@@ -607,6 +693,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
             {currentStep === 1 && (
               <div className="space-y-8">
                 {/* Sales Order Details */}
+                {console.log(formData)}
                 <div>
                   <h4 className="text-lg font-medium text-gray-900 mb-4">Sales Order Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -625,11 +712,13 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                         <option value="">
                           {loadingQuotations ? 'Loading quotations...' : 'Select Quotation'}
                         </option>
+                        {editMode}? <option value={formData.quotationId}>{formData.quotationNumber}</option>: (
                         {quotations.map(quotation => (
                           <option key={quotation.quotation_id} value={quotation.quotation_id}>
                             {quotation.customer_quotation_number}
                           </option>
                         ))}
+                        )
                       </select>
                     </div>
 
@@ -639,7 +728,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                       </label>
                       <select
                         name="salesOrderType"
-                        value={formData.salesOrderType}
+                        value={formData.salesOrderType === 'SO' ? 'Sales Order' : formData.salesOrderType === 'WO' ? 'Work Order' : formData.salesOrderType}
                         onChange={handleInputChange}
                         required
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -937,7 +1026,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                     </div>
 
                     {/* BG Information (Conditional) */}
-                    {formData.isGovernment && (
+                    {formData.isGovernment === true && (
                       <div>
                         <h4 className="text-lg font-medium text-gray-900 mb-4">Bank Guarantee Information</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">

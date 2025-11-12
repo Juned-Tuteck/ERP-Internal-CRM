@@ -323,28 +323,165 @@ export const updateSalesOrder = async (
   return response.data;
 };
 
-export const updateSalesOrderStep1 = async (salesOrderId: string, data: any): Promise<any> => {
-  const response = await axios.put(
-    `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}`,
-    data,
-    {
+// export const updateSalesOrderStep1 = async (salesOrderId: string, data: any): Promise<any> => {
+//   const response = await axios.put(
+//     `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}`,
+//     data,
+//     {
+//       headers: { "Content-Type": "application/json" },
+//     }
+//   );
+//   return response.data;
+// };
+
+export const updateSalesOrderStep1 = async (
+  salesOrderId: string,
+  payload: {
+    salesOrder: any;
+    materialCosts?: any[];
+    paymentTerms?: any[];
+  }
+): Promise<any> => {
+  try {
+    // -------------------------------
+    // 1️⃣ Update Main Sales Order
+    // -------------------------------
+    const mainUrl = `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}`;
+    const mainResponse = await axios.put(mainUrl, payload.salesOrder, {
       headers: { "Content-Type": "application/json" },
+    });
+
+    // -------------------------------
+    // 2️⃣ Update Material Type Details
+    // -------------------------------
+    if (Array.isArray(payload.materialCosts) && payload.materialCosts.length > 0) {
+      const materialRequests = payload.materialCosts.map((item) => {
+        const formatted = {
+          // ...item,
+          so_id: salesOrderId,
+          material_type: item.type || item.materialType || null,
+          gst: Number(item.gstPercentage) || 0,
+          amount_basic: Number(item.amountBasic) || 0,
+          amount_with_gst: Number(item.amountWithGst) || 0,
+        };
+
+        if (item.id) {
+          // Existing record — update
+          return axios.put(
+            `${import.meta.env.VITE_API_BASE_URL}/sales-order-material-type-details/${item.id}`,
+            formatted,
+            { headers: { "Content-Type": "application/json" } }
+          );
+        } else {
+          // New record — create
+          return axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/sales-order-material-type-details`,
+            formatted,
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+      });
+
+      await Promise.all(materialRequests);
     }
-  );
-  return response.data;
+
+    // -------------------------------
+    // 3️⃣ Update Payment Terms
+    // -------------------------------
+    if (Array.isArray(payload.paymentTerms) && payload.paymentTerms.length > 0) {
+      const paymentRequests = payload.paymentTerms.map((item) => {
+        const formatted = {
+          // ...item,
+          so_id: salesOrderId,
+          term_comments: item.description || "",
+          payment_terms_type: item.termType || "",
+          material_type: item.materialType || "",
+          percentage: Number(item.percentage) || 0,
+          amount: Number(item.amount) || 0,
+        };
+
+        if (item.id) {
+          // Existing record — update
+          return axios.put(
+            `${import.meta.env.VITE_API_BASE_URL}/sales-order-payment-terms/${item.id}`,
+            formatted,
+            { headers: { "Content-Type": "application/json" } }
+          );
+        } else {
+          // New record — create
+          return axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/sales-order-payment-terms`,
+            formatted,
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+      });
+
+      await Promise.all(paymentRequests);
+    }
+
+    // -------------------------------
+    // ✅ Return combined result
+    // -------------------------------
+    return {
+      success: true,
+      message: "Sales order and related data updated successfully",
+      data: mainResponse.data,
+    };
+  } catch (error: any) {
+    console.error("updateSalesOrderStep1 Error:", error);
+    throw new Error(
+      error?.response?.data?.clientMessage ||
+        error?.response?.data?.message ||
+        error.message ||
+        "Failed to update sales order"
+    );
+  }
 };
 
-export const updateSalesOrderContacts = async (salesOrderId: string, contacts: any[]): Promise<any> => {
-  // Delete existing contacts and add new ones
-  const response = await axios.put(
-    `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}/contacts`,
-    { contacts },
-    {
-      headers: { "Content-Type": "application/json" },
+// export const updateSalesOrderContacts = async (salesOrderId: string, contacts: any[]): Promise<any> => {
+//   // Delete existing contacts and add new ones
+//   const response = await axios.put(
+//     `${import.meta.env.VITE_API_BASE_URL}/sales-order-contact-details/${salesOrderId}`,
+//     { contacts },
+//     {
+//       headers: { "Content-Type": "application/json" },
+//     }
+//   );
+//   return response.data;
+// };
+
+// contacts: array from formData
+export interface SalesOrderContact {
+  id?: string;
+  name?: string;
+  designation?: string;
+  email?: string;
+  phone?: string;
+  // allow additional fields coming from form
+  [key: string]: any;
+}
+
+export const updateSalesOrderContacts = async (
+  salesOrderId: string,
+  contacts: SalesOrderContact[]
+): Promise<any[]> => {
+  const promises: Promise<any>[] = contacts.map((contact) => {
+    const payload = {
+      ...contact,
+      so_id: salesOrderId,
+    };
+    if (contact.id) {
+      return axios.put(`${import.meta.env.VITE_API_BASE_URL}/sales-order-contact-details/${contact.id}`, payload);
+    } else {
+      return axios.post(`${import.meta.env.VITE_API_BASE_URL}/sales-order-contact-details`, payload);
     }
-  );
-  return response.data;
+  });
+
+  const results: any[] = await Promise.all(promises);
+  return results.map((r: any) => r.data);
 };
+
 
 export const updateSalesOrderComments = async (salesOrderId: string, comments: string): Promise<any> => {
   const response = await axios.post(
@@ -378,7 +515,7 @@ export const approveSalesOrder = async (
     `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}/approve`,
     {
       approval_status: "APPROVED",
-      notes: reason,
+      reason: reason,
     },
     {
       headers: { "Content-Type": "application/json" },
