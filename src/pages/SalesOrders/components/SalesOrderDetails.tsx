@@ -3,6 +3,7 @@ import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Downlo
 import CreateSalesOrderModal from './CreateSalesOrderModal';
 import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder, submitSalesOrderForApproval } from '../../../utils/salesOrderApi';
 import { getAllRolesInOrder } from '../../../utils/roleHierarchy';
+import { createProjectFromSalesOrder } from '../../../utils/projectApi';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
@@ -105,6 +106,37 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
     } catch (error) {
       console.error('Error submitting for approval:', error);
       alert('Error submitting sales order for approval. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!fullSalesOrder) {
+      alert('Sales Order details not loaded');
+      return;
+    }
+
+    const confirmCreate = window.confirm(
+      `Create a new project from Sales Order ${fullSalesOrder.so_number}?\n\nThis will create a new project in the PMS system with the Sales Order details.`
+    );
+
+    if (!confirmCreate) return;
+
+    try {
+      setLoading(true);
+
+      const result = await createProjectFromSalesOrder(fullSalesOrder);
+
+      if (result.success) {
+        alert(result.clientMessage || 'Project created successfully!');
+        console.log('Created Project:', result.data);
+      } else {
+        alert(result.clientMessage || 'Failed to create project. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating project:', error);
+      alert('Error creating project from Sales Order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -270,15 +302,12 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
               )} */}
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'APPROVED' && (
                 <button
-                  onClick={() => {
-                    // Navigate to create project with SO data
-                    console.log('Create project from SO:', enhancedSalesOrder.id);
-                    alert('Create Project functionality - Will navigate to project creation with pre-filled SO data');
-                  }}
-                  className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-xs font-medium text-green-700 bg-white hover:bg-green-50"
+                  onClick={handleCreateProject}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-xs font-medium text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FolderPlus className="h-3 w-3 mr-1" />
-                  Create Project
+                  {loading ? 'Creating...' : 'Create Project'}
                 </button>
               )}
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
