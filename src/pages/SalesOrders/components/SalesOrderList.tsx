@@ -86,12 +86,14 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
 
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case 'approved':
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
       case 'pending_approval':
+      case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'draft':
         return 'bg-gray-100 text-gray-800';
@@ -105,12 +107,14 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case 'approved':
         return <CheckCircle className="h-4 w-4 text-green-600 mr-1" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-red-600 mr-1" />;
       case 'pending_approval':
+      case 'pending':
         return <Calendar className="h-4 w-4 text-yellow-600 mr-1" />;
       case 'draft':
         return <Edit className="h-4 w-4 text-gray-600 mr-1" />;
@@ -170,7 +174,10 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
                       </div>
                     </div>
                     <div className="ml-auto text-right">
-                      <span>{salesOrder.status}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(salesOrder.status)}`}>
+                        {getStatusIcon(salesOrder.status)}
+                        {salesOrder.status.replace('_', ' ').toUpperCase()}
+                      </span>
                     </div>
                   </div>
                 </td>
