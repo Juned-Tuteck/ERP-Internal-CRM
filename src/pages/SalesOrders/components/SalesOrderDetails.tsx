@@ -258,7 +258,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                 <Printer className="h-3 w-3 mr-1" />
                 Print
               </button>
-              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
+              {/* {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
                 <button
                   onClick={handleSalesForApproval}
                   disabled={loading}
@@ -267,7 +267,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                   <Send className="h-3 w-3 mr-1" />
                   {loading ? 'Submitting...' : 'Sales for Approval'}
                 </button>
-              )}
+              )} */}
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'APPROVED' && (
                 <button
                   onClick={() => {
