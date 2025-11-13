@@ -3,7 +3,7 @@ import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Downlo
 import CreateSalesOrderModal from './CreateSalesOrderModal';
 import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder, submitSalesOrderForApproval } from '../../../utils/salesOrderApi';
 import { getAllRolesInOrder } from '../../../utils/roleHierarchy';
-import { createProjectFromSalesOrder } from '../../../utils/projectApi';
+import { createProjectFromSalesOrder,updateSOStatusToProjectCreated } from '../../../utils/projectApi';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
@@ -134,6 +134,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
 
       if (result.success) {
         setProjectCreated(true);
+        updateSOStatusToProjectCreated(fullSalesOrder.id);
         alert(result.clientMessage || 'Project created successfully!');
         console.log('Created Project:', result.data);
       } else {
@@ -308,7 +309,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'APPROVED' && (
                 <button
                   onClick={handleCreateProject}
-                  disabled={loading || projectCreated}
+                  disabled={loading || projectCreated || enhancedSalesOrder?.is_project_created}
                   className={`inline-flex items-center px-3 py-1 border rounded-md text-xs font-medium ${
                     projectCreated
                       ? 'border-green-500 text-green-800 bg-green-100 cursor-default'
@@ -316,7 +317,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <FolderPlus className="h-3 w-3 mr-1" />
-                  {loading ? 'Creating...' : projectCreated ? 'Project Created' : 'Create Project'}
+                  {enhancedSalesOrder.is_project_created ? 'Project Created' : (loading ? 'Creating...' : 'Create Project')}
                 </button>
               )}
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (

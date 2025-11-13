@@ -196,3 +196,16 @@ export const createProjectFromSalesOrder = async (salesOrderData: any) => {
     };
   }
 };
+
+export const updateSOStatusToProjectCreated = async (salesOrderId: string) => {
+  try {
+    const response = await axios.put(
+      `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}`,
+      { is_project_created: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating sales order status:', error);
+    throw new Error('Failed to update sales order status');
+  }
+};
