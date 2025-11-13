@@ -19,6 +19,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
+  const [projectCreated, setProjectCreated] = useState(false);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -26,6 +27,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
 
       try {
         setLoading(true);
+        setProjectCreated(false); // Reset project created state when SO changes
         const [details] = await Promise.all([
           getSalesOrderById(salesOrder.id),
           // getSalesOrderContactDetails(salesOrder.id),
@@ -117,7 +119,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
       return;
     }
     console.log("fullSalesOrder", fullSalesOrder);
-    
+
 
     const confirmCreate = window.confirm(
       `Create a new project from Sales Order ${fullSalesOrder.so_number}?\n\nThis will create a new project in the PMS system with the Sales Order details.`
@@ -131,6 +133,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
       const result = await createProjectFromSalesOrder(fullSalesOrder);
 
       if (result.success) {
+        setProjectCreated(true);
         alert(result.clientMessage || 'Project created successfully!');
         console.log('Created Project:', result.data);
       } else {
@@ -305,11 +308,15 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'APPROVED' && (
                 <button
                   onClick={handleCreateProject}
-                  disabled={loading}
-                  className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-xs font-medium text-green-700 bg-white hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading || projectCreated}
+                  className={`inline-flex items-center px-3 py-1 border rounded-md text-xs font-medium ${
+                    projectCreated
+                      ? 'border-green-500 text-green-800 bg-green-100 cursor-default'
+                      : 'border-green-300 text-green-700 bg-white hover:bg-green-50'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <FolderPlus className="h-3 w-3 mr-1" />
-                  {loading ? 'Creating...' : 'Create Project'}
+                  {loading ? 'Creating...' : projectCreated ? 'Project Created' : 'Create Project'}
                 </button>
               )}
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
