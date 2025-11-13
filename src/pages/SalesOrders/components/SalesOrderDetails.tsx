@@ -281,6 +281,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                   Create Project
                 </button>
               )}
+              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
               <button
                 onClick={() => setIsEditModalOpen(true)}
                 className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
@@ -288,6 +289,8 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                 <Edit className="h-3 w-3 mr-1" />
                 Edit
               </button>
+              )}
+              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
               <button
                 onClick={() => setIsDeleteModalOpen(true)}
                 className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50"
@@ -295,6 +298,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                 <Trash2 className="h-3 w-3 mr-1" />
                 Delete
               </button>
+              )}
             </div>
           </div>
         </div>
