@@ -116,6 +116,8 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
       alert('Sales Order details not loaded');
       return;
     }
+    console.log("fullSalesOrder", fullSalesOrder);
+    
 
     const confirmCreate = window.confirm(
       `Create a new project from Sales Order ${fullSalesOrder.so_number}?\n\nThis will create a new project in the PMS system with the Sales Order details.`
