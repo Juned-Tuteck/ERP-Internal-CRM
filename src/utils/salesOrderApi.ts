@@ -365,7 +365,12 @@ export const updateSalesOrderStep1 = async (
           amount_with_gst: Number(item.amountWithGst) || 0,
         };
 
-        if (item.id) {
+        // Check if ID is a real database ID or temporary timestamp ID
+        // Temporary IDs from Date.now() are typically 13+ digits
+        const isTemporaryId = item.id && item.id.toString().length > 12;
+        const isExistingRecord = item.id && !isTemporaryId;
+
+        if (isExistingRecord) {
           // Existing record — update
           return axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/sales-order-material-type-details/${item.id}`,
@@ -400,7 +405,12 @@ export const updateSalesOrderStep1 = async (
           amount: Number(item.amount) || 0,
         };
 
-        if (item.id) {
+        // Check if ID is a real database ID or temporary timestamp ID
+        // Temporary IDs from Date.now() are typically 13+ digits
+        const isTemporaryId = item.id && item.id.toString().length > 12;
+        const isExistingRecord = item.id && !isTemporaryId;
+
+        if (isExistingRecord) {
           // Existing record — update
           return axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/sales-order-payment-terms/${item.id}`,
