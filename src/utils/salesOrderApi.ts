@@ -367,8 +367,10 @@ export const updateSalesOrderStep1 = async (
 
         // Check if ID is a real database ID or temporary timestamp ID
         // Temporary IDs from Date.now() are typically 13+ digits
+        console.log('item.id:', item.id);
         const isTemporaryId = item.id && item.id.toString().length > 12;
-        const isExistingRecord = item.id && !isTemporaryId;
+        console.log('isTemporaryId:', isTemporaryId);
+        const isExistingRecord = item.id ;
 
         if (isExistingRecord) {
           // Existing record — update
@@ -407,8 +409,11 @@ export const updateSalesOrderStep1 = async (
 
         // Check if ID is a real database ID or temporary timestamp ID
         // Temporary IDs from Date.now() are typically 13+ digits
-        const isTemporaryId = item.id && item.id.toString().length > 12;
-        const isExistingRecord = item.id && !isTemporaryId;
+        // const isTemporaryId = item.id && item.id.toString().length > 12;
+        const isExistingRecord = item.id ;
+        console.log('item.id:', item.id);
+        console.log("isexis",isExistingRecord);
+        
 
         if (isExistingRecord) {
           // Existing record — update

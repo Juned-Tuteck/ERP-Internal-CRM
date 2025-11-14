@@ -23,7 +23,7 @@ const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ project, isOp
     };
 
     const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
+        switch (status?.toLowerCase()) {
             case 'active':
                 return 'bg-green-100 text-green-800 border-green-200';
             case 'pending':

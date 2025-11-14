@@ -139,7 +139,7 @@ export const createProjectFromSalesOrder = async (salesOrderData: any) => {
     const projectData = {
       lead_id: salesOrderData.lead_id || null,
       warehouse_id: salesOrderData.warehouse_id || null,
-      project_species: salesOrderData.project_species || null,
+      project_species: salesOrderData.project_species || "actual project",
       name: salesOrderData.project_name || null,
       project_type: salesOrderData.project_category || null,
       project_status: salesOrderData.project_status || 'NOT_STARTED',

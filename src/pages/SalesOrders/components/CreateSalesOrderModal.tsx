@@ -301,7 +301,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   // Payment Terms Management
   const addPaymentTerm = () => {
     const newTerm: PaymentTerm = {
-      id: Date.now().toString(),
+      id: '',
       description: '',
       termType: '',
       materialType: '',
