@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Eye, Clock, AlertTriangle, ShoppingCart, Building2, Calendar } from 'lucide-react';
+import { getAllSalesOrders, approveSalesOrder, rejectSalesOrder } from '../../../utils/salesOrderApi';
 
 interface SalesOrderApprovalProps {
   onApprovalAction: (salesOrderId: string, action: 'approve' | 'reject', reason?: string) => void;
@@ -10,9 +11,70 @@ const SalesOrderApproval: React.FC<SalesOrderApprovalProps> = ({ onApprovalActio
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
   const [reason, setReason] = useState('');
+  const [pendingSalesOrders, setPendingSalesOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for pending sales orders
-  const pendingSalesOrders = [
+  useEffect(() => {
+    fetchPendingSalesOrders();
+  }, []);
+
+  const fetchPendingSalesOrders = async () => {
+    try {
+      setLoading(true);
+      const allOrders = await getAllSalesOrders();
+      console.log("Fetched all orders :", allOrders);
+      const pending = allOrders.filter(
+        (order: any) => order.approval_status === 'PENDING'
+      ).map((order: any) => ({
+        id: order.id,
+        orderNumber: order.so_number,
+        businessName: order.business_name,
+        quotationNumber: order.quotation_number,
+        bomNumber: order.bom_number,
+        totalValue: order.total_cost,
+        createdBy: order.created_by,
+        createdDate: order.created_at,
+        status: 'pending_approval',
+        customerBranch: order.customer_branch_name || '',
+        contactPerson: order.contact_person_name || '',
+        workOrderNumber: order.work_order_number || '',
+        projectCategory: order.project_category || '',
+        projectAddress: order.project_address || '',
+        salesOrderType: order.sales_order_type || ''
+      }));
+      setPendingSalesOrders(pending);
+    } catch (error) {
+      console.error('Error fetching pending sales orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (salesOrderId: string, approvalReason?: string) => {
+    try {
+      console.log("approve called :", salesOrderId, approvalReason);
+      await approveSalesOrder(salesOrderId, approvalReason);
+      onApprovalAction(salesOrderId, 'approve', approvalReason);
+      fetchPendingSalesOrders();
+    } catch (error) {
+      console.error('Error approving sales order:', error);
+      alert('Error approving sales order');
+    }
+  };
+
+  const handleReject = async (salesOrderId: string, rejectionReason: string) => {
+    try {
+      await rejectSalesOrder(salesOrderId, rejectionReason);
+      onApprovalAction(salesOrderId, 'reject', rejectionReason);
+      fetchPendingSalesOrders();
+    } catch (error) {
+      console.error('Error rejecting sales order:', error);
+      alert('Error rejecting sales order');
+    }
+  };
+
+  // Mock data preserved for UI structure reference
+  const mockPendingSalesOrders = [
     {
       id: '1',
       orderNumber: 'SO-2024-002',
@@ -70,14 +132,20 @@ const SalesOrderApproval: React.FC<SalesOrderApprovalProps> = ({ onApprovalActio
   ];
 
   const handleApprovalClick = (salesOrder: any, action: 'approve' | 'reject') => {
+    console.log("handleApprovalClick called :", salesOrder, action);
     setSelectedSalesOrder(salesOrder);
     setActionType(action);
     setShowReasonModal(true);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (selectedSalesOrder) {
-      onApprovalAction(selectedSalesOrder.id, actionType, reason);
+      console.log("handleConfirmAction called :", selectedSalesOrder);
+      if (actionType === 'approve') {
+        await handleApprove(selectedSalesOrder.id, reason);
+      } else {
+        await handleReject(selectedSalesOrder.id, reason);
+      }
       setShowReasonModal(false);
       setReason('');
       setSelectedSalesOrder(null);
@@ -126,7 +194,8 @@ const SalesOrderApproval: React.FC<SalesOrderApprovalProps> = ({ onApprovalActio
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {pendingSalesOrders.map((salesOrder) => (
-                <tr key={salesOrder.id} className="hover:bg-gray-50">
+                console.log("Rendering sales order :", salesOrder),
+                <tr key={salesOrder.id} className="hover:bg-gray-50">               
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <ShoppingCart className="h-5 w-5 text-gray-400 mr-3" />
@@ -151,7 +220,7 @@ const SalesOrderApproval: React.FC<SalesOrderApprovalProps> = ({ onApprovalActio
                   <td className="px-6 py-4">
                     <div>
                       <p className="text-sm text-gray-900">{salesOrder.projectCategory}</p>
-                      <p className="text-xs text-gray-500">WO: {salesOrder.workOrderNumber}</p>
+                      <p className="text-xs text-gray-500">{salesOrder.salesOrderType}: {salesOrder.workOrderNumber}</p>
                       <div className="text-xs text-gray-500 mt-1">
                         <div className="flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />

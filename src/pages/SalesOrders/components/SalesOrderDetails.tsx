@@ -1,15 +1,152 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Calendar, Building2, User, DollarSign, Tag, Clock, Download, Printer, FileText, Phone, Mail, MapPin, Edit, Trash2, AlertTriangle, FolderPlus, Send } from 'lucide-react';
 import CreateSalesOrderModal from './CreateSalesOrderModal';
+import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder, submitSalesOrderForApproval } from '../../../utils/salesOrderApi';
+import { getAllRolesInOrder } from '../../../utils/roleHierarchy';
+import { createProjectFromSalesOrder,updateSOStatusToProjectCreated } from '../../../utils/projectApi';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
+  onRefresh?: () => void;
 }
 
-const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => {
+const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRefresh }) => {
   const [activeTab, setActiveTab] = useState('general');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [fullSalesOrder, setFullSalesOrder] = useState<any>(null);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [projectCreated, setProjectCreated] = useState(false);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!salesOrder?.id) return;
+
+      try {
+        setLoading(true);
+        setProjectCreated(false); // Reset project created state when SO changes
+        const [details] = await Promise.all([
+          getSalesOrderById(salesOrder.id),
+          // getSalesOrderContactDetails(salesOrder.id),
+          // getSalesOrderComments(salesOrder.id)
+        ]);
+
+        setFullSalesOrder(details);
+        // setContacts(contactsData);
+        // setComments(commentsData);
+      } catch (error) {
+        console.error('Error fetching sales order details:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [salesOrder?.id]);
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !salesOrder?.id) return;
+
+    try {
+      await addSalesOrderComment(salesOrder.id, newComment);
+      const updatedComments = await getSalesOrderComments(salesOrder.id);
+      setComments(updatedComments);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!id) return;
+
+    try {
+      await deleteSalesOrder(id);
+      setIsDeleteModalOpen(false);
+      alert('Sales order deleted successfully');
+      // Trigger refresh
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Error deleting sales order:', error);
+      alert('Error deleting sales order');
+    }
+  };
+
+  const handleSalesForApproval = async () => {
+    if (!salesOrder?.id) return;
+
+    try {
+      setLoading(true);
+
+      // Get all roles in hierarchy
+      const roles = getAllRolesInOrder();
+
+      // Create approval records for all roles with PENDING status
+      const approvals = roles.map(role => ({
+        approver_role: role,
+        approval_status: 'PENDING',
+        approval_comment: 'Submitted for approval'
+      }));
+
+      await submitSalesOrderForApproval(salesOrder.id, approvals);
+
+      alert('Sales Order submitted for approval successfully!');
+
+      // Refresh the sales order details
+      const details = await getSalesOrderById(salesOrder.id);
+      setFullSalesOrder(details);
+
+      // Trigger parent refresh
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Error submitting for approval:', error);
+      alert('Error submitting sales order for approval. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!fullSalesOrder) {
+      alert('Sales Order details not loaded');
+      return;
+    }
+    console.log("fullSalesOrder", fullSalesOrder);
+
+
+    const confirmCreate = window.confirm(
+      `Create a new project from Sales Order ${fullSalesOrder.so_number}?\n\nThis will create a new project in the PMS system with the Sales Order details.`
+    );
+
+    if (!confirmCreate) return;
+
+    try {
+      setLoading(true);
+
+      const result = await createProjectFromSalesOrder(fullSalesOrder);
+
+      if (result.success) {
+        setProjectCreated(true);
+        updateSOStatusToProjectCreated(fullSalesOrder.id);
+        alert(result.clientMessage || 'Project created successfully!');
+        console.log('Created Project:', result.data);
+      } else {
+        alert(result.clientMessage || 'Failed to create project. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating project:', error);
+      alert('Error creating project from Sales Order. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!salesOrder) {
     return (
@@ -23,82 +160,98 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
     );
   }
 
-  // Mock data for sales order details
-  const enhancedSalesOrder = {
-    ...salesOrder,
-    customerBranch: 'Mumbai Head Office',
-    contactPerson: 'Amit Patel',
-    contactEmail: 'amit.patel@techcorp.in',
-    contactPhone: '+91 98765 43210',
-    workOrderNumber: 'WO-2024-001',
-    workOrderAmount: '₹24,75,000',
-    workOrderDate: '2024-01-20',
-    projectCategory: 'Commercial',
-    projectTemplate: 'Standard Ventilation Project',
-    projectAddress: 'Andheri East, Mumbai, Maharashtra - 400069',
-    bgInformation: {
+  // Map API response to UI format
+  const enhancedSalesOrder = fullSalesOrder ? {
+    ...fullSalesOrder,
+    // Map API fields to UI fields
+    customerBranch: fullSalesOrder.customer_branch_name || 'N/A',
+    businessName: fullSalesOrder.business_name || 'N/A',
+    quotationNumber: fullSalesOrder.quotation_number || 'N/A',
+    contactPerson: fullSalesOrder.contact_person_name || 'N/A',
+    workOrderNumber: fullSalesOrder.work_order_number || 'N/A',
+    workOrderAmount: fullSalesOrder.work_order_amount ? `₹${parseFloat(fullSalesOrder.work_order_amount).toLocaleString('en-IN')}` : 'N/A',
+    workOrderDate: fullSalesOrder.work_order_date || 'N/A',
+    projectCategory: fullSalesOrder.project_category || 'N/A',
+    projectTemplate: fullSalesOrder.project_template || 'N/A',
+    projectAddress: fullSalesOrder.project_address || 'N/A',
+    projectStartDate: fullSalesOrder.estimated_start_date || 'N/A',
+    projectEndDate: fullSalesOrder.estimated_end_date || 'N/A',
+    projectName: fullSalesOrder.project_name || 'N/A',
+    workOrderTenure: fullSalesOrder.workorder_tenure_months || 'N/A',
+    // Bank Guarantee Information
+    bgInformation: fullSalesOrder.beneficiary_name ? {
       beneficiary: {
-        name: 'TechCorp Solutions Pvt Ltd',
-        address: 'Andheri East, Mumbai, Maharashtra - 400069',
-        contactNumber: '+91 98765 43210',
-        email: 'finance@techcorp.in'
+        name: fullSalesOrder.beneficiary_name || '',
+        address: fullSalesOrder.beneficiary_address || '',
+        contactNumber: fullSalesOrder.beneficiary_contact_number || '',
+        email: fullSalesOrder.beneficiary_email || ''
       },
       applicant: {
-        name: 'TuTeck Engineering Ltd',
-        address: 'Powai, Mumbai, Maharashtra - 400076',
-        contactNumber: '+91 22 2857 3000',
-        email: 'finance@tutech.in'
+        name: fullSalesOrder.applicant_name || '',
+        address: fullSalesOrder.applicant_address || '',
+        contactNumber: fullSalesOrder.applicant_contact_number || '',
+        email: fullSalesOrder.applicant_email || ''
       },
       bank: {
-        name: 'State Bank of India',
-        address: 'Andheri Branch, Mumbai, Maharashtra - 400069',
-        contactNumber: '+91 22 2836 9000',
-        email: 'andheri.mumbai@sbi.co.in'
+        name: fullSalesOrder.bank_name || '',
+        address: fullSalesOrder.bank_address || '',
+        contactNumber: fullSalesOrder.bank_contact_number || '',
+        email: fullSalesOrder.bank_email || ''
       },
-      guaranteeNumber: 'BG-2024-0045',
-      currency: 'INR',
-      guaranteeAmount: '₹2,47,500',
-      effectiveDate: '2024-01-25',
-      expiryDate: '2024-07-30',
-      purpose: 'Performance Guarantee',
-      exemptionType: 'None'
-    },
-    materialCosts: [
-      { type: 'High Side Supply', gstPercentage: 18, amountBasic: 1000000, amountWithGst: 1180000 },
-      { type: 'Low Side Supply', gstPercentage: 18, amountBasic: 800000, amountWithGst: 944000 },
-      { type: 'Installation', gstPercentage: 18, amountBasic: 675000, amountWithGst: 796500 }
-    ],
-    paymentTerms: [
-      { description: 'Advance Payment', termType: 'On Order', percentage: 30, amount: 742500 },
-      { description: 'On Material Delivery', termType: 'On Delivery', percentage: 40, amount: 990000 },
-      { description: 'On Installation', termType: 'On Installation', percentage: 20, amount: 495000 },
-      { description: 'After Commissioning', termType: 'After Commissioning', percentage: 10, amount: 247500 }
-    ],
-    contacts: [
-      { name: 'Amit Patel', designation: 'Project Manager', email: 'amit.patel@techcorp.in', phone: '+91 98765 43210' },
-      { name: 'Priya Sharma', designation: 'Finance Manager', email: 'priya.sharma@techcorp.in', phone: '+91 87654 32109' },
-      { name: 'Vikram Singh', designation: 'Site Engineer', email: 'vikram.singh@techcorp.in', phone: '+91 76543 21098' }
-    ],
-    comments: [
-      { author: 'Rajesh Kumar', timestamp: '2024-01-15T10:30:00', text: 'Sales Order created from accepted quotation QT-2024-001.' },
-      { author: 'Priya Sharma', timestamp: '2024-01-16T14:45:00', text: 'Payment terms confirmed with client. Advance payment expected by Jan 25.' },
-      { author: 'Amit Singh', timestamp: '2024-01-17T09:15:00', text: 'Project timeline reviewed and approved by engineering team.' }
-    ]
-  };
+      guaranteeNumber: fullSalesOrder.guarantee_number || '',
+      currency: fullSalesOrder.guarantee_currency || '',
+      guaranteeAmount: fullSalesOrder.guarantee_amount ? `₹${parseFloat(fullSalesOrder.guarantee_amount).toLocaleString('en-IN')}` : '',
+      effectiveDate: fullSalesOrder.effective_date || '',
+      expiryDate: fullSalesOrder.expiry_date || '',
+      issueDate: fullSalesOrder.issue_date || '',
+      purpose: fullSalesOrder.purpose || '',
+      guaranteeType: fullSalesOrder.guarantee_type || ''
+    } : null,
+    // Material Costs from API
+    materialCosts: fullSalesOrder.material_type_details?.map((item: any) => ({
+      type: item.material_type,
+      gstPercentage: item.gst,
+      amountBasic: parseFloat(item.amount_basic),
+      amountWithGst: parseFloat(item.amount_with_gst)
+    })) || [],
+    // Payment Terms from API
+    paymentTerms: fullSalesOrder.payment_terms?.map((term: any) => ({
+      description: term.term_comments || '',
+      termType: term.payment_terms_type,
+      materialType: term.material_type,
+      percentage: term.percentage,
+      amount: parseFloat(term.amount)
+    })) || [],
+    // Contacts from API
+    contacts: fullSalesOrder.contact_details?.map((contact: any) => ({
+      name: contact.contact_name,
+      designation: contact.contact_designation,
+      email: contact.contact_email,
+      phone: contact.contact_no
+    })) || [],
+    // Comments from API
+    comments: fullSalesOrder.comments?.map((comment: any) => ({
+      text: comment.comments,
+      timestamp: comment.created_at,
+      author: 'System' // You might want to add author info in API
+    })) || []
+  } : salesOrder;
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
+    const upperStatus = status?.toUpperCase();
+    switch (upperStatus) {
+      case 'APPROVED':
         return 'bg-green-100 text-green-800';
-      case 'rejected':
+      case 'REJECTED':
         return 'bg-red-100 text-red-800';
-      case 'pending_approval':
+      case 'PENDING':
+      case 'PENDING_APPROVAL':
         return 'bg-yellow-100 text-yellow-800';
-      case 'draft':
+      case 'DRAFT':
         return 'bg-gray-100 text-gray-800';
-      case 'in_progress':
+      case 'IN_PROGRESS':
         return 'bg-blue-100 text-blue-800';
-      case 'completed':
+      case 'COMPLETED':
         return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -121,14 +274,14 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-gray-900">{salesOrder.orderNumber}</h2>
-            <p className="text-sm text-gray-600">{salesOrder.businessName}</p>
+            <h2 className="text-xl font-bold text-gray-900">{enhancedSalesOrder.so_number || salesOrder.orderNumber}</h2>
+            <p className="text-sm text-gray-600">{enhancedSalesOrder.lead_number}</p>
             <div className="flex items-center space-x-2 mt-1">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(salesOrder.status)}`}>
-                {salesOrder.status.replace('_', ' ')}
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(enhancedSalesOrder.approval_status || salesOrder.status)}`}>
+                {(enhancedSalesOrder.approval_status || salesOrder.status || '').replace('_', ' ')}
               </span>
               <span className="text-xs text-gray-500">
-                Created: {new Date(salesOrder.createdDate).toLocaleDateString('en-IN')}
+                Created: {new Date(enhancedSalesOrder.created_at || salesOrder.createdDate).toLocaleDateString('en-IN')}
               </span>
             </div>
           </div>
@@ -143,20 +296,48 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                 <Printer className="h-3 w-3 mr-1" />
                 Print
               </button>
-              <button 
+              {/* {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
+                <button
+                  onClick={handleSalesForApproval}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-1 border border-purple-300 rounded-md text-xs font-medium text-purple-700 bg-white hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="h-3 w-3 mr-1" />
+                  {loading ? 'Submitting...' : 'Sales for Approval'}
+                </button>
+              )} */}
+              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'APPROVED' && (
+                <button
+                  onClick={handleCreateProject}
+                  disabled={loading || projectCreated || enhancedSalesOrder?.is_project_created}
+                  className={`inline-flex items-center px-3 py-1 border rounded-md text-xs font-medium ${
+                    projectCreated
+                      ? 'border-green-500 text-green-800 bg-green-100 cursor-default'
+                      : 'border-green-300 text-green-700 bg-white hover:bg-green-50'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <FolderPlus className="h-3 w-3 mr-1" />
+                  {enhancedSalesOrder.is_project_created ? 'Project Created' : (loading ? 'Creating...' : 'Create Project')}
+                </button>
+              )}
+              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
+              <button
                 onClick={() => setIsEditModalOpen(true)}
                 className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
               >
                 <Edit className="h-3 w-3 mr-1" />
                 Edit
               </button>
-              <button 
+              )}
+              {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
+              <button
                 onClick={() => setIsDeleteModalOpen(true)}
                 className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-xs font-medium text-red-700 bg-white hover:bg-red-50"
               >
                 <Trash2 className="h-3 w-3 mr-1" />
                 Delete
               </button>
+              )}
             </div>
           </div>
         </div>
@@ -196,7 +377,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Business Name</div>
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.businessName}</div>
+                      <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.businessName}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Customer Branch</div>
@@ -208,15 +389,15 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Quotation Number</div>
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.quotationNumber}</div>
+                      <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.quotationNumber}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">BOM Number</div>
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.bomNumber}</div>
+                      <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bom_number}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Total Cost</div>
-                      <div className="text-sm font-medium text-green-600">{salesOrder.totalValue}</div>
+                      <div className="text-sm font-medium text-green-600">{enhancedSalesOrder.total_cost}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">SO Date</div>
@@ -374,28 +555,28 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.name || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.address}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.address || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.contactNumber}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.contactNumber || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.beneficiary.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.beneficiary?.email || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -408,28 +589,28 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.name || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.address}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.address || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.contactNumber}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.contactNumber || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.applicant.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.applicant?.email || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -442,28 +623,28 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.name || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.address}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.address || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Phone className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.contactNumber}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.contactNumber || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.bank.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.bank?.email || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -475,35 +656,35 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Guarantee Number</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.guaranteeNumber}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.guaranteeNumber || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Currency</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.currency}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.currency || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Guarantee Amount</div>
-                  <div className="text-sm font-medium text-green-600">{enhancedSalesOrder.bgInformation.guaranteeAmount}</div>
+                  <div className="text-sm font-medium text-green-600">{enhancedSalesOrder?.bgInformation?.guaranteeAmount || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Effective Date</div>
                   <div className="text-sm font-medium text-gray-900">
-                    {new Date(enhancedSalesOrder.bgInformation.effectiveDate).toLocaleDateString('en-IN')}
+                    {new Date(enhancedSalesOrder?.bgInformation?.effectiveDate).toLocaleDateString('en-IN')}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Expiry Date</div>
                   <div className="text-sm font-medium text-gray-900">
-                    {new Date(enhancedSalesOrder.bgInformation.expiryDate).toLocaleDateString('en-IN')}
+                    {new Date(enhancedSalesOrder?.bgInformation?.expiryDate).toLocaleDateString('en-IN')}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Purpose</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.purpose}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.purpose || '-'}</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">Exemption Type</div>
-                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder.bgInformation.exemptionType}</div>
+                  <div className="text-sm font-medium text-gray-900">{enhancedSalesOrder?.bgInformation?.exemptionType || '-'}</div>
                 </div>
               </div>
             </div>
@@ -674,12 +855,23 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
         <CreateSalesOrderModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          onSubmit={(updatedSalesOrder) => {
+          onSubmit={async (updatedSalesOrder) => {
             console.log('Updated sales order:', updatedSalesOrder);
-            // In a real app, this would update the sales order in the database
             setIsEditModalOpen(false);
+            // Refresh the sales order details
+            try {
+              const details = await getSalesOrderById(salesOrder.id);
+              setFullSalesOrder(details);
+              // Trigger parent refresh for list
+              if (onRefresh) {
+                onRefresh();
+              }
+            } catch (error) {
+              console.error('Error refreshing sales order:', error);
+            }
           }}
-          initialData={salesOrder}
+          editMode={true}
+          salesOrderData={fullSalesOrder}
         />
       )}
       
@@ -713,7 +905,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder }) => 
               <button
                 onClick={() => {
                   console.log('Deleting sales order:', salesOrder.id);
-                  // In a real app, this would delete the sales order from the database
+                  handleDelete(salesOrder.id);
                   setIsDeleteModalOpen(false);
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"

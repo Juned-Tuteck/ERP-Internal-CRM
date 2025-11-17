@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Calendar, Tag, Edit, Trash2, Download, CheckCircle, XCircle, Building2 } from 'lucide-react';
+import { getAllSalesOrders } from '../../../utils/salesOrderApi';
 
 interface SalesOrder {
   id: string;
@@ -7,6 +8,7 @@ interface SalesOrder {
   businessName: string;
   quotationNumber: string;
   bomNumber: string;
+  leadNumber: string;
   totalValue: string;
   createdBy: string;
   createdDate: string;
@@ -18,84 +20,80 @@ interface SalesOrder {
 interface SalesOrderListProps {
   selectedSalesOrder: SalesOrder | null;
   onSelectSalesOrder: (salesOrder: SalesOrder) => void;
+  refreshTrigger?: number;
 }
 
-const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onSelectSalesOrder }) => {
-  const salesOrders: SalesOrder[] = [
-    {
-      id: '1',
-      orderNumber: 'SO-2024-001',
-      businessName: 'TechCorp Solutions Pvt Ltd',
-      quotationNumber: 'QT-2024-001',
-      bomNumber: 'BOM-2024-001',
-      totalValue: '₹24,75,000',
-      createdBy: 'Rajesh Kumar',
-      createdDate: '2024-01-15',
-      projectStartDate: '2024-02-01',
-      projectEndDate: '2024-06-30',
-      status: 'approved',
-    },
-    {
-      id: '2',
-      orderNumber: 'SO-2024-002',
-      businessName: 'Innovate India Limited',
-      quotationNumber: 'QT-2024-002',
-      bomNumber: 'BOM-2024-002',
-      totalValue: '₹18,50,000',
-      createdBy: 'Priya Sharma',
-      createdDate: '2024-01-10',
-      projectStartDate: '2024-02-15',
-      projectEndDate: '2024-05-15',
-      status: 'pending_approval',
-    },
-    {
-      id: '3',
-      orderNumber: 'SO-2024-003',
-      businessName: 'Digital Solutions Enterprise',
-      quotationNumber: 'QT-2024-003',
-      bomNumber: 'BOM-2024-003',
-      totalValue: '₹32,80,000',
-      createdBy: 'Amit Singh',
-      createdDate: '2024-01-05',
-      projectStartDate: '2024-03-01',
-      projectEndDate: '2024-08-20',
-      status: 'in_progress',
-    },
-    {
-      id: '4',
-      orderNumber: 'SO-2023-045',
-      businessName: 'Manufacturing Industries Co',
-      quotationNumber: 'QT-2023-045',
-      bomNumber: 'BOM-2023-045',
-      totalValue: '₹12,45,000',
-      createdBy: 'Sneha Patel',
-      createdDate: '2023-12-28',
-      projectStartDate: '2024-01-15',
-      projectEndDate: '2024-07-10',
-      status: 'draft',
-    },
-    {
-      id: '5',
-      orderNumber: 'SO-2023-044',
-      businessName: 'FinTech Innovations Pvt Ltd',
-      quotationNumber: 'QT-2023-044',
-      bomNumber: 'BOM-2023-044',
-      totalValue: '₹19,30,000',
-      createdBy: 'Vikram Gupta',
-      createdDate: '2023-12-20',
-      projectStartDate: '2024-01-10',
-      projectEndDate: '2024-04-25',
-      status: 'rejected',
-    },
-  ];
+const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onSelectSalesOrder, refreshTrigger }) => {
+  const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSalesOrders = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllSalesOrders();
+        const mappedData = data.map((so: any) => ({
+          id: so.id,
+          orderNumber: so.so_number,
+          businessName: so.customer_id, // You may want to fetch customer name
+          quotationNumber: so.quotation_id,
+          leadNumber: so.lead_number || 'N/A',
+          bomNumber: so.bom_number || 'N/A',
+          totalValue: so.total_cost ? `₹${parseFloat(so.total_cost).toLocaleString('en-IN')}` : '₹0',
+          createdBy: so.created_by,
+          createdDate: so.created_at,
+          projectStartDate: so.estimated_start_date || '',
+          projectEndDate: so.estimated_end_date || '',
+          status: so.approval_status?.toLowerCase() || 'draft',
+        }));
+        setSalesOrders(mappedData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching sales orders:', err);
+        setError('Failed to load sales orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSalesOrders();
+  }, [refreshTrigger]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <div className="text-gray-500">Loading sales orders...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <div className="text-red-600">
+          {error}
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-2 text-blue-600 underline"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case 'approved':
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
       case 'pending_approval':
+      case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'draft':
         return 'bg-gray-100 text-gray-800';
@@ -109,12 +107,14 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case 'approved':
         return <CheckCircle className="h-4 w-4 text-green-600 mr-1" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-red-600 mr-1" />;
       case 'pending_approval':
+      case 'pending':
         return <Calendar className="h-4 w-4 text-yellow-600 mr-1" />;
       case 'draft':
         return <Edit className="h-4 w-4 text-gray-600 mr-1" />;
@@ -133,7 +133,7 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
         <h3 className="text-lg font-semibold text-gray-900">All Sales Orders</h3>
         <p className="text-sm text-gray-500">{salesOrders.length} total sales orders</p>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -141,39 +141,47 @@ const SalesOrderList: React.FC<SalesOrderListProps> = ({ selectedSalesOrder, onS
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Order Details
               </th>
-              
+
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {salesOrders.map((salesOrder) => (
-              <tr 
-                key={salesOrder.id} 
+              <tr
+                key={salesOrder.id}
                 className={`hover:bg-gray-50 cursor-pointer ${selectedSalesOrder?.id === salesOrder.id ? 'bg-blue-50' : ''}`}
                 onClick={() => onSelectSalesOrder(salesOrder)}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <ShoppingCart className="h-5 w-5 text-gray-500" />
+                    <div className='flex items-center'>
+                      <div className="flex-shrink-0">
+                        <ShoppingCart className="h-5 w-5 text-gray-500" />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{salesOrder.orderNumber}</div>
+                        <div className="text-xs text-gray-500">
+                          <div className="flex items-center">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {salesOrder.leadNumber}
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <div className="flex items-center">
+                            <Tag className="h-3 w-3 mr-1" />
+                            BOM: {salesOrder.bomNumber}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{salesOrder.orderNumber}</div>
-                      <div className="text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {salesOrder.businessName}
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        <div className="flex items-center">
-                          <Tag className="h-3 w-3 mr-1" />
-                          BOM: {salesOrder.bomNumber}
-                        </div>
-                      </div>
+                    <div className="ml-auto text-right">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(salesOrder.status)}`}>
+                        {getStatusIcon(salesOrder.status)}
+                        {salesOrder.status.replace('_', ' ').toUpperCase()}
+                      </span>
                     </div>
                   </div>
                 </td>
-                
+
               </tr>
             ))}
           </tbody>

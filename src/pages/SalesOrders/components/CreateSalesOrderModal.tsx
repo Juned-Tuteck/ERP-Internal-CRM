@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
+import { createSalesOrder, updateSalesOrderStep1, updateSalesOrderContacts, updateSalesOrderComments, getLeadWonQuotations, getQuotationById, LeadWonQuotation } from '../../../utils/salesOrderApi';
 
 interface CreateSalesOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (salesOrderData: any) => void;
+  editMode?: boolean;
+  salesOrderData?: any;
 }
 
 interface ContactPerson {
@@ -19,14 +22,21 @@ interface PaymentTerm {
   id: string;
   description: string;
   termType: string;
+  materialType: string;
   percentage: number;
   amount: number;
 }
 
-const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, onClose, onSubmit, editMode = false, salesOrderData = null }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(false);
+  const [quotations, setQuotations] = useState<LeadWonQuotation[]>([]);
+  const [loadingQuotations, setLoadingQuotations] = useState(false);
+
+  const getInitialFormData = () => ({
     // Step 1: General Information
+    salesOrderType: 'Sales Order',
+    leadNumber: '',
     quotationId: '',
     quotationNumber: '',
     businessName: '',
@@ -34,12 +44,13 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     contactPerson: '',
     bomNumber: '',
     totalCost: '',
-    currency: 'INR',
+    currency: '',
     soDate: new Date().toISOString().split('T')[0],
     comments: '',
     // Project Details
     workOrderNumber: '',
-    manpowerServiceQuotation: '',
+    workOrderTenureMonths: '',
+    projectName: '',
     workOrderAmount: '',
     workOrderDate: new Date().toISOString().split('T')[0],
     projectStartDate: '',
@@ -48,7 +59,8 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     projectTemplate: '',
     projectAddress: '',
     // BG Information
-    isGovernment: false,
+    isGovernment: true,
+    issueDate: '',
     beneficiaryName: '',
     beneficiaryAddress: '',
     beneficiaryContactNumber: '',
@@ -62,17 +74,17 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     bankContactNumber: '',
     bankEmail: '',
     guaranteeNumber: '',
-    guaranteeCurrency: 'INR',
+    guaranteeCurrency: '',
     guaranteeAmount: '',
     effectiveDate: '',
     expiryDate: '',
     purpose: '',
-    exemptionType: '',
+    guaranteeType: '',
     // Material Costs
     materialCosts: [
-      { type: 'High Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-      { type: 'Low Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-      { type: 'Installation', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 }
+      { type: 'HIGH SIDE SUPPLY', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
+      { type: 'LOW SIDE SUPPLY', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
+      { type: 'INSTALLATION', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 }
     ],
     // Payment Terms
     paymentTerms: [] as PaymentTerm[],
@@ -82,17 +94,157 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     orderComments: ''
   });
 
+  const [formData, setFormData] = useState(getInitialFormData());
+
+  const resetForm = () => {
+    setFormData(getInitialFormData());
+    setCurrentStep(1);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editMode && salesOrderData) {
+        console.log('Prefilling form data for edit mode:', salesOrderData);
+        prefillFormData(salesOrderData);
+      } else {
+        fetchQuotations();
+      }
+    }
+  }, [isOpen, editMode, salesOrderData]);
+
+  const prefillFormData = (data: any) => {
+    setFormData({
+      // Step 1: General Information
+      salesOrderType: data.sales_order_type || 'SO',
+      leadNumber: data.lead_number || '',
+      quotationId: data.quotation_id || '',
+      quotationNumber: data.quotation_number || '',
+      businessName: data.business_name || '',
+      customerBranch: data.customer_branch_name || '',
+      contactPerson: data.contact_person_name || '',
+      bomNumber: data.bom_number || '',
+      totalCost: data.total_cost || '',
+      currency: data.guarantee_currency || 'INR',
+      soDate: data.so_date ? new Date(data.so_date).toISOString().split('T')[0] : '',
+      comments: data.so_comments || '',
+      // Project Details
+      workOrderNumber: data.work_order_number || '',
+      workOrderTenureMonths: data.workorder_tenure_months || '',
+      workOrderAmount: data.work_order_amount || '',
+      workOrderDate: data.work_order_date ? new Date(data.work_order_date).toISOString().split('T')[0] : '',
+      projectName: data.project_name || '',
+      projectCategory: data.project_category || '',
+      projectTemplate: data.project_template || '',
+      projectAddress: data.project_address || '',
+      projectStartDate: data.estimated_start_date ? new Date(data.estimated_start_date).toISOString().split('T')[0] : '',
+      projectEndDate: data.estimated_end_date ? new Date(data.estimated_end_date).toISOString().split('T')[0] : '',
+      // BG Information
+      isGovernment: true,
+      beneficiaryName: data.beneficiary_name || '',
+      beneficiaryAddress: data.beneficiary_address || '',
+      beneficiaryContactNumber: data.beneficiary_contact_number || '',
+      beneficiaryEmail: data.beneficiary_email || '',
+      applicantName: data.applicant_name || '',
+      applicantAddress: data.applicant_address || '',
+      applicantContactNumber: data.applicant_contact_number || '',
+      applicantEmail: data.applicant_email || '',
+      bankName: data.bank_name || '',
+      bankAddress: data.bank_address || '',
+      bankContactNumber: data.bank_contact_number || '',
+      bankEmail: data.bank_email || '',
+      guaranteeNumber: data.guarantee_number || '',
+      guaranteeCurrency: data.guarantee_currency || '',
+      guaranteeAmount: data.guarantee_amount || '',
+      issueDate: data.issue_date ? new Date(data.issue_date).toISOString().split('T')[0] : '',
+      effectiveDate: data.effective_date ? new Date(data.effective_date).toISOString().split('T')[0] : '',
+      expiryDate: data.expiry_date ? new Date(data.expiry_date).toISOString().split('T')[0] : '',
+      purpose: data.purpose || '',
+      guaranteeType: data.guarantee_type || '',
+      // Material Costs
+      materialCosts: data.material_type_details?.map((item: any) => ({
+        id: item.id,
+        type: item.material_type,
+        gstPercentage: item.gst,
+        amountBasic: item.amount_basic,
+        amountWithGst: item.amount_with_gst
+      })) || [],
+      // Payment Terms
+      paymentTerms: data.payment_terms?.map((term: any) => ({
+        id: term.id,
+        description: term.term_comments || '',
+        termType: term.payment_terms_type,
+        materialType: term.material_type,
+        percentage: term.percentage,
+        amount: term.amount
+      })) || [],
+      // Contacts
+      contacts: data.contact_details?.map((contact: any) => ({
+        id: contact.id,
+        name: contact.contact_name,
+        designation: contact.contact_designation,
+        email: contact.contact_email,
+        phone: contact.contact_no
+      })) || [],
+      // Comments
+      orderComments: data.comments?.map((c: any) => c.comments).join('\n') || ''
+    });
+  };
+
+  const fetchQuotations = async () => {
+    try {
+      setLoadingQuotations(true);
+      const data = await getLeadWonQuotations();
+      setQuotations(data);
+    } catch (error) {
+      console.error('Error fetching quotations:', error);
+    } finally {
+      setLoadingQuotations(false);
+    }
+  };
+
+  const handleQuotationChange = async (quotationId: string) => {
+    if (!quotationId) return;
+
+    try {
+      setLoading(true);
+      const details = await getQuotationById(quotationId);
+      console.log('Quotation Details:', details);
+
+      setFormData(prev => ({
+        ...prev,
+        quotationId: details.quotationId,
+        quotationNumber: details.customerQuotationNumber,
+        leadNumber: details.lead.leadNumber,
+        businessName: details.lead.businessName,
+        customerBranch: details.customerBranch.name,
+        contactPerson: details.contactPerson.name,
+        bomNumber: details.bomNumber,
+        totalCost: details.grandTotalGst,
+        projectName: details.lead.projectName,
+        materialCosts: [
+          { type: 'HIGH SIDE SUPPLY', gstPercentage: details.highSideGstPercentage || 0, amountBasic: details.highSideCostWithoutGst || 0, amountWithGst: details.highSideCostWithGst || 0 },
+          { type: 'LOW SIDE SUPPLY', gstPercentage: details.lowSideGstPercentage || 0, amountBasic: details.lowSideCostWithoutGst || 0, amountWithGst: details.lowSideCostWithGst || 0 },
+          { type: 'INSTALLATION', gstPercentage: details.installationGstPercentage || 0, amountBasic: details.installationCostWithoutGst || 0, amountWithGst: details.installationCostWithGst || 0 }
+        ]
+      }));
+      console.log('Form Data to Submit:', formData);
+    } catch (error) {
+      console.error('Error fetching quotation details:', error);
+      alert('Error loading quotation details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const steps = [
     { id: 1, name: 'General Information', description: 'Order and project details' },
     { id: 2, name: 'SO Contact Info', description: 'Contact information' },
     { id: 3, name: 'SO Comments', description: 'Additional notes' }
-  ];
-
-  // Mock data for dropdowns
-  const quotations = [
-    { id: '1', number: 'QT-2024-001', businessName: 'TechCorp Solutions Pvt Ltd', bomNumber: 'BOM-2024-001', totalValue: '₹24,75,000', isGovernment: true },
-    { id: '2', number: 'QT-2024-002', businessName: 'Innovate India Limited', bomNumber: 'BOM-2024-002', totalValue: '₹18,50,000', isGovernment: false },
-    { id: '3', number: 'QT-2024-003', businessName: 'Digital Solutions Enterprise', bomNumber: 'BOM-2024-003', totalValue: '₹32,80,000', isGovernment: false }
   ];
 
   const branches = {
@@ -108,27 +260,18 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   };
 
   const projectCategories = ['Commercial', 'Residential', 'Industrial', 'Healthcare', 'Educational', 'Government'];
+  const guaranteeTypes = ['ADVANCE PAYMENT GUARANTEE', 'BID BOND', 'FINANCIAL GUARANTEE', 'PERFORMANCE GUARANTEE'];
   const projectTemplates = ['Standard Ventilation Project', 'Commercial HVAC Project', 'Healthcare AMC Project', 'Residential Retrofit Project', 'Commercial Chiller Project'];
-  const termTypes = ['On Order', 'On Delivery', 'On Installation', 'After Commissioning', 'After Handover'];
   const purposes = ['Performance Guarantee', 'Advance Payment Guarantee', 'Retention Money Guarantee', 'Bid Bond'];
-  const exemptionTypes = ['None', 'Partial', 'Full'];
+
+  const materialTypes = ['HIGH SIDE SUPPLY', 'LOW SIDE SUPPLY', 'INSTALLATION'];
+  const paymentTermTypes = ['Advance along with order', 'After Commissioning', 'After DLP', 'After Handing over', 'After Installation', 'Before dispatch against PI'];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (name === 'quotationId') {
-      const selectedQuotation = quotations.find(q => q.id === value);
-      if (selectedQuotation) {
-        setFormData(prev => ({
-          ...prev,
-          quotationId: value,
-          quotationNumber: selectedQuotation.number,
-          businessName: selectedQuotation.businessName,
-          bomNumber: selectedQuotation.bomNumber,
-          totalCost: selectedQuotation.totalValue,
-          isGovernment: selectedQuotation.isGovernment
-        }));
-      }
+      handleQuotationChange(value);
     } else {
       setFormData(prev => ({
         ...prev,
@@ -140,7 +283,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const handleMaterialCostChange = (index: number, field: string, value: string) => {
     const updatedCosts = [...formData.materialCosts];
     const numValue = parseFloat(value) || 0;
-    
+
     if (field === 'amountBasic') {
       updatedCosts[index].amountBasic = numValue;
       updatedCosts[index].amountWithGst = numValue * (1 + updatedCosts[index].gstPercentage / 100);
@@ -148,7 +291,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       updatedCosts[index].gstPercentage = numValue;
       updatedCosts[index].amountWithGst = updatedCosts[index].amountBasic * (1 + numValue / 100);
     }
-    
+
     setFormData(prev => ({
       ...prev,
       materialCosts: updatedCosts
@@ -158,9 +301,10 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   // Payment Terms Management
   const addPaymentTerm = () => {
     const newTerm: PaymentTerm = {
-      id: Date.now().toString(),
+      id: '',
       description: '',
       termType: '',
+      materialType: '',
       percentage: 0,
       amount: 0
     };
@@ -173,16 +317,28 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const updatePaymentTerm = (id: string, field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
-      paymentTerms: prev.paymentTerms.map(term => {
+      paymentTerms: prev.paymentTerms?.map(term => {
         if (term.id === id) {
           const updatedTerm = { ...term, [field]: value };
-          
-          // If percentage is updated, recalculate amount
-          if (field === 'percentage') {
-            const totalCostValue = parseFloat(prev.totalCost.replace(/[₹,]/g, '')) || 0;
-            updatedTerm.amount = totalCostValue * (updatedTerm.percentage / 100);
+
+          // If percentage or materialType is updated, recalculate amount based on material cost
+          if (field === 'percentage' || field === 'materialType') {
+            const materialType = field === 'materialType' ? value : term.materialType;
+            const percentage = field === 'percentage' ? Number(value) : term.percentage;
+
+            // Find the material cost for the selected material type
+            const materialCost = prev.materialCosts.find(
+              cost => cost.type === materialType
+            );
+
+            if (materialCost && materialCost.amountWithGst) {
+              // Calculate amount based on material's amountWithGst
+              updatedTerm.amount = materialCost.amountWithGst * (percentage / 100);
+            } else {
+              updatedTerm.amount = 0;
+            }
           }
-          
+
           return updatedTerm;
         }
         return term;
@@ -215,7 +371,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const updateContact = (id: string, field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      contacts: prev.contacts.map(contact => 
+      contacts: prev.contacts.map(contact =>
         contact.id === id ? { ...contact, [field]: value } : contact
       )
     }));
@@ -228,7 +384,14 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+
+    if (editMode) {
+      console.log('Edit mode - saving current step');
+      await handleSaveStep();
+      return;
+    }
+
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -240,61 +403,253 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // const handleSaveStep = async () => {
+  //   if (!editMode || !salesOrderData?.id) return;
+
+  //   setLoading(true);
+  //   try {
+  //     if (currentStep === 1) {
+  //       // Update Step 1: General Information + Project Details + BG Info
+  //       const updateData = {
+  //         sales_order_type: formData.salesOrderType === 'Sales Order' ? 'SO' : 'WO',
+  //         so_date: formData.soDate,
+  //         so_comments: formData.comments,
+  //         work_order_number: formData.workOrderNumber,
+  //         workorder_tenure_months: formData.workOrderTenureMonths ? parseInt(formData.workOrderTenureMonths) : null,
+  //         project_name: formData.projectName,
+  //         work_order_amount: formData.workOrderAmount,
+  //         work_order_date: formData.workOrderDate,
+  //         estimated_start_date: formData.projectStartDate,
+  //         estimated_end_date: formData.projectEndDate,
+  //         project_category: formData.projectCategory,
+  //         project_template: formData.projectTemplate,
+  //         project_address: formData.projectAddress,
+  //         beneficiary_name: formData.beneficiaryName,
+  //         beneficiary_address: formData.beneficiaryAddress,
+  //         beneficiary_contact_number: formData.beneficiaryContactNumber,
+  //         beneficiary_email: formData.beneficiaryEmail,
+  //         applicant_name: formData.applicantName,
+  //         applicant_address: formData.applicantAddress,
+  //         applicant_contact_number: formData.applicantContactNumber,
+  //         applicant_email: formData.applicantEmail,
+  //         bank_name: formData.bankName,
+  //         bank_address: formData.bankAddress,
+  //         bank_contact_number: formData.bankContactNumber,
+  //         bank_email: formData.bankEmail,
+  //         guarantee_number: formData.guaranteeNumber,
+  //         guarantee_currency: formData.guaranteeCurrency,
+  //         guarantee_amount: formData.guaranteeAmount,
+  //         issue_date: formData.issueDate,
+  //         effective_date: formData.effectiveDate,
+  //         expiry_date: formData.expiryDate,
+  //         purpose: formData.purpose,
+  //         guarantee_type: formData.guaranteeType,
+  //       };
+  //       await updateSalesOrderStep1(salesOrderData.id, updateData);
+  //       alert('Step 1 updated successfully!');
+  //     } else if (currentStep === 2) {
+  //       // Update Step 2: Contacts
+  //       const contactsData = formData.contacts.map(contact => ({
+  //         contact_name: contact.name,
+  //         contact_designation: contact.designation,
+  //         contact_email: contact.email,
+  //         contact_no: contact.phone,
+  //       }));
+  //       await updateSalesOrderContacts(salesOrderData.id, contactsData);
+  //       alert('Contacts updated successfully!');
+  //     } else if (currentStep === 3) {
+  //       // Update Step 3: Comments
+  //       if (formData.orderComments.trim()) {
+  //         await updateSalesOrderComments(salesOrderData.id, formData.orderComments);
+  //         alert('Comments updated successfully!');
+  //       }
+  //     }
+
+  //     onSubmit({ success: true });
+  //   } catch (error) {
+  //     console.error('Error updating sales order:', error);
+  //     alert('Error updating sales order. Please try again.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const handleSaveStep = async () => {
+    if (!editMode || !salesOrderData?.id) return;
+    setLoading(true);
+
+    try {
+      if (currentStep === 1) {
+        const salesOrderPayload = {
+          sales_order_type: formData.salesOrderType === "Sales Order" ? "SO" : "WO",
+          so_date: formData.soDate,
+          so_comments: formData.comments,
+          work_order_number: formData.workOrderNumber,
+          workorder_tenure_months: Number(formData.workOrderTenureMonths) || null,
+          work_order_amount: formData.workOrderAmount,
+          work_order_date: formData.workOrderDate,
+          estimated_start_date: formData.projectStartDate,
+          estimated_end_date: formData.projectEndDate,
+          project_name: formData.projectName,
+          project_category: formData.projectCategory,
+          project_template: formData.projectTemplate,
+          project_address: formData.projectAddress,
+          beneficiary_name: formData.beneficiaryName,
+          beneficiary_address: formData.beneficiaryAddress,
+          beneficiary_contact_number: formData.beneficiaryContactNumber,
+          beneficiary_email: formData.beneficiaryEmail,
+          applicant_name: formData.applicantName,
+          applicant_address: formData.applicantAddress,
+          applicant_contact_number: formData.applicantContactNumber,
+          applicant_email: formData.applicantEmail,
+          bank_name: formData.bankName,
+          bank_address: formData.bankAddress,
+          bank_contact_number: formData.bankContactNumber,
+          bank_email: formData.bankEmail,
+          guarantee_number: formData.guaranteeNumber,
+          guarantee_currency: formData.guaranteeCurrency,
+          guarantee_amount: formData.guaranteeAmount,
+          issue_date: formData.issueDate,
+          effective_date: formData.effectiveDate,
+          expiry_date: formData.expiryDate,
+          purpose: formData.purpose,
+          guarantee_type: formData.guaranteeType,
+        };
+
+        await updateSalesOrderStep1(salesOrderData.id, {
+          salesOrder: salesOrderPayload,
+          materialCosts: formData.materialCosts,
+          paymentTerms: formData.paymentTerms,
+        });
+
+        alert("Step 1 updated successfully!");
+      } else if (currentStep === 2) {
+        // Update Step 2: Contacts
+        const contactsData = formData.contacts.map(contact => ({
+          id: contact.id,
+          contact_name: contact.name,
+          contact_designation: contact.designation,
+          contact_email: contact.email,
+          contact_no: contact.phone,
+        }));
+        await updateSalesOrderContacts(salesOrderData.id, contactsData);
+        alert('Contacts updated successfully!');
+      } else if (currentStep === 3) {
+        // Update Step 3: Comments
+        if (formData.orderComments.trim()) {
+          await updateSalesOrderComments(salesOrderData.id, formData.orderComments);
+          alert('Comments updated successfully!');
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to update sales order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    
-    // Reset form
-    setCurrentStep(1);
-    setFormData({
-      quotationId: '',
-      quotationNumber: '',
-      businessName: '',
-      customerBranch: '',
-      contactPerson: '',
-      bomNumber: '',
-      totalCost: '',
-      currency: 'INR',
-      soDate: new Date().toISOString().split('T')[0],
-      comments: '',
-      workOrderNumber: '',
-      manpowerServiceQuotation: '',
-      workOrderAmount: '',
-      workOrderDate: new Date().toISOString().split('T')[0],
-      projectStartDate: '',
-      projectEndDate: '',
-      projectCategory: '',
-      projectTemplate: '',
-      projectAddress: '',
-      isGovernment: false,
-      beneficiaryName: '',
-      beneficiaryAddress: '',
-      beneficiaryContactNumber: '',
-      beneficiaryEmail: '',
-      applicantName: '',
-      applicantAddress: '',
-      applicantContactNumber: '',
-      applicantEmail: '',
-      bankName: '',
-      bankAddress: '',
-      bankContactNumber: '',
-      bankEmail: '',
-      guaranteeNumber: '',
-      guaranteeCurrency: 'INR',
-      guaranteeAmount: '',
-      effectiveDate: '',
-      expiryDate: '',
-      purpose: '',
-      exemptionType: '',
-      materialCosts: [
-        { type: 'High Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-        { type: 'Low Side Supply', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 },
-        { type: 'Installation', gstPercentage: 18, amountBasic: 0, amountWithGst: 0 }
-      ],
-      paymentTerms: [],
-      contacts: [],
-      orderComments: ''
-    });
+
+    if (editMode) {
+      console.log('Edit mode - saving current step');
+      await handleSaveStep();
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Get the selected quotation to extract lead_id, customer_id, bom_id
+      const selectedQuotation = quotations.find(q => q.quotation_id === formData.quotationId);
+      console.log('Selected Quotation:', selectedQuotation);
+
+      if (!selectedQuotation) {
+        alert('Please select a valid quotation');
+        setLoading(false);
+        return;
+      }
+
+      // Map Sales Order Type to enum values (SO or WO)
+      const salesOrderTypeEnum = formData.salesOrderType === 'Sales Order' ? 'SO' : 'WO';
+
+      const salesOrderData = {
+        salesOrder: {
+          sales_order_type: salesOrderTypeEnum,
+          lead_id: selectedQuotation.lead_id,
+          quotation_id: formData.quotationId,
+          customer_id: selectedQuotation.customer_id,
+          customer_branch_id: selectedQuotation.customer_branch_id,
+          customer_contact_person: selectedQuotation.contact_person,
+          total_cost: formData.totalCost,
+          bom_id: selectedQuotation.quotation_bom_id,
+          so_date: formData.soDate,
+          so_comments: formData.comments,
+        },
+        projectDetails: {
+          work_order_number: formData.workOrderNumber,
+          workorder_tenure_months: formData.workOrderTenureMonths ? parseInt(formData.workOrderTenureMonths) : null,
+          project_name: formData.projectName,
+          work_order_amount: formData.workOrderAmount,
+          work_order_date: formData.workOrderDate,
+          estimated_start_date: formData.projectStartDate,
+          estimated_end_date: formData.projectEndDate,
+          project_category: formData.projectCategory,
+          project_template: formData.projectTemplate,
+          project_address: formData.projectAddress,
+        },
+        bankGuaranteeInfo: formData.isGovernment ? {
+          issue_date: formData.issueDate,
+          guarantee_type: formData.guaranteeType,
+          beneficiary_name: formData.beneficiaryName,
+          beneficiary_address: formData.beneficiaryAddress,
+          beneficiary_contact_number: formData.beneficiaryContactNumber,
+          beneficiary_email: formData.beneficiaryEmail,
+          applicant_name: formData.applicantName,
+          applicant_address: formData.applicantAddress,
+          applicant_contact_number: formData.applicantContactNumber,
+          applicant_email: formData.applicantEmail,
+          bank_name: formData.bankName,
+          bank_address: formData.bankAddress,
+          bank_contact_number: formData.bankContactNumber,
+          bank_email: formData.bankEmail,
+          guarantee_number: formData.guaranteeNumber,
+          guarantee_currency: formData.guaranteeCurrency,
+          guarantee_amount: formData.guaranteeAmount,
+          effective_date: formData.effectiveDate,
+          expiry_date: formData.expiryDate,
+          purpose: formData.purpose,
+        } : undefined,
+        materialCosts: formData.materialCosts.map(cost => ({
+          material_type: cost.type,
+          gst_percentage: cost.gstPercentage,
+          amount_basic: cost.amountBasic,
+          amount_with_gst: cost.amountWithGst,
+        })),
+        paymentTerms: formData.paymentTerms.map(term => ({
+          payment_term_type: term.termType,
+          material_type: term.materialType,
+          description: term.description,
+          percentage: term.percentage,
+          amount: term.amount,
+        })),
+        contacts: formData.contacts,
+        orderComments: formData.orderComments,
+      };
+
+      const response = await createSalesOrder(salesOrderData);
+      onSubmit(response.data);
+
+      // Reset form after successful submission
+      resetForm();
+    } catch (error) {
+      console.error('Error creating sales order:', error);
+      alert('Error creating sales order. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -304,11 +659,11 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Create Sales Order</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{editMode ? 'Edit Sales Order' : 'Create Sales Order'}</h3>
             <p className="text-sm text-gray-500">Step {currentStep} of 3</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -320,14 +675,15 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           <nav className="flex space-x-4">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-2 ${
-                  currentStep === step.id ? 'text-blue-600' : 
-                  currentStep > step.id ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    currentStep === step.id ? 'bg-blue-100 text-blue-600' :
+                <div
+                  className={`flex items-center space-x-2 ${currentStep === step.id ? 'text-blue-600' :
+                    currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                    } ${editMode ? 'cursor-pointer hover:opacity-80' : ''}`}
+                  onClick={() => editMode && setCurrentStep(step.id)}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id ? 'bg-blue-100 text-blue-600' :
                     currentStep > step.id ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                  }`}>
+                    }`}>
                     {step.id}
                   </div>
                   <div>
@@ -361,13 +717,49 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                         value={formData.quotationId}
                         onChange={handleInputChange}
                         required
+                        disabled={loadingQuotations}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        <option value="">Select Quotation</option>
-                        {quotations.map(quotation => (
-                          <option key={quotation.id} value={quotation.id}>{quotation.number} - {quotation.businessName}</option>
+                        <option value="">{loadingQuotations ? 'Loading...' : 'Select Quotation'}</option>
+                        {editMode ? (
+                          <option value={formData.quotationId}>{formData.quotationNumber}</option>
+                        ) : null}
+                        {quotations.map(q => (
+                          <option key={q.quotation_id} value={q.quotation_id}>
+                            {q.customer_quotation_number}
+                          </option>
                         ))}
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Sales Order Type *
+                      </label>
+                      <select
+                        name="salesOrderType"
+                        value={formData.salesOrderType === 'SO' ? 'Sales Order' : formData.salesOrderType === 'WO' ? 'Work Order' : formData.salesOrderType}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="Sales Order">Sales Order</option>
+                        <option value="Work Order">Work Order</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Number
+                      </label>
+                      <input
+                        type="text"
+                        name="leadNumber"
+                        value={formData.leadNumber}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
+                        placeholder="Auto-filled from quotation"
+                      />
                     </div>
 
                     {formData.quotationId && (
@@ -400,39 +792,28 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Customer Branch *
+                            Customer Branch
                           </label>
-                          <select
+                          <input
+                            type="text"
                             name="customerBranch"
                             value={formData.customerBranch}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select Branch</option>
-                            {formData.businessName && branches[formData.businessName as keyof typeof branches]?.map(branch => (
-                              <option key={branch} value={branch}>{branch}</option>
-                            ))}
-                          </select>
+                            readOnly
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
+                          />
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Contact Person *
+                            Contact Person
                           </label>
-                          <select
+                          <input
+                            type="text"
                             name="contactPerson"
                             value={formData.contactPerson}
-                            onChange={handleInputChange}
-                            required
-                            disabled={!formData.customerBranch}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                          >
-                            <option value="">Select Contact Person</option>
-                            {formData.customerBranch && contactPersons[formData.customerBranch as keyof typeof contactPersons]?.map(person => (
-                              <option key={person} value={person}>{person}</option>
-                            ))}
-                          </select>
+                            readOnly
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
+                          />
                         </div>
 
                         <div>
@@ -448,7 +829,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                           />
                         </div>
 
-                        <div>
+                        {/* <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Currency
                           </label>
@@ -462,7 +843,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             <option value="USD">US Dollar ($)</option>
                             <option value="EUR">Euro (€)</option>
                           </select>
-                        </div>
+                        </div> */}
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -518,15 +899,30 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Manpower/Service Quotation
+                            Work Order Tenure (in months)
+                          </label>
+                          <input
+                            type="number"
+                            name="workOrderTenureMonths"
+                            value={formData.workOrderTenureMonths}
+                            onChange={handleInputChange}
+                            min="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter tenure in months"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Project Name
                           </label>
                           <input
                             type="text"
-                            name="manpowerServiceQuotation"
-                            value={formData.manpowerServiceQuotation}
+                            name="projectName"
+                            value={formData.projectName}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter quotation reference"
+                            placeholder="Enter project name"
                           />
                         </div>
 
@@ -640,9 +1036,23 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                     </div>
 
                     {/* BG Information (Conditional) */}
-                    {formData.isGovernment && (
+                    {formData.isGovernment === true && (
                       <div>
                         <h4 className="text-lg font-medium text-gray-900 mb-4">Bank Guarantee Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Issue Date
+                            </label>
+                            <input
+                              type="date"
+                              name="issueDate"
+                              value={formData.issueDate}
+                              onChange={handleInputChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           {/* Beneficiary Details */}
                           <div className="border border-gray-200 rounded-lg p-4">
@@ -706,7 +1116,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Applicant Details */}
                           <div className="border border-gray-200 rounded-lg p-4">
                             <h5 className="text-sm font-medium text-gray-900 mb-3">Applicant Details</h5>
@@ -769,7 +1179,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Bank Details */}
                           <div className="border border-gray-200 rounded-lg p-4">
                             <h5 className="text-sm font-medium text-gray-900 mb-3">Bank Details</h5>
@@ -833,7 +1243,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -848,7 +1258,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               placeholder="Enter guarantee number"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Currency
@@ -864,7 +1274,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               <option value="EUR">Euro (€)</option>
                             </select>
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Guarantee Amount
@@ -878,7 +1288,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               placeholder="Enter amount"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Effective Date
@@ -891,7 +1301,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Expiry Date
@@ -904,7 +1314,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Purpose
@@ -921,19 +1331,19 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               ))}
                             </select>
                           </div>
-                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Exemption Type
+                              Guarantee Type
                             </label>
                             <select
-                              name="exemptionType"
-                              value={formData.exemptionType}
+                              name="guaranteeType"
+                              value={formData.guaranteeType}
                               onChange={handleInputChange}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
-                              <option value="">Select Exemption Type</option>
-                              {exemptionTypes.map(type => (
+                              <option value="">Select Guarantee Type</option>
+                              {guaranteeTypes.map(type => (
                                 <option key={type} value={type}>{type}</option>
                               ))}
                             </select>
@@ -982,7 +1392,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             ))}
                           </tbody>
                           <tfoot className="bg-gray-50">
-                            <tr>
+                            {/* <tr>
                               <td colSpan={2} className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6">Total:</td>
                               <td className="px-3 py-3.5 text-sm font-semibold text-gray-900">
                                 ₹{formData.materialCosts.reduce((sum, cost) => sum + cost.amountBasic, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
@@ -990,7 +1400,32 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                               <td className="px-3 py-3.5 text-sm font-semibold text-green-600">
                                 ₹{formData.materialCosts.reduce((sum, cost) => sum + cost.amountWithGst, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                               </td>
+                            </tr> */}
+                            <tr>
+                              <td
+                                colSpan={2}
+                                className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6"
+                              >
+                                Total:
+                              </td>
+
+                              {/* Total Basic Amount */}
+                              <td className="px-3 py-3.5 text-sm font-semibold text-gray-900">
+                                ₹
+                                {formData.materialCosts
+                                  .reduce((sum, cost) => sum + Number(cost.amountBasic || 0), 0)
+                                  .toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                              </td>
+
+                              {/* Total With GST */}
+                              <td className="px-3 py-3.5 text-sm font-semibold text-green-600">
+                                ₹
+                                {formData.materialCosts
+                                  .reduce((sum, cost) => sum + Number(cost.amountWithGst || 0), 0)
+                                  .toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                              </td>
                             </tr>
+
                           </tfoot>
                         </table>
                       </div>
@@ -998,8 +1433,11 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
 
                     {/* Payment Terms */}
                     <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-lg font-medium text-gray-900">Sales Order Payment Terms</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">Sales Order Payment Terms</h4>
+                          <p className="text-xs text-gray-500 mt-1">Amount is calculated as percentage of selected Material Type's Amount with GST</p>
+                        </div>
                         <button
                           type="button"
                           onClick={addPaymentTerm}
@@ -1009,13 +1447,14 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                           Add Payment Term
                         </button>
                       </div>
-                      
+
                       {formData.paymentTerms.length > 0 ? (
                         <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
                           <table className="min-w-full divide-y divide-gray-300">
                             <thead className="bg-gray-50">
                               <tr>
                                 <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Description</th>
+                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Material Type</th>
                                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Term Type</th>
                                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Percentage</th>
                                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Amount</th>
@@ -1036,12 +1475,24 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                                   </td>
                                   <td className="whitespace-nowrap px-3 py-4 text-sm">
                                     <select
+                                      value={term.materialType}
+                                      onChange={(e) => updatePaymentTerm(term.id, 'materialType', e.target.value)}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                      <option value="">Select Material Type</option>
+                                      {materialTypes.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                    <select
                                       value={term.termType}
                                       onChange={(e) => updatePaymentTerm(term.id, 'termType', e.target.value)}
                                       className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
                                       <option value="">Select Term Type</option>
-                                      {termTypes.map(type => (
+                                      {paymentTermTypes.map(type => (
                                         <option key={type} value={type}>{type}</option>
                                       ))}
                                     </select>
@@ -1073,7 +1524,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             {formData.paymentTerms.length > 0 && (
                               <tfoot className="bg-gray-50">
                                 <tr>
-                                  <td colSpan={2} className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6">Total:</td>
+                                  <td colSpan={3} className="py-3.5 pl-4 pr-3 text-right text-sm font-semibold text-gray-900 sm:pl-6">Total:</td>
                                   <td className="px-3 py-3.5 text-sm font-semibold text-gray-900">
                                     {formData.paymentTerms.reduce((sum, term) => sum + term.percentage, 0)}%
                                   </td>
@@ -1111,7 +1562,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                     Add Contact
                   </button>
                 </div>
-                
+
                 {formData.contacts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {formData.contacts.map((contact) => (
@@ -1194,7 +1645,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
             {currentStep === 3 && (
               <div className="space-y-6">
                 <h4 className="text-lg font-medium text-gray-900 mb-4">Sales Order Comments</h4>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Add Comment
@@ -1208,7 +1659,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                     placeholder="Enter any comments or notes related to this sales order..."
                   />
                 </div>
-                
+
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">
                     These comments are for internal use only and will not be visible to the customer. Use this space to add any important notes, special instructions, or context about this sales order.
@@ -1235,12 +1686,12 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
             </button>
-            
+
             {currentStep < 3 ? (
               <button
                 type="button"

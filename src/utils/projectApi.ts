@@ -133,3 +133,79 @@ export const createProjectFromLead = async (projectData: CreateProjectRequest) =
     };
   }
 };
+
+export const createProjectFromSalesOrder = async (salesOrderData: any) => {
+  try {
+    const projectData = {
+      lead_id: salesOrderData.lead_id || null,
+      warehouse_id: salesOrderData.warehouse_id || null,
+      project_species: salesOrderData.project_species || "actual project",
+      name: salesOrderData.project_name || null,
+      project_type: salesOrderData.project_category || null,
+      project_status: salesOrderData.project_status || 'NOT_STARTED',
+      estimated_start: salesOrderData.estimated_start_date || null,
+      estimated_end: salesOrderData.estimated_end_date || null,
+      actual_start: salesOrderData.actual_start || null,
+      actual_end: salesOrderData.actual_end || null,
+      price_customer: salesOrderData.total_cost || null,
+      estimated_price: salesOrderData.total_cost || null,
+      actual_price: salesOrderData.actual_price || null,
+      kick_off: salesOrderData.kick_off || null,
+      comment_baseline: salesOrderData.comment_baseline || null,
+      comment_other: salesOrderData.so_comments || null,
+      project_template_id: salesOrderData.project_template_id || null,
+      customer_id: salesOrderData.customer_id || null,
+      location: salesOrderData.location || null,
+      project_address: salesOrderData.project_address || null,
+      project_number: salesOrderData.project_number || null,
+      is_insured: salesOrderData.is_insured || false,
+      insurance_no: salesOrderData.insurance_no || null,
+      insurance_from_date: salesOrderData.insurance_from_date || null,
+      insurance_to_date: salesOrderData.insurance_to_date || null,
+      approval_status: 'PENDING',
+      approval_comment: `Created from Sales Order: ${salesOrderData.so_number}`,
+      approved_by: null,
+      approved_on: null,
+      completion: 0,
+      created_by: salesOrderData.created_by || null
+    };
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_PMS_API_BASE_URL}`,
+      projectData,
+      {
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+
+    return {
+      success: true,
+      statusCode: 201,
+      data: response.data,
+      clientMessage: 'Project created successfully from Sales Order',
+      devMessage: 'Insert query executed successfully'
+    };
+  } catch (error) {
+    console.error('Error creating project from sales order:', error);
+    return {
+      success: false,
+      statusCode: 500,
+      data: null,
+      clientMessage: 'Failed to create project from Sales Order',
+      devMessage: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+export const updateSOStatusToProjectCreated = async (salesOrderId: string) => {
+  try {
+    const response = await axios.put(
+      `${import.meta.env.VITE_API_BASE_URL}/sales-order/${salesOrderId}`,
+      { is_project_created: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating sales order status:', error);
+    throw new Error('Failed to update sales order status');
+  }
+};
