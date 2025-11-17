@@ -674,16 +674,12 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
             Final Selling Amount
           </h5>
           <p className="text-lg font-bold text-gray-900">
-            ₹{isEditMode ? Number(formData.final_selling_amt || 0).toLocaleString("en-IN", {
+            {(formData.sitcSummary?.sellingAmount || 0).toLocaleString("en-IN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
-            }) : (
-              (formData.sitcSummary?.sellingAmount || 0).toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
-            )}
+            })}
           </p>
+
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
@@ -691,17 +687,20 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
             Profit Percentage
           </h5>
           <p className="text-lg font-bold text-purple-600">
-            {isEditMode
-              ? (formData.profit_percentage || 0)
-              : (
-                (() => {
-                  const marginAmount = formData.sitcSummary?.marginAmount || 0;
-                  const subTotal = formData.sitcSummary?.subTotal || 0;
-                  const profitPercentage = subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
-                  return profitPercentage.toFixed(2);
-                })()
-              )}%
+            {(() => {
+              const marginAmount = formData.sitcSummary?.marginAmount || 0;
+              const subTotal = formData.sitcSummary?.subTotal || 0;
+              const profitPercentage =
+                subTotal > 0 ? (marginAmount / subTotal) * 100 : 0;
+              console.log("Profit Percentage Calculation:", {
+                marginAmount,
+                subTotal,
+                profitPercentage,
+              });
+              return profitPercentage.toFixed(2);
+            })()}%
           </p>
+
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
@@ -711,9 +710,9 @@ const QuotationStep4: React.FC<QuotationStep4Props> = ({
           <p className="text-xl font-bold text-green-600">
             ₹{isEditMode
               ? Number(formData.grand_total_gst || 0).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
               : (() => {
                 const sellingAmount = formData.sitcSummary?.sellingAmount || 0;
                 const gstAmount = totalWithGST - totalWithoutGST;

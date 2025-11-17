@@ -523,7 +523,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
         });
 
         alert("Step 1 updated successfully!");
-      }else if (currentStep === 2) {
+      } else if (currentStep === 2) {
         // Update Step 2: Contacts
         const contactsData = formData.contacts.map(contact => ({
           id: contact.id,
@@ -720,16 +720,15 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                         disabled={loadingQuotations}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        <option value="">
-                          {loadingQuotations ? 'Loading quotations...' : 'Select Quotation'}
-                        </option>
-                        {editMode}? <option value={formData.quotationId}>{formData.quotationNumber}</option>: (
-                        {quotations.map(quotation => (
-                          <option key={quotation.quotation_id} value={quotation.quotation_id}>
-                            {quotation.customer_quotation_number}
+                        <option value="">{loadingQuotations ? 'Loading...' : 'Select Quotation'}</option>
+                        {editMode ? (
+                          <option value={formData.quotationId}>{formData.quotationNumber}</option>
+                        ) : null}
+                        {quotations.map(q => (
+                          <option key={q.quotation_id} value={q.quotation_id}>
+                            {q.customer_quotation_number}
                           </option>
                         ))}
-                        )
                       </select>
                     </div>
 

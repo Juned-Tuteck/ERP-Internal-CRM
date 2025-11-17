@@ -45,6 +45,92 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
   };
 
   // Handler for sending quotation for approval
+  // const handleSendForApproval = async () => {
+  //   if (!quotation?.id) return;
+
+  //   setIsSendingForApproval(true);
+  //   try {
+  //     const roleHierarchy = {
+  //       level1: "sales manager",
+  //       level2: "crm zonal head"
+  //     };
+  //     console.log("Quotation Details for Approval:", quotationDetails);
+  //     const profit_percentage = quotationDetails.profitPercentage || 0;
+  //     console.log("Calculated Profit Percentage:", profit_percentage);
+
+  //     console.log(`Calling role-variances API for quotation ${quotation.id}`);
+  //     const roleVariancesResponse = await callRoleVariances();
+  //     console.log('Role variances API response:', roleVariancesResponse);
+
+  //     if (roleVariancesResponse?.success && roleVariancesResponse?.data) {
+  //       // Filter roles by profit_percentage
+  //       const filteredRoles = (roleVariancesResponse.data || [])
+  //         .filter((role: any) => Number(role.profit_percentage) <= profit_percentage)
+  //         .sort(
+  //           (a: any, b: any) =>
+  //             (Number(b.profit_percentage) || 0) - (Number(a.profit_percentage) || 0)
+  //         )
+  //         .slice(0, 1); // keep only the top role
+
+  //       console.log("Top role by profit percentage:", filteredRoles);
+
+  //       // Prepare approvals array
+  //       const approvals: {
+  //         customer_quotation_id: string;
+  //         approver_role: string;
+  //         approval_status: string;
+  //       }[] = [];
+
+  //       // Add filtered roles from API
+  //       filteredRoles.forEach((role: any) => {
+  //         approvals.push({
+  //           customer_quotation_id: quotation.id,
+  //           approver_role: role.role_name,
+  //           approval_status: "PENDING"
+  //         });
+  //       });
+
+  //       // Add hardcoded roles from roleHierarchy
+  //       Object.values(roleHierarchy).forEach((role: string) => {
+  //         approvals.push({
+  //           customer_quotation_id: quotation.id,
+  //           approver_role: role,
+  //           approval_status: "PENDING"
+  //         });
+  //       });
+
+  //       console.log('Final approvals payload:', { approvals });
+
+  //       // Call bulk approval API
+  //       if (approvals.length > 0) {
+  //         const bulkApprovalResponse = await createBulkCustomerQuotationApprovals({ approvals });
+  //         console.log('Bulk approval API response:', bulkApprovalResponse);
+
+  //         // Update quotation status to PENDING_FOR_APPROVAL
+  //         try {
+  //           const updateStatusResponse = await updateQuotationStatus(quotation.id, "PENDING_FOR_APPROVAL");
+  //           console.log('Quotation status updated:', updateStatusResponse);
+  //         } catch (statusError) {
+  //           console.error('Error updating quotation status:', statusError);
+  //           // Continue with the flow even if status update fails
+  //         }
+
+  //         setIsApprovalSent(true); // Set the approval sent state to true
+  //         alert("Quotation sent for approval successfully!");
+  //       } else {
+  //         alert("No approvers found for this quotation.");
+  //       }
+  //     } else {
+  //       alert("Failed to fetch role variances. Please try again.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error sending quotation for approval:", error);
+  //     alert("Failed to send quotation for approval. Please try again.");
+  //   } finally {
+  //     setIsSendingForApproval(false);
+  //   }
+  // };
+
   const handleSendForApproval = async () => {
     if (!quotation?.id) return;
 
@@ -54,74 +140,96 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
         level1: "sales manager",
         level2: "crm zonal head"
       };
+
       console.log("Quotation Details for Approval:", quotationDetails);
-      const profit_percentage = quotationDetails.profitPercentage || 0;
+      const profit_percentage = Number(quotationDetails?.profitPercentage ?? 0);
       console.log("Calculated Profit Percentage:", profit_percentage);
 
       console.log(`Calling role-variances API for quotation ${quotation.id}`);
       const roleVariancesResponse = await callRoleVariances();
       console.log('Role variances API response:', roleVariancesResponse);
 
-      if (roleVariancesResponse?.success && roleVariancesResponse?.data) {
-        // Filter roles by profit_percentage
-        const filteredRoles = (roleVariancesResponse.data || [])
-          .filter((role: any) => Number(role.profit_percentage) <= profit_percentage)
-          .sort(
-            (a: any, b: any) =>
-              (Number(b.profit_percentage) || 0) - (Number(a.profit_percentage) || 0)
-          )
-          .slice(0, 1); // keep only the top role
-
-        console.log("Top role by profit percentage:", filteredRoles);
-
-        // Prepare approvals array
-        const approvals: {
-          customer_quotation_id: string;
-          approver_role: string;
-          approval_status: string;
-        }[] = [];
-
-        // Add filtered roles from API
-        filteredRoles.forEach((role: any) => {
-          approvals.push({
-            customer_quotation_id: quotation.id,
-            approver_role: role.role_name,
-            approval_status: "PENDING"
-          });
-        });
-
-        // Add hardcoded roles from roleHierarchy
-        Object.values(roleHierarchy).forEach((role: string) => {
-          approvals.push({
-            customer_quotation_id: quotation.id,
-            approver_role: role,
-            approval_status: "PENDING"
-          });
-        });
-
-        console.log('Final approvals payload:', { approvals });
-
-        // Call bulk approval API
-        if (approvals.length > 0) {
-          const bulkApprovalResponse = await createBulkCustomerQuotationApprovals({ approvals });
-          console.log('Bulk approval API response:', bulkApprovalResponse);
-
-          // Update quotation status to PENDING_FOR_APPROVAL
-          try {
-            const updateStatusResponse = await updateQuotationStatus(quotation.id, "PENDING_FOR_APPROVAL");
-            console.log('Quotation status updated:', updateStatusResponse);
-          } catch (statusError) {
-            console.error('Error updating quotation status:', statusError);
-            // Continue with the flow even if status update fails
-          }
-
-          setIsApprovalSent(true); // Set the approval sent state to true
-          alert("Quotation sent for approval successfully!");
-        } else {
-          alert("No approvers found for this quotation.");
-        }
-      } else {
+      if (!roleVariancesResponse?.success || !Array.isArray(roleVariancesResponse.data)) {
         alert("Failed to fetch role variances. Please try again.");
+        return;
+      }
+
+      // Normalize roles: parse profit percentage as number and filter out invalid entries
+      const roles = (roleVariancesResponse.data || [])
+        .map((r: any) => ({
+          ...r,
+          profit_percentage_num: Number(r.profit_percentage) // could be negative or positive
+        }))
+        .filter((r: any) => !Number.isNaN(r.profit_percentage_num));
+
+      // Find the *smallest* role.profit_percentage_num that is >= profit_percentage
+      const candidateRoles = roles
+        .filter((r: any) => r.profit_percentage_num >= profit_percentage)
+        .sort((a: any, b: any) => a.profit_percentage_num - b.profit_percentage_num);
+
+      const selectedRole = candidateRoles.length > 0 ? candidateRoles[0] : null;
+
+      console.log("Selected role based on profit:", selectedRole);
+
+      // if (!selectedRole) {
+      //   // No role threshold >= profit_percentage -> profit is above all roles => auto-approve
+      //   console.log("Profit above all role thresholds — auto-approving the quotation.");
+      //   try {
+      //     const approveResp = await updateQuotationStatus(quotation.id, "APPROVED");
+      //     console.log('Quotation auto-approved response:', approveResp);
+      //     setIsApprovalSent(true);
+      //     alert("Quotation automatically approved (profit above all approval thresholds).");
+      //   } catch (statusError) {
+      //     console.error('Error auto-approving quotation status:', statusError);
+      //     alert("Quotation profit is above all approval thresholds but updating status failed. Please try again.");
+      //   }
+      //   return;
+      // }
+
+      // Prepare approvals array (selected role + hardcoded roleHierarchy)
+      const approvals: {
+        customer_quotation_id: string;
+        approver_role: string;
+        approval_status: string;
+      }[] = [];
+
+      if (selectedRole) {
+        approvals.push({
+          customer_quotation_id: quotation.id,
+          approver_role: selectedRole.role_name,
+          approval_status: "PENDING"
+        });
+      }
+
+      // Add hardcoded hierarchy roles (if you still want them after the selected role)
+      Object.values(roleHierarchy).forEach((role: string) => {
+        approvals.push({
+          customer_quotation_id: quotation.id,
+          approver_role: role,
+          approval_status: "PENDING"
+        });
+      });
+
+      console.log('Final approvals payload:', { approvals });
+
+      // Call bulk approval API
+      if (approvals.length > 0) {
+        const bulkApprovalResponse = await createBulkCustomerQuotationApprovals({ approvals });
+        console.log('Bulk approval API response:', bulkApprovalResponse);
+
+        // Update quotation status to PENDING_FOR_APPROVAL (best-effort)
+        try {
+          const updateStatusResponse = await updateQuotationStatus(quotation.id, "PENDING_FOR_APPROVAL");
+          console.log('Quotation status updated:', updateStatusResponse);
+        } catch (statusError) {
+          console.error('Error updating quotation status:', statusError);
+          // continue even if status update fails
+        }
+
+        setIsApprovalSent(true);
+        alert("Quotation sent for approval successfully!");
+      } else {
+        alert("No approvers found for this quotation.");
       }
     } catch (error) {
       console.error("Error sending quotation for approval:", error);
@@ -130,6 +238,8 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
       setIsSendingForApproval(false);
     }
   };
+
+
   const [activeTab, setActiveTab] = useState("summary");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -555,6 +665,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 parseFloat(apiQuotation.low_side_cost_without_gst || 0)) +
               (parseFloat(apiQuotation.installation_cost_with_gst || 0) -
                 parseFloat(apiQuotation.installation_cost_without_gst || 0)),
+            profitPercentage: parseFloat(apiQuotation.profit_percentage || 0),
           },
 
           // Step 5: Comments - Direct mapping

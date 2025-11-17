@@ -241,8 +241,8 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
         finalCosting: {
           ...defaultData.finalCosting,
           ...(initialData.finalCosting || {}),
-          final_selling_amt: initialData.final_selling_amt || 0,
-          grand_total_gst: initialData.grand_total_gst || 0,
+          // final_selling_amt: initialData.final_selling_amt || 0,
+          // grand_total_gst: initialData.grand_total_gst || 0,
         },
         // Step 5: Comments
         comments: initialData.comments || [],
@@ -1023,6 +1023,15 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
             initialMargin.id,
             marginUpdatePayload
           );
+        }
+        else {          // Create new margin (no existing ID found)
+          console.log(`Creating new margin for ${category.key}:`, currentSummary);
+          const marginCreatePayload = {
+            customer_quotation_id: initialData.id,
+            margin: currentSummary.marginPercentage || 0,
+            cost_type: category.type,
+          };
+          await createCostMargins([marginCreatePayload]);
         }
       }
 
