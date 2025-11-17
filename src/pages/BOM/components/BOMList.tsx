@@ -301,7 +301,6 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
     setDeleteDialogOpen(false);
     setBomToDelete(null);
   };
-  console.log("Template data:", templates);
 
   // Helper to format BOM data for CreateBOM modal
   const formatBOMForEdit = (bom: any) => {
@@ -488,7 +487,6 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
       (bom.bomNumber || "").toLowerCase().includes(q)
     );
   });
-  console.log("Filtered BOMs:", filteredBoms);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">

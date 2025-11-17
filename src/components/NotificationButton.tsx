@@ -26,7 +26,7 @@ export function NotificationButton() {
   const [popupNotification, setPopupNotification] = useState<Notification | null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  console.log("user in NotificationButton:", user, "token:", token);
+  // console.log("user in NotificationButton:", user, "token:", token);
   
   const {
     notifications,

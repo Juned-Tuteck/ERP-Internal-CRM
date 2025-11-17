@@ -73,7 +73,6 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
         setLoading(true);
         const response = await getBOMTemplates();
         const apiTemplates = response.data || [];
-        console.log("Fetched BOM templates:", apiTemplates);
 
         // Map API response to UI format
         const mappedTemplates: BOMTemplate[] = apiTemplates.map(
@@ -345,7 +344,6 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTemplates.map((template) => (
-                console.log("bom template",template),
                 <tr
                   key={template.id}
                   className={`hover:bg-gray-50 cursor-pointer ${selectedTemplate?.id === template.id ? "bg-blue-50" : ""
