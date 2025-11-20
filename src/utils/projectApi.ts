@@ -1,32 +1,60 @@
 import axios from 'axios';
 
+export interface Lead {
+  lead_id: string | null;
+  lead_number: string | null;
+  business_name: string | null;
+  lead_stage: string | null;
+  project_name: string | null;
+  project_value: number | null;
+  contact_person: string | null;
+  contact_no: string | null;
+}
+
+export interface Customer {
+  customer_id: string | null;
+  business_name: string | null;
+  branch_name: string | null;
+  contact_number: string | null;
+  email: string | null;
+}
+
+export interface LatestBOM {
+  bom_id: string | null;
+  bom_number: string | null;
+  total_price: number | null;
+  approval_status: string | null;
+  created_at: string | null;
+}
+
 export interface Project {
   id: string;
   project_number: string;
   project_name: string;
-  lead_number: string;
-  project_type: string;
-  customer_id: string;
-  customer_name: string;
+  lead_id: string | null;
+  lead_number: string | null;
+  lead: Lead;
+  customer: Customer;
+  project_type: string | null;
   created_at: string;
-  project_manager: string;
-  est_start_date: string;
-  est_end_date: string;
-  kick_off_date: string;
+  project_manager: string | null;
+  est_start_date: string | null;
+  est_end_date: string | null;
+  kick_off_date: string | null;
   last_updated: string | null;
-  est_price: string;
-  status: string;
-  warehouse_id: string;
-  project_species: string;
+  est_price: string | null;
+  status: string | null;
+  warehouse_id: string | null;
+  project_species: string | null;
   actual_start: string | null;
   actual_end: string | null;
-  price_customer: string;
+  price_customer: string | null;
   actual_price: string | null;
-  comment_baseline: string;
-  comment_other: string;
+  comment_baseline: string | null;
+  comment_other: string | null;
   project_template_id: string | null;
   location: string | null;
-  project_address: string;
+  project_address: string | null;
   is_insured: boolean;
   insurance_no: string | null;
   insurance_from_date: string | null;
@@ -40,6 +68,7 @@ export interface Project {
   updated_by: string | null;
   is_active: boolean;
   is_deleted: boolean;
+  latest_bom: LatestBOM;
 }
 
 export interface CreateProjectRequest {
