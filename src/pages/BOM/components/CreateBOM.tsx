@@ -52,6 +52,7 @@ interface BOMItem {
   materialType: string;
   specifications?: string;
   isNew?: boolean; // PATCH: allow marking new items
+  detailId?: string; // PATCH: store detail_id for API operations
 }
 
 interface BOMSpec {
@@ -60,6 +61,7 @@ interface BOMSpec {
   items: BOMItem[];
   isExpanded: boolean;
   price: number;
+  isNew?: boolean;
 }
 
 const MATERIAL_TYPES = ["HIGH SIDE SUPPLY", "LOW SIDE SUPPLY", "INSTALLATION"];
@@ -118,41 +120,110 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   }>({});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
-  // PATCH: Save item row for existing items (PUT with detail_id)
+  // PATCH: Save item row for existing items (PUT with detail_id or POST bulk if no detail_id)
   const saveItemRow = async (specId: string, itemId: string, item: any) => {
     // Find detail_id for this item (should be present in item.detail_id or item.detailId)
-    const detailId = item.detail_id || item.detailId;
-    if (!detailId) {
-      alert("detail_id not found for this item");
+    const spec = specs.find((s) => s.id === specId);
+
+    if (!spec) {
+      alert("Specification not found");
       return;
     }
+
+    const currentItem = spec.items.find((it) => it.id === itemId);
+    if (!currentItem) {
+      alert("Item not found");
+      return;
+    }
+    const detailId = currentItem.detail_id || currentItem.detailId;
+
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/bom-detail/${detailId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            supply_rate: item.supplyRate,
-            installation_rate: item.installationRate,
-            net_rate: item.netRate,
-            required_quantity: item.quantity,
-            material_type: item.materialType,
-          }),
+      if (detailId) {
+        // If detail_id exists, update using PUT
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/bom-detail/${detailId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              supply_rate: currentItem.supplyRate,
+              installation_rate: currentItem.installationRate,
+              net_rate: currentItem.netRate,
+              required_quantity: currentItem.quantity,
+              material_type: currentItem.materialType,
+            }),
+          }
+        );
+        if (response.ok) {
+          setEditingItem(null);
+        } else {
+          let msg = "Failed to update item";
+          try {
+            const data = await response.json();
+            if (data && data.message) msg = data.message;
+          } catch { }
+          alert(msg);
         }
-      );
-      if (response.ok) {
-        setEditingItem(null);
       } else {
-        let msg = "Failed to update item";
-        try {
-          const data = await response.json();
-          if (data && data.message) msg = data.message;
-        } catch { }
-        alert(msg);
+        // If no detail_id, create new item using POST bulk API
+        const spec = specs.find((s) => s.id === specId);
+        if (!spec) {
+          alert("Specification not found");
+          return;
+        }
+
+        const detailsPayload = [{
+          bom_id: initialData?.id || createdBOMId,
+          bom_spec_id: specId,
+          item_id: currentItem.id,
+          required_quantity: currentItem.quantity,
+          supply_rate: currentItem.supplyRate,
+          installation_rate: currentItem.installationRate,
+          net_rate: currentItem.netRate,
+          material_type: currentItem.materialType,
+        }];
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/bom-detail/bulk`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(detailsPayload),
+          }
+        );
+
+        if (response.ok) {
+          const responseData = await response.json();
+          // Update the item with the new detail_id from API response
+          if (responseData.data && responseData.data.length > 0) {
+            const newDetailId = responseData.data[0]?.id;
+            setSpecs((prev) =>
+              prev.map((spec) =>
+                spec.id === specId
+                  ? {
+                    ...spec,
+                    items: spec.items.map((itm) =>
+                      itm.id === itemId
+                        ? { ...itm, detailId: newDetailId, detail_id: newDetailId }
+                        : itm
+                    ),
+                  }
+                  : spec
+              )
+            );
+          }
+          setEditingItem(null);
+        } else {
+          let msg = "Failed to create item";
+          try {
+            const data = await response.json();
+            if (data && data.message) msg = data.message;
+          } catch { }
+          alert(msg);
+        }
       }
     } catch (err) {
-      alert("Failed to update item (network or JS error)");
+      alert("Failed to save item (network or JS error)");
     }
   };
 
@@ -420,6 +491,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       items: [],
       isExpanded: true,
       price: 0,
+      isNew: true,
     };
     setSpecs((prev) => [...prev, newSpec]);
     setNewSpecs((prev) => [...prev, newSpec]);
@@ -461,7 +533,37 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     }
   };
 
-  const deleteSpec = (specId: string) => {
+  const deleteSpec = async (specId: string) => {
+    // In edit mode, check if spec is an existing spec (UUID format) and call delete API
+    if (editMode) {
+      const isExistingSpec = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(specId);
+
+      if (isExistingSpec) {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_BASE_URL}/bom-spec/${specId}`,
+            {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+          if (!response.ok) {
+            let msg = "Failed to delete spec";
+            try {
+              const data = await response.json();
+              if (data && data.message) msg = data.message;
+            } catch { }
+            alert(msg);
+            return;
+          }
+        } catch (err) {
+          alert("Failed to delete spec (network or JS error)");
+          return;
+        }
+      }
+    }
+
+    // Remove spec from local state (for both new and deleted existing specs)
     setSpecs((prev) => prev.filter((spec) => spec.id !== specId));
   };
 
@@ -543,12 +645,76 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
   };
 
   // PATCH: Provide a dummy updateSpecItemRates if not present to avoid errors
+  // const updateSpecItemRates = (
+  //   specId: string,
+  //   itemId: string,
+  //   field: string,
+  //   value: any
+  // ) => {
+  //   setSpecs((prev) =>
+  //     prev.map((spec) =>
+  //       spec.id === specId
+  //         ? {
+  //           ...spec,
+  //           items: spec.items.map((item) =>
+  //             item.id === itemId
+  //               ? {
+  //                 ...item,
+  //                 [field]: value,
+  //                 price:
+  //                   field === "quantity" || field === "netRate"
+  //                     ? field === "quantity"
+  //                       ? value * item.netRate
+  //                       : item.quantity * value
+  //                     : item.price,
+  //               }
+  //               : item
+  //           ),
+  //           price: spec.items
+  //             .map((item) =>
+  //               item.id === itemId
+  //                 ? {
+  //                   ...item,
+  //                   [field]: value,
+  //                   price:
+  //                     field === "quantity" || field === "netRate"
+  //                       ? field === "quantity"
+  //                         ? value * item.netRate
+  //                         : item.quantity * value
+  //                       : item.price,
+  //                 }
+  //                 : item
+  //             )
+  //             .reduce((sum, item) => sum + item.price, 0),
+  //         }
+  //         : spec
+  //     )
+  //   );
+
+  //   // Validate the updated item
+  //   const currentSpec = specs.find((s) => s.id === specId);
+  //   if (currentSpec) {
+  //     const currentItem = currentSpec.items.find((item) => item.id === itemId);
+  //     if (currentItem) {
+  //       const updatedItem = { ...currentItem, [field]: value };
+  //       const itemKey = `${specId}_${itemId}`;
+  //       const itemErrors = validateBOMItem(updatedItem);
+  //       setItemErrors((prev) => ({
+  //         ...prev,
+  //         [itemKey]: itemErrors,
+  //       }));
+  //     }
+  //   }
+  // };
+
+  // Replace your updateSpecItemRates with this version
   const updateSpecItemRates = (
     specId: string,
     itemId: string,
     field: string,
     value: any
   ) => {
+    // Update specs state (existing behavior)
     setSpecs((prev) =>
       prev.map((spec) =>
         spec.id === specId
@@ -588,8 +754,18 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
           : spec
       )
     );
+    
+    // ALSO update newItems if this item exists in newItems (keeps the payload source fresh)
+    setNewItems((prev) => {
+      if (!prev[specId]) return prev; // nothing to sync
+      const updated = { ...prev };
+      updated[specId] = updated[specId].map((itm) =>
+        itm.id === itemId ? { ...itm, [field]: value, price: computePrice(itm, field, value) } : itm
+      );
+      return updated;
+    });
 
-    // Validate the updated item
+    // validation: same as before
     const currentSpec = specs.find((s) => s.id === specId);
     if (currentSpec) {
       const currentItem = currentSpec.items.find((item) => item.id === itemId);
@@ -605,7 +781,53 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
     }
   };
 
-  const removeItemFromSpec = (specId: string, itemId: string) => {
+  // helper (add above or inline). Mirrors your price calculation logic.
+  const computePrice = (item: any, field: string, value: any) => {
+    if (field === "quantity") return value * item.netRate;
+    if (field === "netRate") return item.quantity * value;
+    return item.price;
+  };
+
+
+  const removeItemFromSpec = async (specId: string, itemId: string) => {
+    console.log("Removing item:", specId, itemId);
+    // In edit mode, check if item has a detailId (existing item from API)
+    if (editMode) {
+      const spec = specs.find((s) => s.id === specId);
+      console.log("spec", spec);
+
+      if (spec) {
+        const item = spec.items.find((itm) => itm.id === itemId);
+        console.log("item", item);
+        if (item && item.detail_id) {
+          console.log("Item has detailId, calling delete API:", item.detail_id);
+          // Item has detailId, so it's an existing item from DB - call delete API
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_API_BASE_URL}/bom-detail/${item.detail_id}`,
+              {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+            if (!response.ok) {
+              let msg = "Failed to delete item";
+              try {
+                const data = await response.json();
+                if (data && data.message) msg = data.message;
+              } catch { }
+              alert(msg);
+              return;
+            }
+          } catch (err) {
+            alert("Failed to delete item (network or JS error)");
+            return;
+          }
+        }
+      }
+    }
+
+    // Remove item from local state (for both new and deleted existing items)
     setSpecs((prev) =>
       prev.map((spec) =>
         spec.id === specId
@@ -652,6 +874,14 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
           : spec
       )
     );
+    setNewItems((prev) => {
+      if (!prev[specId]) return prev;
+      const updated = { ...prev };
+      updated[specId] = updated[specId].map((itm) =>
+        itm.id === itemId ? { ...itm, quantity, price: itm.netRate * quantity } : itm
+      );
+      return updated;
+    });
   };
 
   const getAvailableItemsForSpec = (specId: string) => {
@@ -893,33 +1123,33 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       // Always save new items in existing specs (bulk-details) before normal submit
       try {
         // Save new items for existing specs (specId is UUID)
-        for (const [specId, items] of Object.entries(newItems)) {
-          if (
-            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-              specId
-            ) &&
-            items.length > 0
-          ) {
-            const detailsPayload = items.map((item) => ({
-              bom_id: initialData.id,
-              bom_spec_id: specId,
-              item_id: item.id,
-              required_quantity: item.quantity,
-              supply_rate: item.supplyRate,
-              installation_rate: item.installationRate,
-              net_rate: item.netRate,
-              material_type: item.materialType,
-            }));
-            await fetch(
-              `${import.meta.env.VITE_API_BASE_URL}/bom-detail/bulk`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(detailsPayload),
-              }
-            );
-          }
-        }
+        // for (const [specId, items] of Object.entries(newItems)) {
+        //   if (
+        //     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        //       specId
+        //     ) &&
+        //     items.length > 0
+        //   ) {
+        //     const detailsPayload = items.map((item) => ({
+        //       bom_id: initialData.id,
+        //       bom_spec_id: specId,
+        //       item_id: item.id,
+        //       required_quantity: item.quantity,
+        //       supply_rate: item.supplyRate,
+        //       installation_rate: item.installationRate,
+        //       net_rate: item.netRate,
+        //       material_type: item.materialType,
+        //     }));
+        //     await fetch(
+        //       `${import.meta.env.VITE_API_BASE_URL}/bom-detail/bulk`,
+        //       {
+        //         method: "POST",
+        //         headers: { "Content-Type": "application/json" },
+        //         body: JSON.stringify(detailsPayload),
+        //       }
+        //     );
+        //   }
+        // }
         // Save new specs and their items if any
         if (newSpecs.length > 0) {
           // Save new specs
@@ -1500,7 +1730,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                               min="0"
                                               step="0.01"
                                               className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                                              disabled={editMode && !isEditing}
+                                              disabled={editMode && !isEditing && !spec.isNew}
                                             />
                                           </td>
                                           <td className="px-3 py-2 whitespace-nowrap">
@@ -1519,7 +1749,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                               min="0"
                                               step="0.01"
                                               className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                                              disabled={editMode && !isEditing}
+                                              disabled={editMode && !isEditing && !spec.isNew}
                                             />
                                           </td>
                                           <td className="px-3 py-2 whitespace-nowrap">
@@ -1538,7 +1768,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                               min="0"
                                               step="0.01"
                                               className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                                              disabled={editMode && !isEditing}
+                                              disabled={editMode && !isEditing && !spec.isNew}
                                             />
                                           </td>
                                           <td className="px-3 py-2 whitespace-nowrap">
@@ -1554,7 +1784,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                               }
                                               min="1"
                                               className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-                                              disabled={editMode && !isEditing}
+                                              disabled={editMode && !isEditing && !spec.isNew}
                                             />
                                           </td>
                                           <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -1573,7 +1803,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                                 )
                                               }
                                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                              disabled={editMode && !isEditing}
+                                              disabled={editMode && !isEditing && !spec.isNew}
                                             >
                                               {MATERIAL_TYPES.map((type) => (
                                                 <option key={type} value={type}>
@@ -1583,10 +1813,9 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                             </select>
                                           </td>
                                           <td className="px-3 py-2 whitespace-nowrap flex items-center space-x-2">
-                                            {/* Only show edit/save toggles for existing items (with real UUID) in edit mode */}
-                                            {editMode &&
-                                              !item.isNew &&
-                                              (isEditing ? (
+
+                                            {editMode && !spec.isNew &&
+                                              (isEditing && editingItem?.itemId === item.id ? (
                                                 <button
                                                   type="button"
                                                   className="text-green-600 hover:text-green-900"
@@ -1633,7 +1862,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                       );
                                     })}
                                   </tbody>
-                                  <tfoot className="bg-gray-50">
+                                  {/* <tfoot className="bg-gray-50">
                                     <tr>
                                       <td
                                         colSpan={6}
@@ -1646,7 +1875,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                                       </td>
                                       <td></td>
                                     </tr>
-                                  </tfoot>
+                                  </tfoot> */}
                                 </table>
                               </div>
                             )}
