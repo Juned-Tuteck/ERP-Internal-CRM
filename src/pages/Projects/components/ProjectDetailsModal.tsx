@@ -145,8 +145,8 @@ const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ project, isOp
                             </button>
                             <button
                                 onClick={() => setShowCustomerModal(true)}
-                                disabled={!project.lead_customer_id}
-                                className={`px-6 py-3 rounded-md transition-colors font-medium ${project.lead_customer_id
+                                disabled={!project.customer?.customer_id}
+                                className={`px-6 py-3 rounded-md transition-colors font-medium ${project.customer?.customer_id
                                     ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 }`}

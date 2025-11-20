@@ -9,7 +9,9 @@ interface LeadDetailsModalProps {
 }
 
 const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, onClose }) => {
-  if (!isOpen || !project) return null;
+  if (!isOpen || !project || !project.lead) return null;
+
+  const lead = project.lead;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -32,7 +34,7 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
               </label>
               <input
                 type="text"
-                value={project.lead_number || 'N/A'}
+                value={lead.lead_number || 'N/A'}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
@@ -44,7 +46,7 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
               </label>
               <input
                 type="text"
-                value="Converted"
+                value={lead.lead_stage || 'N/A'}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
@@ -52,11 +54,11 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lead Source
+                Business Name
               </label>
               <input
                 type="text"
-                value="Website Inquiry"
+                value={lead.business_name || 'N/A'}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
@@ -68,19 +70,7 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
               </label>
               <input
                 type="text"
-                value="John Doe"
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="text"
-                value="john.doe@example.com"
+                value={lead.contact_person || 'N/A'}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
@@ -92,7 +82,19 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
               </label>
               <input
                 type="text"
-                value="+1 234 567 8900"
+                value={lead.contact_no || 'N/A'}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Project Value
+              </label>
+              <input
+                type="text"
+                value={lead.project_value ? lead.project_value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A'}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
@@ -101,12 +103,12 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
+              Project Name
             </label>
             <textarea
-              value="Lead generated from website contact form. Interested in CRM implementation services."
+              value={lead.project_name || 'N/A'}
               readOnly
-              rows={3}
+              rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700 resize-none"
             />
           </div>
