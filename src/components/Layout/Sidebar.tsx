@@ -130,7 +130,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       }
                     `}
                   />
-                  {item.name}
+                  {item.name=='BOM' ? 'CRM BOM' : item.name}
                 </Link>
               );
             })}

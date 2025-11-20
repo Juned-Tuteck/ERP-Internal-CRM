@@ -582,6 +582,8 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
         specId
       );
+    console.log("item", item);
+    
     const newItem: BOMItem = {
       id: item.id,
       itemCode: item.item_code,
@@ -592,7 +594,7 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
       netRate: item.latest_lowest_net_rate || 0,
       quantity: 1,
       price: item.latest_lowest_net_rate || 0,
-      materialType: "HIGH SIDE SUPPLY",
+      materialType: item.material_type || "HIGH SIDE SUPPLY",
       specifications: "",
       isNew: true, // Mark as new for UI and bulk API
     };
@@ -1905,7 +1907,12 @@ const CreateBOM: React.FC<CreateBOMProps> = ({
                       <span className="text-lg font-bold text-green-600">
                         ₹
                         {specs
-                          .reduce((sum, spec) => sum + spec.price, 0)
+                          .reduce((sum, spec) => {
+                            const specTotal = spec.items.reduce((itemAcc, item) => {
+                              return itemAcc + (item.price ?? 0);
+                            }, 0);
+                            return sum + specTotal;
+                          }, 0)
                           .toLocaleString("en-IN")}
                       </span>
                     </div>

@@ -420,7 +420,12 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-medium text-gray-900">Grand Total:</span>
                         <span className="text-lg font-bold text-green-600">
-                          ₹{bomDetail.totalPrice.toLocaleString('en-IN')}
+                          ₹{bomDetail.specs.reduce((specAcc, spec) => {
+                            const specTotal = spec.items.reduce((itemAcc, item) => {
+                              return itemAcc + (item.price ?? 0);
+                            }, 0);
+                            return specAcc + specTotal;
+                          }, 0).toLocaleString('en-IN')}
                         </span>
                       </div>
                     </div>
