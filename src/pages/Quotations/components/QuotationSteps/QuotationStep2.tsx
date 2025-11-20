@@ -964,7 +964,8 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
                 }
                 min="0"
                 step="0.01"
-                className={`w-full px-3 py-2 border rounded-md text-right focus:outline-none focus:ring-2 focus:border-blue-500 ${
+                readOnly
+                className={`w-full px-3 py-2 border rounded-md text-right bg-gray-50 cursor-not-allowed text-green-700 font-medium border-gray-300 ${
                   getSummaryError("contractValue")
                     ? "border-red-300 focus:ring-red-500"
                     : "border-gray-300 focus:ring-blue-500"

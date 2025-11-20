@@ -823,7 +823,14 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                           <input
                             type="text"
                             name="totalCost"
-                            value={formData.totalCost}
+                            value={
+                              formData.totalCost
+                                ? Number(formData.totalCost).toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })
+                                : "0.00"
+                            }
                             readOnly
                             className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-green-600 font-medium"
                           />
@@ -933,10 +940,12 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                           <input
                             type="text"
                             name="workOrderAmount"
-                            value={formData.workOrderAmount}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={Number(formData.totalCost).toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                            readOnly
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed text-gray-700 focus:outline-none"
                             placeholder="Enter amount"
                           />
                         </div>

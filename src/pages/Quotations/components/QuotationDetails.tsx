@@ -44,6 +44,9 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
     }
   };
 
+  console.log("quotation:", quotation);
+  
+
   // Handler for sending quotation for approval
   // const handleSendForApproval = async () => {
   //   if (!quotation?.id) return;
@@ -870,7 +873,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           </div>
           <div className="text-right flex flex-col items-end">
             <div className="text-2xl font-bold text-green-600">
-              {quotation.totalValue}
+              ₹ {Number(displayQuotation.grand_total_gst).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
             <p className="text-xs text-gray-500">
               Expires:{" "}
@@ -2018,7 +2024,10 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
               <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
                 <h5 className="text-sm font-medium text-gray-600 mb-2">Final Selling Amount</h5>
                 <p className="text-lg font-bold text-gray-900">
-                  ₹ {displayQuotation.final_selling_amt}
+                  ₹ {Number(displayQuotation.final_selling_amt).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
               </div>
 
