@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useCRM } from "../../context/CRMContext";
+import logo from "../../assets/Contromoist_logo_icon.png";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -93,7 +94,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       `}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">CRM Pro</h1>
+          
+          <h1 className="flex text-xl font-bold text-gray-900"><img src={logo} alt="Contromoist logo" className="h-6 object-contain" />CRM Pro</h1>
           <button
             onClick={onClose}
             className="lg:hidden text-gray-500 hover:text-gray-700"

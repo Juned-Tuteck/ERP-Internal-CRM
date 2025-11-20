@@ -1313,7 +1313,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
           </div>
 
           {/* Final Amounts Summary */}
-          {(totals.totalFinalSupplyAmount > 0 ||
+          {/* {(totals.totalFinalSupplyAmount > 0 ||
             totals.totalFinalInstallationAmount > 0) && (
               <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
                 <h4 className="text-lg font-medium text-gray-900 mb-3">
@@ -1346,7 +1346,7 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
         </div>
       )}
 
