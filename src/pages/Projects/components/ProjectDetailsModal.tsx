@@ -42,6 +42,7 @@ const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ project, isOp
 
     const estimatedResourceCost = project.est_price ? (parseFloat(project.est_price) * 0.7).toFixed(2) : 'N/A';
     const basicCost = project.est_price ? (parseFloat(project.est_price) * 0.6).toFixed(2) : 'N/A';
+    
 
     return (
         <>
@@ -89,7 +90,8 @@ const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ project, isOp
                                 </label>
                                 <input
                                     type="text"
-                                    value={formatCurrency(basicCost)}
+                                    // value={formatCurrency(basicCost)}    
+                                    value={0}
                                     readOnly
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
                                 />
@@ -125,7 +127,8 @@ const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ project, isOp
                                 </label>
                                 <input
                                     type="text"
-                                    value={formatCurrency(estimatedResourceCost)}
+                                    // value={formatCurrency(estimatedResourceCost)}
+                                    value={0}
                                     readOnly
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
                                 />

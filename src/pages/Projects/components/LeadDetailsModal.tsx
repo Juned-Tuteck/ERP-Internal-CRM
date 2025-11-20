@@ -64,7 +64,7 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
               />
             </div>
 
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Contact Person
               </label>
@@ -74,9 +74,9 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
-            </div>
+            </div> */}
 
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Phone
               </label>
@@ -86,9 +86,9 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
-            </div>
+            </div> */}
 
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Project Value
               </label>
@@ -98,7 +98,7 @@ const LeadDetailsModal: React.FC<LeadDetailsModalProps> = ({ project, isOpen, on
                 readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
               />
-            </div>
+            </div> */}
           </div>
 
           <div>

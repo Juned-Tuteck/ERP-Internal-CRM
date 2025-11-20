@@ -251,7 +251,7 @@ const BOMDetailsModal: React.FC<BOMDetailsModalProps> = ({ project, isOpen, onCl
               <div className="flex justify-end">
                 <div className="flex items-center space-x-4">
                   <span className="text-sm font-semibold text-gray-700">Grand Total:</span>
-                  <span className="text-lg font-bold text-gray-900">${grandTotal.toLocaleString()}</span>
+                  <span className="text-lg font-bold text-gray-900">{grandTotal.toLocaleString()}</span>
                 </div>
               </div>
             </div>
