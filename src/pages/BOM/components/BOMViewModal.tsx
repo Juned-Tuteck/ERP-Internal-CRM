@@ -395,14 +395,14 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                                       </tr>
                                     ))}
                                   </tbody>
-                                  <tfoot className="bg-gray-50">
+                                  {/* <tfoot className="bg-gray-50">
                                     <tr>
                                       <td colSpan={6} className="px-3 py-2 text-sm font-medium text-right">Spec Total:</td>
                                       <td className="px-3 py-2 text-sm font-medium text-gray-900">
                                         ₹{spec.price.toLocaleString('en-IN')}
                                       </td>
                                     </tr>
-                                  </tfoot>
+                                  </tfoot> */}
                                 </table>
                               </div>
                             ) : (
