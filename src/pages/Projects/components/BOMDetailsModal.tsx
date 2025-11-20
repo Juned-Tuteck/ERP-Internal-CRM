@@ -94,7 +94,11 @@ const BOMDetailsModal: React.FC<BOMDetailsModalProps> = ({ project, isOpen, onCl
   };
 
   const allDetails = bomData?.specs?.flatMap(spec => spec.details) || [];
-  const grandTotal = bomData?.total_price ? parseFloat(bomData.total_price) : 0;
+
+  // Calculate grand total from all BOM items
+  const grandTotal = allDetails.reduce((total, detail) => {
+    return total + (detail.required_quantity * detail.net_rate);
+  }, 0);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
