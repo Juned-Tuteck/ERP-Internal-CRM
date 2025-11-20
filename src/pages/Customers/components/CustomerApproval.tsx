@@ -27,57 +27,58 @@ const CustomerApproval: React.FC = () => {
   const [reason, setReason] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingCustomers, setPendingCustomers] = useState<any[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { hasActionAccess } = useCRM();
 
+  const fetchCustomers = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/customer/`
+      );
+      const customers = response.data.data;
+
+      // Filter customers with approval_status not APPROVED or REJECTED
+      const filteredCustomers = customers.filter(
+        (customer: any) =>
+          customer.approval_status !== "APPROVED" &&
+          customer.approval_status !== "REJECTED"
+      );
+
+      // Map API keys to UI keys
+      const mappedCustomers = filteredCustomers.map((customer: any) => ({
+        id: customer.customer_id,
+        businessName: customer.business_name,
+        contactNo: customer.contact_number,
+        email: customer.email,
+        country: customer.country,
+        currency: customer.currency,
+        state: customer.state,
+        district: customer.district,
+        city: customer.city,
+        customerType: customer.customer_type,
+        customerPotential: customer.customer_potential,
+        pincode: customer.pincode,
+        submittedBy: customer.created_by, // Assuming created_by is the submitter
+        submittedDate: new Date(customer.created_at).toLocaleDateString(
+          "en-IN"
+        ),
+        panNumber: customer.pan_number,
+        gstNumber: customer.gst_number,
+        bankName: customer.bank_name,
+        contactPersons: [], // Assuming no contact persons in the API response
+        branches: [], // Assuming no branches in the API response
+        uploadedFiles: [], // Assuming no uploaded files in the API response
+      }));
+
+      setPendingCustomers(mappedCustomers);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/customer/`
-        );
-        const customers = response.data.data;
-
-        // Filter customers with approval_status not APPROVED or REJECTED
-        const filteredCustomers = customers.filter(
-          (customer: any) =>
-            customer.approval_status !== "APPROVED" &&
-            customer.approval_status !== "REJECTED"
-        );
-
-        // Map API keys to UI keys
-        const mappedCustomers = filteredCustomers.map((customer: any) => ({
-          id: customer.customer_id,
-          businessName: customer.business_name,
-          contactNo: customer.contact_number,
-          email: customer.email,
-          country: customer.country,
-          currency: customer.currency,
-          state: customer.state,
-          district: customer.district,
-          city: customer.city,
-          customerType: customer.customer_type,
-          customerPotential: customer.customer_potential,
-          pincode: customer.pincode,
-          submittedBy: customer.created_by, // Assuming created_by is the submitter
-          submittedDate: new Date(customer.created_at).toLocaleDateString(
-            "en-IN"
-          ),
-          panNumber: customer.pan_number,
-          gstNumber: customer.gst_number,
-          bankName: customer.bank_name,
-          contactPersons: [], // Assuming no contact persons in the API response
-          branches: [], // Assuming no branches in the API response
-          uploadedFiles: [], // Assuming no uploaded files in the API response
-        }));
-
-        setPendingCustomers(mappedCustomers);
-      } catch (error) {
-        console.error("Error fetching customers:", error);
-      }
-    };
-
     fetchCustomers();
-  }, []);
+  }, [refreshTrigger]);
 
   const getCustomerTypeColor = (type: string) => {
     switch (type) {
@@ -128,13 +129,6 @@ const CustomerApproval: React.FC = () => {
         );
 
         if (response.status === 200) {
-          // Update the UI after successful approval/rejection
-          setPendingCustomers((prevCustomers) =>
-            prevCustomers.filter(
-              (customer) => customer.id !== selectedCustomer.id
-            )
-          );
-
           // ------------------------------------------------------------------------------------------For notifications
           try {
                 await sendNotification({
@@ -155,6 +149,9 @@ const CustomerApproval: React.FC = () => {
               // Continue with the flow even if notification fails
             }
           // ----------------------------------------------------------------------------------------
+
+          // Refresh the customer list to show updated data
+          setRefreshTrigger(prev => prev + 1);
 
           alert(
             `Customer ${actionType === "approve" ? "approved" : "rejected"

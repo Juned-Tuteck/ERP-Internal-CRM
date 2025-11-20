@@ -41,6 +41,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { hasActionAccess } = useCRM();
 
   // Add state for edit modal
@@ -131,7 +132,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     };
 
     fetchLeadDetails();
-  }, [lead]);
+  }, [lead, refreshTrigger]);
 
   // Dummy history data for modal
   const historyData = [
@@ -1017,10 +1018,14 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       {showEditModal && (
         <AddLeadModal
           isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
+          onClose={() => {
+            setShowEditModal(false);
+            setRefreshTrigger(prev => prev + 1);
+          }}
           onSubmit={(_updatedLead) => {
             // Handle update logic here (e.g., call API or update state)
             setShowEditModal(false);
+            setRefreshTrigger(prev => prev + 1);
           }}
           initialData={displayLead}
         />
