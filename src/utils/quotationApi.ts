@@ -258,6 +258,7 @@ export const createBulkCustomerQuotationApprovals = async (payload: {
     customer_quotation_id: string;
     approver_role: string;
     approval_status: string;
+    approval_type?: string;
   }[];
 }) => {
   const token = localStorage.getItem('auth_token');

@@ -191,13 +191,15 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
         customer_quotation_id: string;
         approver_role: string;
         approval_status: string;
+        approval_type?: string;
       }[] = [];
 
       if (selectedRole) {
         approvals.push({
           customer_quotation_id: quotation.id,
           approver_role: selectedRole.role_name,
-          approval_status: "PENDING"
+          approval_status: "PENDING",
+          approval_type:'VARIANCE'
         });
       }
 
@@ -206,7 +208,8 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
         approvals.push({
           customer_quotation_id: quotation.id,
           approver_role: role,
-          approval_status: "PENDING"
+          approval_status: "PENDING",
+          approval_type:'STANDARD'
         });
       });
 
