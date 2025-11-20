@@ -2209,7 +2209,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       relevant documents
                     </p>
                     <p className="text-xs text-gray-500 mb-4">
-                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG (Max
+                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG, XLS, XLSX (Max
                       15MB per file)
                     </p>
                     <input

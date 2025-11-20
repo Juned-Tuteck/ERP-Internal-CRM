@@ -1689,7 +1689,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       etc.
                     </p>
                     <p className="text-xs text-gray-500 mb-4">
-                      Supported formats: PDF, DOC, DOCX, JPG, PNG, DWG (Max 10MB
+                      Supported formats: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX (Max 10MB
                       per file)
                     </p>
                     <input
