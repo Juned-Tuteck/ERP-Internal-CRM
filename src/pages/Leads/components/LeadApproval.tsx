@@ -35,6 +35,7 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { hasActionAccess } = useCRM();
 
   // Filter leads based on search term
@@ -60,56 +61,56 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
   });
 
   // Fetch leads from API
+  const fetchLeads = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/lead/`
+      );
+      const apiLeads = response.data.data;
+      console.log("Fetched leads for approval:", apiLeads);
+
+      // Filter leads that need approval (not already approved or rejected)
+      const pendingLeads = apiLeads.filter(
+        (apiLead: any) =>
+          apiLead.approval_status !== "APPROVED" &&
+          apiLead.approval_status !== "REJECTED"
+      );
+      console.log("Pending leads for approval:", pendingLeads);
+
+      // Map API response to UI format
+      const mappedLeads = pendingLeads.map((apiLead: any) => ({
+        id: apiLead.lead_id?.toString() || "",
+        projectName: apiLead.project_name || "",
+        businessName: apiLead.business_name || "",
+        contactPerson: apiLead.contact_person || "",
+        projectValue: `₹${(apiLead.project_value || 0).toLocaleString(
+          "en-IN"
+        )}`,
+        leadType: apiLead.lead_type || "",
+        leadCriticality: apiLead.lead_criticality || "",
+        leadStage: apiLead.lead_stage || "",
+        submittedBy: apiLead.created_by || "Unknown",
+        submittedDate: apiLead.created_at || "",
+        leadDetails: apiLead.lead_details || "",
+        workType: apiLead.work_type || "",
+        eta: apiLead.eta || "",
+        approximateResponseTime:
+          apiLead.approximate_response_time_day?.toString() || "0",
+        approvalStatus: apiLead.approval_status || "PENDING",
+        involvedAssociates: [],
+      }));
+
+      setLeads(mappedLeads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/lead/`
-        );
-        const apiLeads = response.data.data;
-        console.log("Fetched leads for approval:", apiLeads);
-
-        // Filter leads that need approval (not already approved or rejected)
-        const pendingLeads = apiLeads.filter(
-          (apiLead: any) =>
-            apiLead.approval_status !== "APPROVED" &&
-            apiLead.approval_status !== "REJECTED"
-        );
-        console.log("Pending leads for approval:", pendingLeads);
-
-        // Map API response to UI format
-        const mappedLeads = pendingLeads.map((apiLead: any) => ({
-          id: apiLead.lead_id?.toString() || "",
-          projectName: apiLead.project_name || "",
-          businessName: apiLead.business_name || "",
-          contactPerson: apiLead.contact_person || "",
-          projectValue: `₹${(apiLead.project_value || 0).toLocaleString(
-            "en-IN"
-          )}`,
-          leadType: apiLead.lead_type || "",
-          leadCriticality: apiLead.lead_criticality || "",
-          leadStage: apiLead.lead_stage || "",
-          submittedBy: apiLead.created_by || "Unknown",
-          submittedDate: apiLead.created_at || "",
-          leadDetails: apiLead.lead_details || "",
-          workType: apiLead.work_type || "",
-          eta: apiLead.eta || "",
-          approximateResponseTime:
-            apiLead.approximate_response_time_day?.toString() || "0",
-          approvalStatus: apiLead.approval_status || "PENDING",
-          involvedAssociates: [],
-        }));
-
-        setLeads(mappedLeads);
-      } catch (error) {
-        console.error("Error fetching leads:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchLeads();
-  }, []);
+  }, [refreshTrigger]);
 
   const getCriticalityColor = (criticality: string) => {
     switch (criticality) {
@@ -186,8 +187,8 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
           }
         // ----------------------------------------------------------------------------------------
 
-        // Optionally refresh the leads list
-        // You might want to call fetchLeads() here to refresh the data
+        // Refresh the leads list to show updated data
+        setRefreshTrigger(prev => prev + 1);
       } catch (error) {
         console.error("Error updating lead decision:", error);
         alert("Failed to update lead decision. Please try again.");

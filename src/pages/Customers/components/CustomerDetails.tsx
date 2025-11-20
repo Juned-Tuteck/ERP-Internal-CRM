@@ -34,6 +34,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [mappedApiData, setMappedApiData] = useState<any>({
     ...customer,
     panNumber: "ABCDE1234F",
@@ -189,7 +190,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
           console.error("Error fetching customer details:", error);
         });
     }
-  }, [customer?.id]);
+  }, [customer?.id, refreshTrigger]);
 
   useEffect(() => {
     console.log("API Data:", mappedApiData);
@@ -809,11 +810,14 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
 
       <AddCustomerModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setRefreshTrigger(prev => prev + 1);
+        }}
         onSubmit={(updatedCustomerData) => {
-          // Replace with actual update logic, e.g., API call or state update
           console.log("Updated Customer:", updatedCustomerData);
           setIsEditModalOpen(false);
+          setRefreshTrigger(prev => prev + 1);
         }}
         initialData={{ ...customer, ...mappedApiData }}
       />
