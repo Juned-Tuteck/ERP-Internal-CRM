@@ -348,6 +348,8 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           isExpanded: true,
           price: parseFloat(spec.spec_price || "0"),
           items: (spec.items || []).map((detail: any) => {
+            const basicSupplyRate = parseFloat(detail.basic_supply_rate || "0");
+            const basicInstallationRate = parseFloat(detail.basic_installation_rate || "0");
             const quantity = parseFloat(detail.required_qty || "1");
             const supplyRate = parseFloat(detail.supply_rate || "0");
             const installationRate = parseFloat(
@@ -369,8 +371,8 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
               uomValue: parseFloat(detail.uom_value || "1"),
               isCapitalItem: detail.is_capital_item || false,
               isScrapItem: detail.is_scrap_item || false,
-              basicSupplyRate: supplyRate,
-              basicInstallationRate: installationRate,
+              basicSupplyRate: basicSupplyRate,
+              basicInstallationRate: basicInstallationRate,
               supplyRate,
               installationRate,
               netRate: parseFloat(detail.latest_lowest_net_rate || "0"),
@@ -382,7 +384,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 detail.installation_price || "0"
               ),
               costDetails: {
-                supplyDiscount: 0, // Not stored in API, would need separate endpoint
+                supplyDiscount:parseFloat(detail.spec_discount || "0"), // Not stored in API, would need separate endpoint
                 supplyWastage: parseFloat(detail.supply_wastage_pct || "0"),
                 supplyWastageAmount: parseFloat(
                   detail.supply_wastage_amt || "0"

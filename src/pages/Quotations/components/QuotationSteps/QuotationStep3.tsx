@@ -86,19 +86,20 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({
     }
   }, [validationErrors, onValidationChange]);
   // Get values from previous steps
+
   const ownSupply = formData.specs
     ? formData.specs.reduce(
       (sum: number, spec: any) =>
         sum +
         spec.items.reduce(
           (itemSum: number, item: any) =>
-            itemSum + (item.finalSupplyAmount || item.supplyOwnAmount || 0),
+            itemSum + ( item.supplyOwnAmount || 0),
           0
         ),
       0
     )
     : formData.items?.reduce(
-      (sum: number, item: any) => sum + (item.finalSupplyAmount || item.supplyOwnAmount || 0),
+      (sum: number, item: any) => sum + ( item.supplyOwnAmount || 0),
       0
     ) || 0;
 
@@ -108,15 +109,18 @@ const QuotationStep3: React.FC<QuotationStep3Props> = ({
         sum +
         spec.items.reduce(
           (itemSum: number, item: any) =>
-            itemSum + (item.finalInstallationAmount || item.installationOwnAmount || 0),
+            itemSum + ( item.installationOwnAmount || 0),
           0
         ),
       0
     )
     : formData.items?.reduce(
-      (sum: number, item: any) => sum + (item.finalInstallationAmount || item.installationOwnAmount || 0),
+      (sum: number, item: any) => sum + (item.installationOwnAmount || 0),
       0
     ) || 0;
+
+  console.log("Own Supply", ownSupply);
+  console.log("Own Labour", ownLabour);
 
   const totalOverheads = formData.totalOverheadsCost || 0;
   const totalOwn = ownSupply + ownLabour;

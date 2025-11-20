@@ -413,7 +413,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                 costDetails.installationOfficeOverhead || 0,
               total_supply_amt: item.supplyOwnAmount || 0,
               total_installation_amt: item.installationOwnAmount || 0,
-              spec_discount: 0,
+              spec_discount: costDetails.supplyDiscount||0,
               basic_supply_rate: item.basicSupplyRate || 0,
               basic_installation_rate: item.basicInstallationRate || 0,
             });
@@ -897,6 +897,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                   total_installation_amt: item.installationOwnAmount || 0,
                   basic_supply_rate: item.basicSupplyRate || 0,
                   basic_installation_rate: item.basicInstallationRate || 0,
+                  spec_discount: costDetails.supplyDiscount||0
                 };
                 await updateQuotationBOMItemDetail(
                   initialItem.id,
