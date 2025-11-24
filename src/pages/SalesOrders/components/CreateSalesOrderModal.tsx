@@ -226,6 +226,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
         bomNumber: details.bomNumber,
         totalCost: details.grandTotalGst,
         projectName: details.lead.projectName,
+        workOrderAmount:details.grandTotalGst,
         materialCosts: [
           { type: 'HIGH SIDE SUPPLY', gstPercentage: details.highSideGstPercentage || 0, amountBasic: details.highSideCostWithoutGst || 0, amountWithGst: details.highSideCostWithGst || 0 },
           { type: 'LOW SIDE SUPPLY', gstPercentage: details.lowSideGstPercentage || 0, amountBasic: details.lowSideCostWithoutGst || 0, amountWithGst: details.lowSideCostWithGst || 0 },
@@ -940,7 +941,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                           <input
                             type="text"
                             name="workOrderAmount"
-                            value={Number(formData.totalCost).toLocaleString("en-IN", {
+                            value={Number(formData.workOrderAmount).toLocaleString("en-IN", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}
