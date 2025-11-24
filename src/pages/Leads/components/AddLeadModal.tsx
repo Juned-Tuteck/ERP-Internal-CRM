@@ -215,13 +215,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         errors.businessName = "Customer is required";
       }
 
-      if (!formData.customerBranch?.trim()) {
-        errors.customerBranch = "Customer Branch is required";
-      }
+      // if (!formData.customerBranch?.trim()) {
+      //   errors.customerBranch = "Customer Branch is required";
+      // }
 
-      if (!formData.contactPerson?.trim()) {
-        errors.contactPerson = "Contact Person is required";
-      }
+      // if (!formData.contactPerson?.trim()) {
+      //   errors.contactPerson = "Contact Person is required";
+      // }
 
       if (!formData.contactNo?.trim()) {
         errors.contactNo = "Contact Number is required";
@@ -316,10 +316,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         return !value?.trim() ? "Customer is required" : "";
 
       case "customerBranch":
-        return !value?.trim() ? "Customer Branch is required" : "";
+        // return !value?.trim() ? "Customer Branch is required" : "";
 
       case "contactPerson":
-        return !value?.trim() ? "Contact Person is required" : "";
+        // return !value?.trim() ? "Contact Person is required" : "";
 
       case "contactNo":
         if (!value?.trim()) return "Contact Number is required";
@@ -1220,7 +1220,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Customer Branch *
+                      Customer Branch 
                     </label>
                     <select
                       name="customerBranch"
@@ -1262,7 +1262,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contact Person *
+                      Contact Person 
                     </label>
                     <select
                       name="contactPerson"
