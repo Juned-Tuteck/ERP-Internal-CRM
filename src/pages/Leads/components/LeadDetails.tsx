@@ -365,8 +365,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       setShowWinLossModal(false);
       setWinLossReason("");
 
-      // Optionally refresh the lead details or trigger a re-fetch
-      // You might want to call a refresh function here
+      // Refresh the lead details to show updated data
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error("Error updating lead status:", error);
       // You might want to show an error message to the user here
