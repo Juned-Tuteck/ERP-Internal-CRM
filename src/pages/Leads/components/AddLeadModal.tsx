@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   X,
   Save,
@@ -376,6 +376,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
+  // NEW: ref to keep normalized snapshot of initial form for diffing
+  const initialFormRef = useRef<any>(null);
+
   useEffect(() => {
     const fetchAllForEdit = async () => {
       if (initialData) {
@@ -405,25 +408,53 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         } else {
           normalizedEta = "";
         }
-        setFormData({
-          ...initialData,
+
+        // Create a normalized form object (snapshot) to compare later
+        const normalizedFormSnapshot = {
+          businessName: initialData.businessName || initialData.business_name || "",
+          avatar: initialData.avatar || "",
+          customerBranch: initialData.branch_name || initialData.customerBranch || "",
+          currency: initialData.currency || "INR",
+          contactPerson: initialData.contactPerson || initialData.contact_person || "",
+          contactNo: initialData.contactNo || initialData.contact_no || "",
+          leadGeneratedDate: normalizedDate,
+          referencedBy: initialData.referencedBy || initialData.referenced_by || "",
+          projectName: initialData.projectName || initialData.project_name || "",
           projectValue:
-            initialData.projectValue !== undefined &&
-              initialData.projectValue !== null
+            initialData.projectValue !== undefined && initialData.projectValue !== null
               ? String(initialData.projectValue).replace(/[^\d.]/g, "")
               : "",
-          leadGeneratedDate: normalizedDate,
+          leadType: initialData.leadType || initialData.lead_type || "",
+          workType: initialData.workType || initialData.work_type || "",
+          leadCriticality: initialData.leadCriticality || initialData.lead_criticality || "",
+          leadSource: initialData.leadSource || initialData.lead_source || "",
+          leadStage: initialData.leadStage || initialData.lead_stage || "New Lead",
+          leadStagnation: initialData.leadStagnation || initialData.lead_stagnation || "",
+          approximateResponseTime: initialData.approximateResponseTime || initialData.approximate_response_time_day || "",
           eta: normalizedEta,
-          referencedBy:
-            initialData.referencedBy || initialData.referenced_by || "",
-          involvedAssociates:
-            initialData.involvedAssociates || initialData.lead_associates || [],
+          leadDetails: initialData.leadDetails || initialData.lead_details || "",
+          involvedAssociates: initialData.involvedAssociates || initialData.lead_associates || [],
+          uploadedFiles: initialData.uploadedFiles || [],
+          followUpComments: initialData.followUpComments || [],
+          // also snapshot backend ids if present
+          customer_id: initialData.customer_id || initialData.customerId || null,
+          customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
+          contact_person_id: initialData.contact_person || initialData.contact_person_id || null,
+        };
+
+        // Set form data for editing
+        setFormData({
+          ...normalizedFormSnapshot,
         });
         setUploadedFiles(initialData.uploadedFiles || []);
         console.log(
           "THE INITIAL DATA ____________________:::::: ",
           initialData
         );
+
+        // Store snapshot in ref for later diffing
+        initialFormRef.current = { ...normalizedFormSnapshot };
+
         if (initialData.businessName && isOpen) {
           // Fetch customers and use the response directly
           console.log("INSIDE THE MODAL :::::::::::::");
@@ -452,11 +483,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
             console.log("THE SELECTED CUSTOMER:", selectedCustomer);
             if (selectedCustomer) {
-              setSelectedCustomerId(selectedCustomer.id);
+              // use local ids to snapshot accurately
+              const localCustomerId = selectedCustomer.id;
+              setSelectedCustomerId(localCustomerId);
+              // update snapshot
+              initialFormRef.current.customer_id = localCustomerId;
+
               // Fetch branches for this customer
               const branchResponse = await axios.get(
                 `${import.meta.env.VITE_API_BASE_URL
-                }/customer-branch?customer_id=${selectedCustomer.id}`
+                }/customer-branch?customer_id=${localCustomerId}`
               );
               const branchData = branchResponse.data.data;
               setCustomerBranches(branchData);
@@ -467,7 +503,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     branch.branch_name === initialData.branch_name
                 );
                 if (selectedBranch) {
-                  setSelectedBranchId(selectedBranch.id);
+                  const localBranchId = selectedBranch.id;
+                  setSelectedBranchId(localBranchId);
+                  initialFormRef.current.customer_branch_id = localBranchId;
                   // Always update formData.customerBranch to the exact branch name from fetched data
                   setFormData((prev: any) => ({
                     ...prev,
@@ -476,7 +514,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   // Fetch contacts for this branch
                   const contactResponse = await axios.get(
                     `${import.meta.env.VITE_API_BASE_URL
-                    }/customer-branch-contact?customer_branch_id=${selectedBranch.id
+                    }/customer-branch-contact?customer_branch_id=${localBranchId
                     }`
                   );
                   const contactData = contactResponse.data.data;
@@ -487,7 +525,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         contact.name === initialData.contactPerson
                     );
                     if (selectedContact) {
-                      setSelectedContactId(selectedContact.id);
+                      const localContactId = selectedContact.id;
+                      setSelectedContactId(localContactId);
+                      initialFormRef.current.contact_person_id = localContactId;
                     }
                   }
                 } else {
@@ -719,7 +759,31 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Update lead API call
+  // NEW helper: build backend-shaped object from current form state
+  const buildBackendObject = () => {
+    return {
+      business_name: formData.businessName || "",
+      customer_id: selectedCustomerId || null,
+      customer_branch_id: selectedBranchId || null,
+      contact_person: selectedContactId || null,
+      contact_no: formData.contactNo || "",
+      lead_date_generated_on: formData.leadGeneratedDate || "",
+      referenced_by: formData.referencedBy || null,
+      project_name: formData.projectName || "",
+      project_value: parseFloat(String(formData.projectValue || "0")) || 0,
+      lead_type: formData.leadType || "",
+      work_type: formData.workType || null,
+      lead_criticality: formData.leadCriticality || "",
+      lead_source: formData.leadSource || "",
+      lead_stage: formData.leadStage || "",
+      approximate_response_time_day:
+        parseInt(String(formData.approximateResponseTime || "0")) || 0,
+      eta: formData.eta || null,
+      lead_details: formData.leadDetails || null,
+    };
+  };
+
+  // REPLACE existing handleUpdateLead with this diffing version
   const handleUpdateLead = async () => {
     setIsLoading(true);
     try {
@@ -728,39 +792,89 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         setIsLoading(false);
         return;
       }
-      // Map UI fields to backend keys
-      const leadPayload = {
-        business_name: formData.businessName,
-        customer_id: selectedCustomerId || null,
-        customer_branch_id: selectedBranchId || null,
-        contact_person: selectedContactId || null,
-        contact_no: formData.contactNo,
-        lead_date_generated_on: formData.leadGeneratedDate,
-        referenced_by: formData.referencedBy || null,
-        project_name: formData.projectName,
-        project_value: parseFloat(formData.projectValue) || 0,
-        lead_type: formData.leadType,
-        work_type: formData.workType || null,
-        lead_criticality: formData.leadCriticality,
-        lead_source: formData.leadSource,
-        lead_stage: formData.leadStage,
-        approximate_response_time_day:
-          parseInt(formData.approximateResponseTime) || 0,
-        eta: formData.eta || null,
-        lead_details: formData.leadDetails || null,
-      };
+
+      // current backend-shaped object
+      const currentBackend = buildBackendObject();
+
+      // initial snapshot: try to use the ref snapshot; if missing, create minimal fallback from initialData
+      const initialSnapshotBackend = initialFormRef.current
+        ? {
+            business_name: initialFormRef.current.businessName || "",
+            customer_id: initialFormRef.current.customer_id || null,
+            customer_branch_id: initialFormRef.current.customer_branch_id || null,
+            contact_person: initialFormRef.current.contact_person_id || null,
+            contact_no: initialFormRef.current.contactNo || "",
+            lead_date_generated_on: initialFormRef.current.leadGeneratedDate || "",
+            referenced_by: initialFormRef.current.referencedBy || null,
+            project_name: initialFormRef.current.projectName || "",
+            project_value: parseFloat(String(initialFormRef.current.projectValue || "0")) || 0,
+            lead_type: initialFormRef.current.leadType || "",
+            work_type: initialFormRef.current.workType || null,
+            lead_criticality: initialFormRef.current.leadCriticality || "",
+            lead_source: initialFormRef.current.leadSource || "",
+            lead_stage: initialFormRef.current.leadStage || "",
+            approximate_response_time_day:
+              parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
+            eta: initialFormRef.current.eta || null,
+            lead_details: initialFormRef.current.leadDetails || null,
+          }
+        : {
+            // best-effort fallback from initialData prop
+            business_name: initialData.business_name || initialData.businessName || "",
+            customer_id: initialData.customer_id || null,
+            customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
+            contact_person: initialData.contact_person || null,
+            contact_no: initialData.contact_no || "",
+            lead_date_generated_on: initialData.lead_date_generated_on || initialData.leadGeneratedDate || "",
+            referenced_by: initialData.referenced_by || null,
+            project_name: initialData.project_name || initialData.projectName || "",
+            project_value: parseFloat(String(initialData.project_value || 0)) || 0,
+            lead_type: initialData.lead_type || initialData.leadType || "",
+            work_type: initialData.work_type || initialData.workType || null,
+            lead_criticality: initialData.lead_criticality || initialData.leadCriticality || "",
+            lead_source: initialData.lead_source || initialData.leadSource || "",
+            lead_stage: initialData.lead_stage || initialData.leadStage || "",
+            approximate_response_time_day:
+              parseInt(String(initialData.approximate_response_time_day || initialData.approximateResponseTime || 0)) || 0,
+            eta: initialData.eta || initialData.eta || null,
+            lead_details: initialData.lead_details || initialData.leadDetails || null,
+          };
+
+      // Build diff: include only keys that changed (strict comparison)
+      const diffPayload: any = {};
+      Object.keys(currentBackend).forEach((key) => {
+        const currentVal = currentBackend[key as keyof typeof currentBackend];
+        const initialVal = initialSnapshotBackend[key as keyof typeof initialSnapshotBackend];
+
+        // Normalize null/empty for comparison
+        const cur = currentVal === "" ? null : currentVal;
+        const init = initialVal === "" ? null : initialVal;
+
+        // For numbers, compare numeric values
+        const changed =
+          (typeof cur === "number" || typeof init === "number")
+            ? Number(cur) !== Number(init)
+            : String(cur) !== String(init);
+
+        if (changed) {
+          diffPayload[key] = currentVal;
+        }
+      });
+
+      if (Object.keys(diffPayload).length === 0) {
+        alert("No changes detected to update.");
+        setIsLoading(false);
+        return;
+      }
 
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/lead/${initialData.id}`,
-        leadPayload
+        diffPayload
       );
 
-      // Optionally update associates, files, etc. here if needed
-
-      // In edit mode, set the createdLeadId to existing lead ID for follow-up functionality
+      // keep behavior after successful update (setCreatedLeadId, move step, reset as before)
       setCreatedLeadId(initialData.id);
 
-      // Move to next step instead of closing modal to allow follow-up comments
       setCurrentStep(2);
       setFormData({
         businessName: "",
@@ -805,10 +919,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         console.log(`Notification sent for CRM Lead ${formData.businessName || 'Lead'}`);
       } catch (notifError) {
         console.error('Failed to send notification:', notifError);
-        // Continue with the flow even if notification fails
       }
-      // ----------------------------------------------------------------------------------------
-
     } catch (error) {
       console.error("Error updating lead:", error);
       alert("Failed to update lead. Please try again.");
