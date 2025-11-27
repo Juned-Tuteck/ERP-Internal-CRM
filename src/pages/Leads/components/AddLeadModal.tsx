@@ -51,7 +51,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       workType: "",
       leadCriticality: "",
       leadSource: "",
-      leadStage: "New Lead",
+      leadStage: "Information Stage",
       leadStagnation: "",
       approximateResponseTime: "",
       eta: "",
@@ -744,6 +744,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     return response.data;
   };
 
+  // Update lead stage after file upload
+  const updateLeadStageAfterFileUpload = async (leadId: string) => {
+    try {
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/lead/${leadId}`,
+        {
+          lead_stage: "Enquiry",
+        }
+      );
+      console.log("Lead stage updated to Enquiry after file upload");
+    } catch (error) {
+      console.error("Error updating lead stage:", error);
+    }
+  };
+
 
   const removeFile = (index: number) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
@@ -792,29 +807,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
       // Move to next step instead of closing modal to allow follow-up comments
       setCurrentStep(2);
-      setFormData({
-        businessName: "",
-        customerBranch: "",
-        currency: "INR",
-        contactPerson: "",
-        contactNo: "",
-        leadGeneratedDate: new Date().toISOString().split("T")[0],
-        referencedBy: "",
-        projectName: "",
-        projectValue: "",
-        leadType: "",
-        workType: "",
-        leadCriticality: "",
-        leadSource: "",
-        leadStage: "New Lead",
-        leadStagnation: "",
-        approximateResponseTime: "",
-        eta: "",
-        leadDetails: "",
-        involvedAssociates: [],
-        uploadedFiles: [],
-        followUpComments: [],
-      });
       setUploadedFiles([]);
       setNewComment("");
 
@@ -847,7 +839,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validate current step before proceeding
     if (!validateForm()) {
       return; // Stop if validation fails
@@ -877,14 +869,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       // setIsUploading(true);
       try {
         if (isEditMode) {
-          uploadFilesForLead(leadId, uploadedFiles, (percent) => {
+          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
             console.log("Upload progress:", percent);
           });
         } else {
-          uploadFilesForLead(leadId, uploadedFiles, (percent) => {
+          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
             console.log("Upload progress:", percent);
           });
         }
+
+        // Auto-update lead stage to "Enquiry" when files are uploaded
+        await updateLeadStageAfterFileUpload(leadId);
 
         // setIsUploadDone(true);
         setCurrentStep(3);
@@ -1097,7 +1092,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       workType: "",
       leadCriticality: "",
       leadSource: "",
-      leadStage: "New Lead",
+      leadStage: "Information Stage",
       leadStagnation: "",
       approximateResponseTime: "",
       eta: "",
@@ -1539,14 +1534,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lead Stage *
+                      Lead Stage * (Auto-updated)
                     </label>
                     <select
                       name="leadStage"
                       value={formData.leadStage}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
+                      title="Lead stage is automatically updated based on file uploads and quotations"
                     >
                       {leadStages.map((stage) => (
                         <option key={stage} value={stage}>
@@ -1554,6 +1551,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Stage changes to "Enquiry" when files are uploaded
+                    </p>
                   </div>
 
                   <div>
