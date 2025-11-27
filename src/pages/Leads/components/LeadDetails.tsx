@@ -727,6 +727,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <p className="text-xs text-gray-500">
                     {sizeLabel} • {file.mime ?? "unknown"}
                   </p>
+                  <p className="text-xs text-gray-500">
+                    {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                  </p>
                 </div>
 
                 <Download className="h-4 w-4 text-gray-400 ml-3" />
