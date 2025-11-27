@@ -122,10 +122,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Advertisement",
   ];
   const leadStages = [
-    "New Lead",
-    "Qualified",
-    "Meeting",
-    "Quotation Submitted",
+    "Information Stage",
+    "Enquiry",
+    "Quotation Stage",
     "Won",
     "Lost",
   ];
