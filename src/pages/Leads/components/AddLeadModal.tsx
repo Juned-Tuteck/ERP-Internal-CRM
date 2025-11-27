@@ -912,6 +912,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         return;
       }
 
+      diffPayload.updated_by = userData?.id || null;
       await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/lead/${initialData.id}`,
         diffPayload
@@ -1027,6 +1028,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           parseInt(formData.approximateResponseTime) || 0,
         eta: formData.eta || null,
         lead_details: formData.leadDetails || null,
+        created_by: userData?.id || null,
       };
 
       const leadResponse = await axios.post(
