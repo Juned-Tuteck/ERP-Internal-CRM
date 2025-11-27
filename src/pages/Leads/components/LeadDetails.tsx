@@ -21,7 +21,12 @@ import {
   History,
   Edit2,
   Trash2,
-  Image, FileSpreadsheet, File, Download, FileCheck
+  Image,
+  FileSpreadsheet,
+  File,
+  Download,
+  FileCheck,
+  MessageSquare
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
@@ -47,6 +52,14 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   // Add state for edit modal
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'basic' | 'followup'>('basic');
+
+  // Follow-up comment state
+  const [newComment, setNewComment] = useState('');
+  const [followUpComments, setFollowUpComments] = useState<any[]>([]);
+  const [isAddingComment, setIsAddingComment] = useState(false);
 
   useEffect(() => {
     console.log("Lead Details Component Mounted", lead);
@@ -123,6 +136,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         };
 
         setLeadDetails(mappedLead);
+
+        // Fetch follow-up comments
+        fetchFollowUpComments(lead.id);
       } catch (error) {
         console.error("Error fetching lead details:", error);
         // Fallback to the lead data passed as prop
@@ -134,6 +150,47 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
     fetchLeadDetails();
   }, [lead, refreshTrigger]);
+
+  // Fetch follow-up comments
+  const fetchFollowUpComments = async (leadId: string) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/lead-follow-up?lead_id=${leadId}`
+      );
+      const comments = response.data.data || [];
+      setFollowUpComments(comments);
+    } catch (error) {
+      console.error('Error fetching follow-up comments:', error);
+      setFollowUpComments([]);
+    }
+  };
+
+  // Add follow-up comment
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !displayLead?.id) return;
+
+    setIsAddingComment(true);
+    try {
+      const commentPayload = {
+        lead_id: displayLead.id,
+        comment: newComment.trim(),
+      };
+
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/lead-follow-up`,
+        commentPayload
+      );
+
+      // Refresh comments list
+      await fetchFollowUpComments(displayLead.id);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment. Please try again.');
+    } finally {
+      setIsAddingComment(false);
+    }
+  };
 
   // Dummy history data for modal
   const historyData = [
@@ -538,8 +595,39 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         </div>
       </div>
 
-      {/* Lead Information Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Tabs Navigation */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('basic')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'basic'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Basic Information
+            </button>
+            <button
+              onClick={() => setActiveTab('followup')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'followup'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Follow-Up
+            </button>
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-6">
+          {activeTab === 'basic' && (
+            <div className="space-y-6">
+              {/* Lead Information Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Basic Information */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -678,187 +766,200 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         </div>
       </div>
 
-      {/* Uploaded Files */}
-      {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Supporting Documents
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {displayLead?.uploadedFiles?.map((file: any, index: number) => (
-            <div
-              key={index}
-              className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              <FileText className="h-8 w-8 text-blue-600 mr-3" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {file.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {file.size} • {file.type}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div> */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Supporting Documents</h3>
+              {/* Uploaded Files */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Supporting Documents</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(displayLead?.uploadedFiles ?? []).map((file) => {
-            console.log("Rendering file:", displayLead);
-            const Icon = getIconByMime(file.mime, file.original_name);
-            const sizeLabel = formatBytes(file.size);
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(displayLead?.uploadedFiles ?? []).map((file) => {
+                    console.log("Rendering file:", displayLead);
+                    const Icon = getIconByMime(file.mime, file.original_name);
+                    const sizeLabel = formatBytes(file.size);
 
-            return (
-              <a
-                key={file.id}
-                href={`${import.meta.env.VITE_API_BASE_URL}/lead-file/${displayLead.id}/files/${file.id}/download`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                <Icon className="h-8 w-8 text-blue-600 mr-3" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
-                    {file.original_name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {sizeLabel} • {file.mime ?? "unknown"}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
-                  </p>
-                </div>
-
-                <Download className="h-4 w-4 text-gray-400 ml-3" />
-              </a>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Additional Lead Details */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Additional Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center space-x-2">
-            <Building className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-500">Customer Branch</span>
-            <div className="font-medium text-gray-900 ml-2">
-              {displayLead.branch_name || "-"}
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Star className="h-4 w-4 text-yellow-500" />
-            <span className="text-gray-500">Currency</span>
-            <div className="font-medium text-gray-900 ml-2">
-              {displayLead.currency || "-"}
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Link className="h-4 w-4 text-blue-500" />
-            <span className="text-gray-500">Referenced By</span>
-            <div className="font-medium text-gray-900 ml-2">
-              {displayLead.referencedBy || "-"}
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-500">Lead Generated Date</span>
-            <div className="font-medium text-gray-900 ml-2">
-              {displayLead.leadGeneratedDate
-                ? new Date(displayLead.leadGeneratedDate).toLocaleDateString(
-                  "en-IN"
-                )
-                : "-"}
-            </div>
-          </div>
-          <div className="md:col-span-2 flex items-center space-x-2">
-            <Users className="h-4 w-4 text-blue-500" />
-            <span className="text-gray-500">Involved Associates</span>
-            {displayLead.involvedAssociates &&
-              displayLead.involvedAssociates.length > 0 ? (
-              <div className="flex flex-wrap gap-2 ml-2">
-                {displayLead.involvedAssociates.map((a: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
-                  >
-                    <span className="mr-1">{a.designation}</span>
-                    <span className="font-semibold">{a.associateName}</span>
-                    {a.otherInfo && (
-                      <span className="ml-1 text-gray-500">
-                        ({a.otherInfo})
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="font-medium text-gray-900 ml-2">-</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Follow-up Comments */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Follow-up Comments
-        </h3>
-        {displayLead.followUpComments &&
-          displayLead.followUpComments.length > 0 ? (
-          <div className="space-y-4">
-            {displayLead.followUpComments.map((comment: any, index: number) => (
-              <div
-                key={comment.id || index}
-                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900 mb-2">{comment.text}</p>
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          {comment.timestamp
-                            ? new Date(comment.timestamp).toLocaleString(
-                              "en-IN",
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                              }
-                            )
-                            : "No timestamp"}
-                        </span>
-                      </div>
-                      {comment.author && (
-                        <div className="flex items-center space-x-1">
-                          {/* <Users className="h-3 w-3" />
-                          <span>By: {comment.author}</span> */}
+                    return (
+                      <a
+                        key={file.id}
+                        href={`${import.meta.env.VITE_API_BASE_URL}/lead-file/${displayLead.id}/files/${file.id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        <Icon className="h-8 w-8 text-blue-600 mr-3" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
+                            {file.original_name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {sizeLabel} • {file.mime ?? "unknown"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                          </p>
                         </div>
-                      )}
+
+                        <Download className="h-4 w-4 text-gray-400 ml-3" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Additional Lead Details */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Additional Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <Building className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-500">Customer Branch</span>
+                    <div className="font-medium text-gray-900 ml-2">
+                      {displayLead.branch_name || "-"}
                     </div>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    <span className="text-gray-500">Currency</span>
+                    <div className="font-medium text-gray-900 ml-2">
+                      {displayLead.currency || "-"}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Link className="h-4 w-4 text-blue-500" />
+                    <span className="text-gray-500">Referenced By</span>
+                    <div className="font-medium text-gray-900 ml-2">
+                      {displayLead.referencedBy || "-"}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-500">Lead Generated Date</span>
+                    <div className="font-medium text-gray-900 ml-2">
+                      {displayLead.leadGeneratedDate
+                        ? new Date(displayLead.leadGeneratedDate).toLocaleDateString(
+                          "en-IN"
+                        )
+                        : "-"}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 flex items-center space-x-2">
+                    <Users className="h-4 w-4 text-blue-500" />
+                    <span className="text-gray-500">Involved Associates</span>
+                    {displayLead.involvedAssociates &&
+                      displayLead.involvedAssociates.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 ml-2">
+                        {displayLead.involvedAssociates.map((a: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
+                          >
+                            <span className="mr-1">{a.designation}</span>
+                            <span className="font-semibold">{a.associateName}</span>
+                            {a.otherInfo && (
+                              <span className="ml-1 text-gray-500">
+                                ({a.otherInfo})
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="font-medium text-gray-900 ml-2">-</div>
+                    )}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm">No follow-up comments yet</p>
-            <p className="text-xs mt-1">Comments will appear here when added</p>
-          </div>
-        )}
+            </div>
+          )}
+
+          {activeTab === 'followup' && (
+            <div className="space-y-6">
+              {/* Add Comment Section */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Add Follow-up Comment
+                </label>
+                <div className="space-y-3">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    rows={3}
+                    placeholder="Enter follow-up notes, meeting details, customer feedback..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || isAddingComment}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      {isAddingComment ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Adding...
+                        </>
+                      ) : (
+                        'Add Comment'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comments List */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Follow-up Comments
+                </h3>
+                {followUpComments && followUpComments.length > 0 ? (
+                  <div className="space-y-4">
+                    {followUpComments.map((comment: any, index: number) => (
+                      <div
+                        key={comment.id || index}
+                        className="border border-gray-200 rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-900 mb-2">
+                              {comment.comment || comment.text}
+                            </p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-500">
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  {comment.created_at || comment.timestamp
+                                    ? new Date(
+                                        comment.created_at || comment.timestamp
+                                      ).toLocaleString('en-IN', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                      })
+                                    : 'No timestamp'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                    <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm">No follow-up comments yet</p>
+                    <p className="text-xs mt-1">
+                      Add your first comment using the form above
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Win/Loss Modal */}
