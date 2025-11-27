@@ -97,6 +97,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
+  const [showCustomLeadSource, setShowCustomLeadSource] = useState(false);
+  const [customLeadSource, setCustomLeadSource] = useState("");
 
   const steps = [
     { id: 1, name: "General Information", description: "Basic lead details" },
@@ -463,6 +465,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           initialData
         );
 
+        // Check if lead source is a custom value (not in predefined list)
+        const leadSourceValue = initialData.leadSource || initialData.lead_source || "";
+        if (leadSourceValue && !leadSources.includes(leadSourceValue)) {
+          setShowCustomLeadSource(true);
+          setCustomLeadSource(leadSourceValue);
+        }
+
         // Store snapshot in ref for later diffing
         initialFormRef.current = { ...normalizedFormSnapshot };
 
@@ -713,6 +722,25 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       if (selectedContact) {
         setSelectedContactId(selectedContact.id);
       }
+    }
+
+    // Handle lead source selection
+    if (name === "leadSource") {
+      if (value === "Others") {
+        setShowCustomLeadSource(true);
+        setFormData((prev) => ({
+          ...prev,
+          leadSource: "",
+        }));
+      } else {
+        setShowCustomLeadSource(false);
+        setCustomLeadSource("");
+        setFormData((prev) => ({
+          ...prev,
+          leadSource: value,
+        }));
+      }
+      return;
     }
 
     setFormData((prev) => ({
@@ -1637,23 +1665,60 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Lead Source *
                     </label>
-                    <select
-                      name="leadSource"
-                      value={formData.leadSource}
-                      onChange={handleInputChange}
-                      required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
-                        ? "border-red-500"
-                        : "border-gray-300"
-                        }`}
-                    >
-                      <option value="">Select Source</option>
-                      {leadSources.map((source) => (
-                        <option key={source} value={source}>
-                          {source}
-                        </option>
-                      ))}
-                    </select>
+                    {!showCustomLeadSource ? (
+                      <select
+                        name="leadSource"
+                        value={formData.leadSource}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Source</option>
+                        {leadSources.map((source) => (
+                          <option key={source} value={source}>
+                            {source}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          name="customLeadSource"
+                          value={customLeadSource}
+                          onChange={(e) => {
+                            setCustomLeadSource(e.target.value);
+                            setFormData((prev) => ({
+                              ...prev,
+                              leadSource: e.target.value,
+                            }));
+                          }}
+                          placeholder="Enter custom lead source"
+                          required
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                            ? "border-red-500"
+                            : "border-gray-300"
+                            }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCustomLeadSource(false);
+                            setCustomLeadSource("");
+                            setFormData((prev) => ({
+                              ...prev,
+                              leadSource: "",
+                            }));
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          Back to dropdown
+                        </button>
+                      </div>
+                    )}
                     <ValidationError fieldName="leadSource" />
                   </div>
 
