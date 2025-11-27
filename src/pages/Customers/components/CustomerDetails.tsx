@@ -171,6 +171,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 city: branch.city || "",
                 pincode: branch.pincode || "",
                 address: `${branch.city}, ${branch.district}, ${branch.state} - ${branch.pincode}`,
+                gstNumber: branch.gstNumber || "",
                 contactPersons:
                   branch.contactPersons?.map((person: any) => ({
                     id: person.contactId,
@@ -639,6 +640,16 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                       <p className="text-sm text-gray-500">Address</p>
                       <p className="text-sm font-medium text-gray-900">
                         {branch.address}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <CreditCard className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">GST Number</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {branch.gstNumber}
                       </p>
                     </div>
                   </div>

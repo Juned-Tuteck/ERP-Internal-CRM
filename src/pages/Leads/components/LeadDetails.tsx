@@ -21,6 +21,7 @@ import {
   History,
   Edit2,
   Trash2,
+  Image, FileSpreadsheet, File, Download, FileCheck
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
@@ -115,7 +116,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           approvalStatus: apiLead.approval_status?.toLowerCase() || "pending",
           submittedDate: apiLead.created_at || lead.leadGeneratedDate,
           involvedAssociates: lead.involvedAssociates || [],
-          uploadedFiles: lead.uploadedFiles || [],
+          uploadedFiles: apiLead.files || [],
           followUpComments: lead.followUpComments || [],
           leadNumber: apiLead.lead_number || lead.leadNumber,
           customerNumber: apiLead.customer_number || lead.customerNumber,
@@ -219,6 +220,38 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   // Use detailed lead data if available, otherwise fallback to prop data
   const displayLead = leadDetails || lead;
+
+  function formatBytes(bytes?: string | number | null) {
+    if (bytes == null || isNaN(Number(bytes))) return "-";
+    const b = Number(bytes);
+    if (b === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  function getIconByMime(mime?: string | null, filename?: string) {
+    const ext = filename?.split(".").pop()?.toLowerCase() ?? "";
+    if (!mime && !ext) return File;
+    if (mime?.includes("pdf") || ext === "pdf") return FileText;
+    if (mime?.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(ext))
+      return Image;
+    if (
+      mime?.includes("spreadsheet") ||
+      ["xls", "xlsx", "csv"].includes(ext) ||
+      mime === "application/vnd.ms-excel" ||
+      mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+      return FileSpreadsheet;
+    if (
+      ["doc", "docx", "rtf", "msword"].some((t) => mime?.includes(t)) ||
+      ["doc", "docx"].includes(ext)
+    )
+      return FileText;
+    // fallback
+    return File;
+  }
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -646,7 +679,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       </div>
 
       {/* Uploaded Files */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Supporting Documents
         </h3>
@@ -667,6 +700,39 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </div>
             </div>
           ))}
+        </div>
+      </div> */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Supporting Documents</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {(displayLead?.uploadedFiles ?? []).map((file) => {
+            console.log("Rendering file:", displayLead);
+            const Icon = getIconByMime(file.mime, file.original_name);
+            const sizeLabel = formatBytes(file.size);
+
+            return (
+              <a
+                key={file.id}
+                href={`${import.meta.env.VITE_API_BASE_URL}/lead-file/${displayLead.id}/files/${file.id}/download`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                <Icon className="h-8 w-8 text-blue-600 mr-3" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
+                    {file.original_name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {sizeLabel} • {file.mime ?? "unknown"}
+                  </p>
+                </div>
+
+                <Download className="h-4 w-4 text-gray-400 ml-3" />
+              </a>
+            );
+          })}
         </div>
       </div>
 

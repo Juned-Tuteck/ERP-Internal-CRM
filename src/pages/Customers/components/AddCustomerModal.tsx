@@ -53,6 +53,7 @@ interface Branch {
   pincode: string;
   contactPersons: ContactPerson[];
   isEditing?: boolean;
+  gstNumber?: string;
 }
 
 const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
@@ -207,6 +208,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     district: "district",
     city: "city",
     pincode: "pincode",
+    gstNumber: "gst_number",
   };
 
   const branchContactKeymap = {
@@ -742,7 +744,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   // Branch Management
   const addBranch = () => {
     const newBranch: Branch = {
-      id: Date.now().toString(),
+      id: "",
       branchName: "",
       contactNumber: "",
       email: "",
@@ -754,6 +756,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       pincode: "",
       contactPersons: [],
       isEditing: true,
+      gstNumber: "",
     };
     setFormData((prev: typeof formData) => ({
       ...prev,
@@ -783,6 +786,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             city: prev.city,
             pincode: prev.pincode,
             contactPersons: [...prev.contactPersons],
+            gstNumber: prev.gstNumber || branch.gstNumber || "",
           }
           : branch
       ),
@@ -961,7 +965,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           throw new Error("Failed to create branch");
         }
 
-        console.log("Branch created successfully:", response.data);
+        // console.log("Branch created successfully:", response.data);
+        // get actual backend branch id (adapt key based on response shape)
+        const actualBranchId = response.data.data?.customer_branch_id || response.data.data?.id;
+
+        // update branch id inside formData so future contact person POST uses actual id
+        setFormData(prev => ({
+          ...prev,
+          branches: prev.branches.map(b =>
+            b.id === id ? { ...b, id: actualBranchId } : b
+          ),
+        }));
+
+        console.log("Branch ID replaced (temp → actual):", id, "→", actualBranchId);
+
       } else {
         // PUT request for existing branch
         const originalBranch = originalBranches.find((b) => b.id === id);
@@ -1925,10 +1942,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   disabled={!isEditMode}
                   onClick={() => isEditMode && handleBreadcrumbClick(step.id)}
                   className={`flex items-center space-x-2 focus:outline-none ${currentStep === step.id
-                      ? "text-blue-600"
-                      : currentStep > step.id
-                        ? "text-green-600"
-                        : "text-gray-400"
+                    ? "text-blue-600"
+                    : currentStep > step.id
+                      ? "text-green-600"
+                      : "text-gray-400"
                     }`}
                   style={{
                     background: "none",
@@ -1939,10 +1956,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 >
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id
-                        ? "bg-blue-100 text-blue-600"
-                        : currentStep > step.id
-                          ? "bg-green-100 text-green-600"
-                          : "bg-gray-100 text-gray-400"
+                      ? "bg-blue-100 text-blue-600"
+                      : currentStep > step.id
+                        ? "bg-green-100 text-green-600"
+                        : "bg-gray-100 text-gray-400"
                       }`}
                   >
                     {step.id}
@@ -1982,8 +1999,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         onChange={handleInputChange}
                         required
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.businessName
-                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         placeholder="Enter business name"
                       />
@@ -2005,8 +2022,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         onChange={handleInputChange}
                         required
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.contactNo
-                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         placeholder="+91 98765 43210"
                       />
@@ -2028,8 +2045,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         onChange={handleInputChange}
                         required
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.email
-                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         placeholder="business@company.com"
                       />
@@ -2088,8 +2105,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         onChange={handleInputChange}
                         required
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.state
-                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                       >
                         <option value="">Select State</option>
@@ -2205,8 +2222,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         onChange={handleInputChange}
                         required
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.pincode
-                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         placeholder="400001"
                       />
@@ -2249,8 +2266,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         value={formData.panNumber}
                         onChange={handleInputChange}
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.panNumber
-                            ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                           }`}
                         placeholder="ABCDE1234F"
                       />
@@ -2420,10 +2437,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               }
                               disabled={!person.isEditing}
                               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                  : contactPersonErrors[person.id]?.name
-                                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                : contactPersonErrors[person.id]?.name
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                 }`}
                               placeholder="Contact person name"
                             />
@@ -2449,10 +2466,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               }
                               disabled={!person.isEditing}
                               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                  : contactPersonErrors[person.id]?.phone
-                                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                : contactPersonErrors[person.id]?.phone
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                 }`}
                               placeholder="+91 98765 43210"
                             />
@@ -2478,10 +2495,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               }
                               disabled={!person.isEditing}
                               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                  : contactPersonErrors[person.id]?.email
-                                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                : contactPersonErrors[person.id]?.email
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                 }`}
                               placeholder="contact@company.com"
                             />
@@ -2507,10 +2524,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               }
                               disabled={!person.isEditing}
                               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                  : contactPersonErrors[person.id]?.designation
-                                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                : contactPersonErrors[person.id]?.designation
+                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                 }`}
                               placeholder="Manager, CEO, etc."
                             />
@@ -2613,10 +2630,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           disabled={!branch.isEditing}
                           required
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                              : branchErrors[branch.id]?.branchName
-                                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                            : branchErrors[branch.id]?.branchName
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             }`}
                           placeholder="Branch name"
                         />
@@ -2644,10 +2661,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           disabled={!branch.isEditing}
                           required
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                              : branchErrors[branch.id]?.contactNumber
-                                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                            : branchErrors[branch.id]?.contactNumber
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             }`}
                           placeholder="+91 98765 43210"
                         />
@@ -2671,10 +2688,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           disabled={!branch.isEditing}
                           required
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                              : branchErrors[branch.id]?.email
-                                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                            : branchErrors[branch.id]?.email
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             }`}
                           placeholder="branch@company.com"
                         />
@@ -2697,8 +2714,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           disabled={!branch.isEditing}
                           required
                           className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed"
-                              : ""
+                            ? "bg-gray-50 cursor-not-allowed"
+                            : ""
                             }`}
                         >
                           {countries.map((country) => (
@@ -2721,8 +2738,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           disabled={!branch.isEditing}
                           required
                           className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed"
-                              : ""
+                            ? "bg-gray-50 cursor-not-allowed"
+                            : ""
                             }`}
                         >
                           {currencies.map((currency) => (
@@ -2731,6 +2748,19 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             </option>
                           ))}
                         </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          GST Number *
+                        </label>
+                        <input
+                          name="gstNumber"
+                          value={branch.gstNumber || ""}
+                          onChange={(e) => updateBranch(branch.id, "gstNumber", e.target.value)}
+                          placeholder="GST Number"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
                       </div>
 
                       <div>
@@ -2745,10 +2775,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           disabled={!branch.isEditing}
                           required
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                              : branchErrors[branch.id]?.state
-                                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                            : branchErrors[branch.id]?.state
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             }`}
                         >
                           <option value="">Select State</option>
@@ -2777,10 +2807,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           required
                           disabled={!branch.state || !branch.isEditing}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.state || !branch.isEditing
-                              ? "bg-gray-100 cursor-not-allowed border-gray-300"
-                              : branchErrors[branch.id]?.district
-                                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            ? "bg-gray-100 cursor-not-allowed border-gray-300"
+                            : branchErrors[branch.id]?.district
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             }`}
                         >
                           <option value="">Select District</option>
@@ -2812,10 +2842,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           required
                           disabled={!branch.district || !branch.isEditing}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.district || !branch.isEditing
-                              ? "bg-gray-100 cursor-not-allowed border-gray-300"
-                              : branchErrors[branch.id]?.city
-                                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            ? "bg-gray-100 cursor-not-allowed border-gray-300"
+                            : branchErrors[branch.id]?.city
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             }`}
                         >
                           <option value="">Select City</option>
@@ -2848,10 +2878,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           disabled={!branch.isEditing}
                           required
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                              ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                              : branchErrors[branch.id]?.pincode
-                                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                            : branchErrors[branch.id]?.pincode
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             }`}
                           placeholder="400001"
                         />
@@ -2952,12 +2982,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                                   }
                                   disabled={!person.isEditing}
                                   className={`w-full px-2 py-1 border rounded text-sm ${!person.isEditing
-                                      ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                      : branchErrors[branch.id]?.[
-                                        `contactPerson_${person.id}_name`
-                                      ]
-                                        ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                    ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                    : branchErrors[branch.id]?.[
+                                      `contactPerson_${person.id}_name`
+                                    ]
+                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                     }`}
                                   placeholder="Name"
                                 />
@@ -2987,12 +3017,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                                   }
                                   disabled={!person.isEditing}
                                   className={`w-full px-2 py-1 border rounded text-sm ${!person.isEditing
-                                      ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                      : branchErrors[branch.id]?.[
-                                        `contactPerson_${person.id}_phone`
-                                      ]
-                                        ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                    ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                    : branchErrors[branch.id]?.[
+                                      `contactPerson_${person.id}_phone`
+                                    ]
+                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                     }`}
                                   placeholder="Phone"
                                 />
@@ -3022,12 +3052,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                                   }
                                   disabled={!person.isEditing}
                                   className={`w-full px-2 py-1 border rounded text-sm ${!person.isEditing
-                                      ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                      : branchErrors[branch.id]?.[
-                                        `contactPerson_${person.id}_email`
-                                      ]
-                                        ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                    ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                                    : branchErrors[branch.id]?.[
+                                      `contactPerson_${person.id}_email`
+                                    ]
+                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                                     }`}
                                   placeholder="Email"
                                 />
@@ -3098,8 +3128,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         <div
                           key={file.name + idx}
                           className={`flex items-center px-3 py-1 mr-2 mb-2 rounded-t cursor-pointer ${activeFileTab === idx
-                              ? "bg-blue-100 border-t-2 border-blue-500"
-                              : "bg-gray-100"
+                            ? "bg-blue-100 border-t-2 border-blue-500"
+                            : "bg-gray-100"
                             }`}
                           onClick={() => setActiveFileTab(idx)}
                         >
@@ -3122,8 +3152,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         <div
                           key={file.name + idx + initialFiles.length}
                           className={`flex items-center px-3 py-1 mr-2 mb-2 rounded-t cursor-pointer ${activeFileTab === idx + initialFiles.length
-                              ? "bg-blue-100 border-t-2 border-blue-500"
-                              : "bg-gray-100"
+                            ? "bg-blue-100 border-t-2 border-blue-500"
+                            : "bg-gray-100"
                             }`}
                           onClick={() =>
                             setActiveFileTab(idx + initialFiles.length)
