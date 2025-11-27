@@ -18,7 +18,7 @@ interface AuditLog {
   id: string;
   sourcetype: string;
   sourceid: string;
-  eventtype: 'INSERT' | 'UPDATE' | 'DELETE';
+  eventtype: 'CREATE' | 'UPDATE' | 'DELETE';
   field_name: string;
   old_value: string | null;
   new_value: string | null;
@@ -27,6 +27,7 @@ interface AuditLog {
     after: Record<string, any>;
   };
   changed_by: string;
+  changed_by_name: string;
   change_reason: string | null;
   source_status: string | null;
   created_at: string;
@@ -95,7 +96,7 @@ const Audit: React.FC = () => {
 
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/audit-log/${selectedEntityId}`
+        `${import.meta.env.VITE_API_BASE_URL}/audit-log/source/${selectedEntityId}`
       );
       const logs = response.data.data || [];
       setAuditLogs(logs);
@@ -127,7 +128,7 @@ const Audit: React.FC = () => {
   const uniqueChangedBy = useMemo(() => {
     const users = new Set<string>();
     auditLogs.forEach(log => {
-      if (log.changed_by) users.add(log.changed_by);
+      if (log.changed_by) users.add(log.changed_by_name);
     });
     return Array.from(users).sort();
   }, [auditLogs]);
@@ -142,7 +143,7 @@ const Audit: React.FC = () => {
         return false;
       }
 
-      if (changedByFilter !== 'ALL' && log.changed_by !== changedByFilter) {
+      if (changedByFilter !== 'ALL' && log.changed_by_name !== changedByFilter) {
         return false;
       }
 
@@ -164,7 +165,7 @@ const Audit: React.FC = () => {
   }, [auditLogs, eventTypeFilter, fromDate, toDate, fieldNameFilter, changedByFilter]);
 
   const getEntityDisplay = (entity: Customer | Lead) => {
-    if ('customer_number' in entity) {
+    if (entityType === 'customer') {
       return `${entity.business_name} (${entity.customer_number})`;
     }
     return `${entity.business_name} (${entity.lead_number})`;
@@ -190,7 +191,7 @@ const Audit: React.FC = () => {
 
   const getEventTypeBadgeColor = (eventType: string) => {
     switch (eventType) {
-      case 'INSERT':
+      case 'CREATE':
         return 'bg-green-100 text-green-800';
       case 'UPDATE':
         return 'bg-blue-100 text-blue-800';
@@ -236,7 +237,7 @@ const Audit: React.FC = () => {
               >
                 <option value="">-- Select {entityType === 'customer' ? 'Customer' : 'Lead'} --</option>
                 {entities.map((entity) => {
-                  const id = 'customer_id' in entity ? entity.customer_id : entity.lead_id;
+                  const id = entityType === 'customer' ? entity.customer_id : entity.lead_id;
                   return (
                     <option key={id} value={id}>
                       {getEntityDisplay(entity)}
@@ -281,7 +282,7 @@ const Audit: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 >
                   <option value="ALL">ALL</option>
-                  <option value="INSERT">INSERT</option>
+                  <option value="CREATE">CREATE</option>
                   <option value="UPDATE">UPDATE</option>
                   <option value="DELETE">DELETE</option>
                 </select>
@@ -430,8 +431,8 @@ const Audit: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <User className="w-4 h-4 text-gray-400" />
-                            <span className="truncate max-w-[150px]" title={log.changed_by}>
-                              {log.changed_by}
+                            <span className="truncate max-w-[150px]" title={log.changed_by_name}>
+                              {log.changed_by_name}
                             </span>
                           </div>
                         </td>
