@@ -126,6 +126,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     Record<string, ValidationErrors>
   >({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
 
   // Clear modal state function
   const clearModalState = () => {
@@ -163,6 +164,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     setContactPersonErrors({});
     setBranchErrors({});
     setTouched({});
+    setFileErrors([]);
     setActiveFileTab(0);
     setIsLoading(false);
   };
@@ -1362,10 +1364,87 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }
   };
 
+  // File validation functions
+  const validateFileSize = (file: File): boolean => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    return file.size <= maxSize;
+  };
+
+  const validateFileType = (file: File): boolean => {
+    const allowedTypes = [
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".dwg",
+      ".xls",
+      ".xlsx",
+    ];
+    const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+    return allowedTypes.includes(fileExtension);
+  };
+
   // File Management
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles((prev) => [...prev, ...files]);
+    const newFileErrors: string[] = [];
+    const validFiles: File[] = [];
+
+    files.forEach((file) => {
+      // Validate file type
+      if (!validateFileType(file)) {
+        newFileErrors.push(
+          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX`
+        );
+        return;
+      }
+
+      // Validate file size
+      if (!validateFileSize(file)) {
+        newFileErrors.push(`${file.name}: File size exceeds 10MB limit`);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    setFileErrors(newFileErrors);
+    if (validFiles.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...validFiles]);
+    }
+  };
+
+  // Upload files for customer
+  const uploadFilesForCustomer = async (
+    customerId: string,
+    files: File[],
+    onProgress?: (percent: number) => void
+  ) => {
+    if (!customerId || files.length === 0) return;
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/customer-file/${customerId}/files`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
+        },
+        onUploadProgress: (event) => {
+          if (!onProgress) return;
+          const total = event.total ?? 0;
+          const percent = total ? Math.round((event.loaded * 100) / total) : 0;
+          onProgress(percent);
+        },
+      }
+    );
+
+    return response.data;
   };
 
   // Remove uploaded file (newly added in this session)
@@ -1732,6 +1811,37 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         console.error("Error in step 2 API calls:", error);
         // You might want to show a toast notification or error message here
         // For now, we'll prevent moving to the next step
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (!isEditMode && currentStep === 3) {
+      // Step 3: Upload files
+      console.log("Uploading files for customer...");
+      const customerId = createdCustomerId || formData.id;
+
+      if (!customerId) {
+        console.error("No customerId found. Cannot upload files.");
+        return;
+      }
+
+      if (uploadedFiles.length === 0) {
+        // No files to upload, just close the modal
+        handleSubmit();
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        await uploadFilesForCustomer(customerId, uploadedFiles, (percent) => {
+          console.log("Upload progress:", percent);
+        });
+
+        console.log("Files uploaded successfully");
+        // Close modal after successful upload
+        handleSubmit();
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Failed to upload files. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -3097,13 +3207,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       relevant documents
                     </p>
                     <p className="text-xs text-gray-500 mb-4">
-                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG, XLS, XLSX (Max
-                      15MB per file)
+                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG, DWG, XLS, XLSX (Max
+                      10MB per file)
                     </p>
                     <input
                       type="file"
                       multiple
-                      accept=".doc,.docx,.pdf,.jpg,.jpeg,.png"
+                      accept=".doc,.docx,.pdf,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
                       onChange={handleFileUpload}
                       className="hidden"
                       id="file-upload"
@@ -3115,6 +3225,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       Choose Files
                     </label>
                   </div>
+
+                  {/* Display file validation errors */}
+                  {fileErrors.length > 0 && (
+                    <div className="mt-2">
+                      {fileErrors.map((error, index) => (
+                        <p
+                          key={index}
+                          className="text-red-500 text-xs mt-1 flex items-center"
+                        >
+                          <span className="mr-1">⚠</span>
+                          {error}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tabs for initial files (edit mode) and newly uploaded files */}
