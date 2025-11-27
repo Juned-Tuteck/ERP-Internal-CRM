@@ -51,7 +51,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       workType: "",
       leadCriticality: "",
       leadSource: "",
-      leadStage: "New Lead",
+      leadStage: "Information Stage",
       leadStagnation: "",
       approximateResponseTime: "",
       eta: "",
@@ -122,10 +122,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Advertisement",
   ];
   const leadStages = [
-    "New Lead",
-    "Qualified",
-    "Meeting",
-    "Quotation Submitted",
+    "Information Stage",
+    "Enquiry",
+    "Quotation Stage",
     "Won",
     "Lost",
   ];
@@ -316,10 +315,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         return !value?.trim() ? "Customer is required" : "";
 
       case "customerBranch":
-        // return !value?.trim() ? "Customer Branch is required" : "";
+      // return !value?.trim() ? "Customer Branch is required" : "";
 
       case "contactPerson":
-        // return !value?.trim() ? "Contact Person is required" : "";
+      // return !value?.trim() ? "Contact Person is required" : "";
 
       case "contactNo":
         if (!value?.trim()) return "Contact Number is required";
@@ -755,6 +754,52 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
+  const uploadFilesForLead = async (
+    leadId: string,
+    files: File[],
+    onProgress?: (percent: number) => void
+  ) => {
+    if (!leadId || files.length === 0) return;
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/lead-file/${leadId}/files`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
+        },
+        onUploadProgress: (event) => {
+          if (!onProgress) return;
+          const total = event.total ?? 0;
+          const percent = total ? Math.round((event.loaded * 100) / total) : 0;
+          onProgress(percent);
+        },
+      }
+    );
+
+    return response.data;
+  };
+
+  // Update lead stage after file upload
+  const updateLeadStageAfterFileUpload = async (leadId: string) => {
+    try {
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/lead/${leadId}`,
+        {
+          lead_stage: "Enquiry",
+        }
+      );
+      console.log("Lead stage updated to Enquiry after file upload");
+    } catch (error) {
+      console.error("Error updating lead stage:", error);
+    }
+  };
+
+
   const removeFile = (index: number) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -876,29 +921,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setCreatedLeadId(initialData.id);
 
       setCurrentStep(2);
-      setFormData({
-        businessName: "",
-        customerBranch: "",
-        currency: "INR",
-        contactPerson: "",
-        contactNo: "",
-        leadGeneratedDate: new Date().toISOString().split("T")[0],
-        referencedBy: "",
-        projectName: "",
-        projectValue: "",
-        leadType: "",
-        workType: "",
-        leadCriticality: "",
-        leadSource: "",
-        leadStage: "New Lead",
-        leadStagnation: "",
-        approximateResponseTime: "",
-        eta: "",
-        leadDetails: "",
-        involvedAssociates: [],
-        uploadedFiles: [],
-        followUpComments: [],
-      });
       setUploadedFiles([]);
       setNewComment("");
 
@@ -928,7 +950,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validate current step before proceeding
     if (!validateForm()) {
       return; // Stop if validation fails
@@ -940,7 +962,43 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       } else {
         handleCreateLead();
       }
-    } else if (currentStep < 3) {
+    }
+    if (currentStep === 2) {
+      console.log("Uploading files for lead...");
+      const leadId = createdLeadId || (isEditMode && initialData?.id);
+      if (!leadId) {
+        // safety: leadId should exist if step 1 succeeded
+        console.error("No leadId found. Cannot upload files.");
+        return;
+      }
+
+      if (uploadedFiles.length === 0) {
+        setCurrentStep(3); // or close modal
+        return;
+      }
+
+      // setIsUploading(true);
+      try {
+        if (isEditMode) {
+          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
+            console.log("Upload progress:", percent);
+          });
+        } else {
+          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
+            console.log("Upload progress:", percent);
+          });
+        }
+
+        // Auto-update lead stage to "Enquiry" when files are uploaded
+        await updateLeadStageAfterFileUpload(leadId);
+
+        // setIsUploadDone(true);
+        setCurrentStep(3);
+      } catch (err) {
+        console.error("Upload failed", err);
+      }
+    }
+    else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -1145,7 +1203,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       workType: "",
       leadCriticality: "",
       leadSource: "",
-      leadStage: "New Lead",
+      leadStage: "Information Stage",
       leadStagnation: "",
       approximateResponseTime: "",
       eta: "",
@@ -1331,7 +1389,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Customer Branch 
+                      Customer Branch
                     </label>
                     <select
                       name="customerBranch"
@@ -1373,7 +1431,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contact Person 
+                      Contact Person
                     </label>
                     <select
                       name="contactPerson"
@@ -1587,14 +1645,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lead Stage *
+                      Lead Stage * (Auto-updated)
                     </label>
                     <select
                       name="leadStage"
                       value={formData.leadStage}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
+                      title="Lead stage is automatically updated based on file uploads and quotations"
                     >
                       {leadStages.map((stage) => (
                         <option key={stage} value={stage}>
@@ -1602,6 +1662,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Stage changes to "Enquiry" when files are uploaded
+                    </p>
                   </div>
 
                   <div>
@@ -2001,10 +2064,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               ) : currentStep < 3 ? (
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(currentStep + 1)}
+                  onClick={handleNext}
+                  disabled={isLoading}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                 >
-                  Next
+                  {isLoading ? "Uploading..." : "Next"}
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </button>
               ) : (
