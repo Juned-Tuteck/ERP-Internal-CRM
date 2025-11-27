@@ -337,7 +337,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         return "text-orange-600";
       case "Medium":
         return "text-yellow-600";
-      case "Low":
+      case "Normal":
         return "text-green-600";
       default:
         return "text-gray-600";
