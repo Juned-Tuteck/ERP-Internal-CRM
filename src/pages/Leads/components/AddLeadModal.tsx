@@ -97,6 +97,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
+  const [showCustomLeadSource, setShowCustomLeadSource] = useState(false);
+  const [customLeadSource, setCustomLeadSource] = useState("");
 
   const steps = [
     { id: 1, name: "General Information", description: "Basic lead details" },
@@ -104,22 +106,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     { id: 3, name: "Follow-up Leads", description: "Communication log" },
   ];
 
-  const leadTypes = ["Government", "Private", "Corporate", "SME", "Startup"];
+  const leadTypes = ["Government", "Private", "Semi-Government"];
   const workTypes = [
-    "Basement Ventilation",
-    "HVAC Systems",
-    "AMC",
-    "Retrofit",
-    "Chiller",
+   "AMC", "BASEMENT VENTILLATION", "CHILLER", "CP", "CP (AHU)", "DEVELOPMENT", "RETROFIT", "SERVICE", "VRF"
   ];
-  const leadCriticalities = ["Critical", "High", "Medium", "Low"];
+  const leadCriticalities = ["Critical", "Normal"];
   const leadSources = [
-    "Website",
-    "LinkedIn",
-    "Referral",
-    "Cold Call",
-    "Trade Show",
-    "Advertisement",
+    "Lead source",
+    "Others"
   ];
   const leadStages = [
     "Information Stage",
@@ -183,6 +177,26 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     today.setHours(0, 0, 0, 0);
     return date >= today;
   };
+
+    // Compute ETA as leadGeneratedDate + days
+  const computeEta = (leadDateStr: string, daysStr: string | number) => {
+    if (!leadDateStr) return "";
+    const days = parseInt(String(daysStr || "0"), 10);
+    const base = new Date(leadDateStr);
+    if (isNaN(base.getTime()) || isNaN(days)) return "";
+    const etaDate = new Date(base);
+    etaDate.setDate(etaDate.getDate() + (days || 0));
+    return etaDate.toISOString().split("T")[0];
+  };
+
+  // Keep ETA in sync when lead date or approximate response time changes
+  useEffect(() => {
+    const newEta = computeEta(formData.leadGeneratedDate, formData.approximateResponseTime);
+    if (newEta !== formData.eta) {
+      setFormData((prev: any) => ({ ...prev, eta: newEta }));
+    }
+  }, [formData.leadGeneratedDate, formData.approximateResponseTime]);
+  
 
   const validateFileSize = (file: File): boolean => {
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -451,6 +465,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           initialData
         );
 
+        // Check if lead source is a custom value (not in predefined list)
+        const leadSourceValue = initialData.leadSource || initialData.lead_source || "";
+        if (leadSourceValue && !leadSources.includes(leadSourceValue)) {
+          setShowCustomLeadSource(true);
+          setCustomLeadSource(leadSourceValue);
+        }
+
         // Store snapshot in ref for later diffing
         initialFormRef.current = { ...normalizedFormSnapshot };
 
@@ -701,6 +722,25 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       if (selectedContact) {
         setSelectedContactId(selectedContact.id);
       }
+    }
+
+    // Handle lead source selection
+    if (name === "leadSource") {
+      if (value === "Others") {
+        setShowCustomLeadSource(true);
+        setFormData((prev) => ({
+          ...prev,
+          leadSource: "",
+        }));
+      } else {
+        setShowCustomLeadSource(false);
+        setCustomLeadSource("");
+        setFormData((prev) => ({
+          ...prev,
+          leadSource: value,
+        }));
+      }
+      return;
     }
 
     setFormData((prev) => ({
@@ -1625,23 +1665,60 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Lead Source *
                     </label>
-                    <select
-                      name="leadSource"
-                      value={formData.leadSource}
-                      onChange={handleInputChange}
-                      required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
-                        ? "border-red-500"
-                        : "border-gray-300"
-                        }`}
-                    >
-                      <option value="">Select Source</option>
-                      {leadSources.map((source) => (
-                        <option key={source} value={source}>
-                          {source}
-                        </option>
-                      ))}
-                    </select>
+                    {!showCustomLeadSource ? (
+                      <select
+                        name="leadSource"
+                        value={formData.leadSource}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Source</option>
+                        {leadSources.map((source) => (
+                          <option key={source} value={source}>
+                            {source}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          name="customLeadSource"
+                          value={customLeadSource}
+                          onChange={(e) => {
+                            setCustomLeadSource(e.target.value);
+                            setFormData((prev) => ({
+                              ...prev,
+                              leadSource: e.target.value,
+                            }));
+                          }}
+                          placeholder="Enter custom lead source"
+                          required
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                            ? "border-red-500"
+                            : "border-gray-300"
+                            }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCustomLeadSource(false);
+                            setCustomLeadSource("");
+                            setFormData((prev) => ({
+                              ...prev,
+                              leadSource: "",
+                            }));
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          Back to dropdown
+                        </button>
+                      </div>
+                    )}
                     <ValidationError fieldName="leadSource" />
                   </div>
 
@@ -1695,6 +1772,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <input
                       type="date"
                       name="eta"
+                      readOnly
                       value={formData.eta}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.eta
