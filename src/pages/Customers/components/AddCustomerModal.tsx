@@ -76,7 +76,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       contactNo: "",
       email: "",
       country: "India",
-      currency: "",
+      currency: [] as string[],
       state: "",
       district: "",
       city: "",
@@ -137,7 +137,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         contactNo: "",
         email: "",
         country: "India",
-        currency: "INR",
+        currency: [],
         state: "",
         district: "",
         city: "",
@@ -401,7 +401,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     value: any,
     rule: any
   ): string | null => {
-    // Handle required validation
+    // Handle required validation for arrays (like currency)
+    if (rule.required && Array.isArray(value) && value.length === 0) {
+      return `${getFieldDisplayName(fieldName)} is required`;
+    }
+
+    // Handle required validation for strings
     if (
       rule.required &&
       (!value || (typeof value === "string" && value.trim() === ""))
@@ -410,7 +415,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }
 
     // If field is empty and not required, skip other validations
-    if (!value || (typeof value === "string" && value.trim() === "")) {
+    if (!value || (typeof value === "string" && value.trim() === "") || (Array.isArray(value) && value.length === 0)) {
       return null;
     }
 
@@ -496,6 +501,53 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       ...prev,
       [name]: !prev[name as keyof typeof prev],
     }));
+  };
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = e.target.options;
+    const selectedCurrencies: string[] = [];
+    for (let i = 0; i < options.length; i++) {
+      if (options[i].selected) {
+        selectedCurrencies.push(options[i].value);
+      }
+    }
+
+    setFormData((prev: typeof formData) => ({
+      ...prev,
+      currency: selectedCurrencies,
+    }));
+
+    setTouched((prev) => ({
+      ...prev,
+      currency: true,
+    }));
+
+    const rule = validationRules.currency;
+    if (rule) {
+      const fieldError = validateField("currency", selectedCurrencies, rule);
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        if (fieldError) {
+          newErrors.currency = fieldError;
+        } else {
+          delete newErrors.currency;
+        }
+        return newErrors;
+      });
+    }
+
+    if (initialData && JSON.stringify(initialData.currency) !== JSON.stringify(selectedCurrencies)) {
+      setFieldChanges((prev) => ({
+        ...prev,
+        currency: selectedCurrencies,
+      }));
+    } else {
+      setFieldChanges((prev) => {
+        const updatedChanges = { ...prev };
+        delete updatedChanges.currency;
+        return updatedChanges;
+      });
+    }
   };
 
   // Contact Person Management
@@ -751,7 +803,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       contactNumber: "",
       email: "",
       country: "India",
-      currency: "INR",
+      currency: "",
       state: "",
       district: "",
       city: "",
@@ -782,7 +834,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             contactNumber: prev.contactNo,
             email: prev.email,
             country: prev.country,
-            currency: prev.currency,
+            currency: prev.currency.length > 0 ? prev.currency[0] : "",
             state: prev.state,
             district: prev.district,
             city: prev.city,
@@ -1597,6 +1649,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           }
         });
 
+        // Set approval_status to DRAFT if branches are not completed, otherwise use default (PENDING)
+        if (formData.branches.length === 0) {
+          customerPayload.approval_status = "DRAFT";
+        }
+
         // Call POST API for customer
         const customerResponse = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/customer`,
@@ -1738,6 +1795,24 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           const createdBranchesData =
             branchResponse.data.data || branchResponse.data;
           setCreatedBranches(createdBranchesData);
+
+          // Update customer status from DRAFT to PENDING since branches are now completed
+          if (createdCustomerId) {
+            try {
+              await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/customer/${createdCustomerId}`,
+                { approval_status: "PENDING" },
+                {
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+              console.log("Customer status updated to PENDING");
+            } catch (updateError) {
+              console.error("Failed to update customer status:", updateError);
+            }
+          }
 
           // Step 2: Create branch contact persons in bulk if any exist
           const allBranchContactPersons: any[] = [];
@@ -1996,7 +2071,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         contactNo: "",
         email: "",
         country: "India",
-        currency: "INR",
+        currency: [],
         state: "",
         district: "",
         city: "",
@@ -2189,14 +2264,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Currency *
+                        Currency * (Hold Ctrl/Cmd to select multiple)
                       </label>
                       <select
                         name="currency"
                         value={formData.currency}
-                        onChange={handleInputChange}
+                        onChange={handleCurrencyChange}
+                        multiple
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
                       >
                         {currencies.map((currency) => (
                           <option key={currency} value={currency}>
@@ -2204,6 +2280,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {formData.currency.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Selected: {formData.currency.join(", ")}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -2847,19 +2928,25 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           onChange={(e) =>
                             updateBranch(branch.id, "currency", e.target.value)
                           }
-                          disabled={!branch.isEditing}
+                          disabled={!branch.isEditing || formData.currency.length === 0}
                           required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing || formData.currency.length === 0
                             ? "bg-gray-50 cursor-not-allowed"
                             : ""
                             }`}
                         >
-                          {currencies.map((currency) => (
+                          <option value="">Select Currency</option>
+                          {formData.currency.map((currency) => (
                             <option key={currency} value={currency}>
                               {currency}
                             </option>
                           ))}
                         </select>
+                        {formData.currency.length === 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Please select currencies in Step 1 first
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -3018,7 +3105,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             !branch.isEditing ||
                             branch.contactPersons.some(
                               (person: ContactPerson) => person.isEditing
-                            )
+                            ) ||
+                            (isEditMode && !originalBranches.some(
+                              (originalBranch) => originalBranch.id === branch.id
+                            ))
                           }
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
