@@ -76,7 +76,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       contactNo: "",
       email: "",
       country: "India",
-      currency: "INR",
+      currency: "",
       state: "",
       district: "",
       city: "",
@@ -972,9 +972,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         const actualBranchId = response.data.data?.customer_branch_id || response.data.data?.id;
 
         // update branch id inside formData so future contact person POST uses actual id
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
           ...prev,
-          branches: prev.branches.map(b =>
+          branches: prev.branches.map((b: any) =>
             b.id === id ? { ...b, id: actualBranchId } : b
           ),
         }));
@@ -1814,7 +1814,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       } finally {
         setIsLoading(false);
       }
-    } else if (!isEditMode && currentStep === 3) {
+    } else if ( currentStep === 3) {
       // Step 3: Upload files
       console.log("Uploading files for customer...");
       const customerId = createdCustomerId || formData.id;
@@ -1826,7 +1826,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
       if (uploadedFiles.length === 0) {
         // No files to upload, just close the modal
-        handleSubmit();
+        // handleSubmit();
         return;
       }
 
@@ -1838,7 +1838,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
         console.log("Files uploaded successfully");
         // Close modal after successful upload
-        handleSubmit();
+        // handleSubmit();
+        onClose();
       } catch (err) {
         console.error("Upload failed", err);
         alert("Failed to upload files. Please try again.");
@@ -2676,6 +2677,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 </div>
 
                 {formData.branches.map((branch: Branch, index: number) => (
+                  console.log("branch", branch),
                   <div
                     key={branch.id}
                     className="border border-gray-200 rounded-lg p-6"
@@ -3250,8 +3252,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     </h4>
                     <div className="border-b border-gray-200 mb-2 flex flex-wrap">
                       {initialFiles.map((file, idx) => (
+                        console.log("Initial file:", file),
+                        console.log("Active file tab:", uploadedFiles),
                         <div
-                          key={file.name + idx}
+                          key={file.original_name + idx}
                           className={`flex items-center px-3 py-1 mr-2 mb-2 rounded-t cursor-pointer ${activeFileTab === idx
                             ? "bg-blue-100 border-t-2 border-blue-500"
                             : "bg-gray-100"
@@ -3259,7 +3263,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           onClick={() => setActiveFileTab(idx)}
                         >
                           <span className="text-xs font-medium text-gray-800 mr-2">
-                            {file.name}
+                            {file.original_name}
                           </span>
                           <button
                             type="button"
@@ -3384,7 +3388,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             {isEditMode ? (
               <button
                 type="submit"
-                onClick={handleEditSubmit}
+                onClick={handleNext}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
@@ -3403,7 +3407,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={handleNext}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
