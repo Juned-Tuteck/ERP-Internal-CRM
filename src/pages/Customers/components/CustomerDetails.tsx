@@ -136,7 +136,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             contactNo: apiData.contact_number || "",
             email: apiData.email || "",
             country: apiData.country || "",
-            currency: apiData.currency || "",
+            currency: typeof apiData.currency === 'string' 
+              ? apiData.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
+              : [],
             state: apiData.state || "",
             district: apiData.district || "",
             city: apiData.city || "",
@@ -166,7 +168,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 contactNumber: branch.contactNumber,
                 email: branch.emailId,
                 country: branch.country || "India",
-                currency: branch.currency || "INR",
+                currency: typeof branch.currency === 'string'
+                  ? branch.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
+                  : [],
                 state: branch.state || "",
                 district: branch.district || "",
                 city: branch.city || "",
