@@ -13,6 +13,7 @@ import axios from "axios";
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
+import { create } from "domain";
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       businessName: "",
       avatar: "",
       customerBranch: "",
-      currency: "INR",
+      currency: "",
       contactPerson: "",
       contactNo: "",
       leadGeneratedDate: new Date().toISOString().split("T")[0],
@@ -86,7 +87,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     Array<{ id: string; name: string }>
   >([]);
   const [customerBranches, setCustomerBranches] = useState<
-    Array<{ id: string; branch_name: string }>
+    Array<{ id: string; branch_name: string, currency: string }>
   >([]);
   const [contactPersons, setContactPersons] = useState<
     Array<{ id: string; name: string }>
@@ -688,7 +689,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         setSelectedCustomerId(selectedCustomer.id);
         fetchCustomerBranches(selectedCustomer.id);
       }
-      setFormData((prev) => ({
+      setFormData((prev: any) => ({
         ...prev,
         businessName: value,
         customerBranch: "",
@@ -706,10 +707,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         setSelectedBranchId(selectedBranch.id);
         fetchContactPersons(selectedBranch.id);
       }
-      setFormData((prev) => ({
+      setFormData((prev: any) => ({
         ...prev,
         customerBranch: value,
         contactPerson: "",
+      }));
+      return;
+    }
+
+    if (name === "currency") {
+      setFormData((prev: any) => ({
+        ...prev,
+        currency: value,
       }));
       return;
     }
@@ -1068,6 +1077,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           parseInt(formData.approximateResponseTime) || 0,
         eta: formData.eta || null,
         lead_details: formData.leadDetails || null,
+        currency: formData.currency || null,
         created_by: userData?.id || null,
       };
 
@@ -1152,6 +1162,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const commentPayload = {
         lead_id: leadId,
         comment: newComment.trim(),
+        created_by: userData?.id || 'unknown',
       };
 
       await axios.post(
@@ -1166,7 +1177,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         timestamp: new Date().toISOString(),
         author: "Current User",
       };
-      setFormData((prev) => ({
+      setFormData((prev: any) => ({
         ...prev,
         followUpComments: [...prev.followUpComments, comment],
       }));
@@ -1273,7 +1284,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     const associateName =
       registeredAssociates.find((a) => a.id === associateForm.associateId)
         ?.name || "";
-    setFormData((prev) => ({
+    setFormData((prev: any) => ({
       ...prev,
       involvedAssociates: [
         ...prev.involvedAssociates,
@@ -1290,9 +1301,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   };
 
   const removeAssociate = (index: number) => {
-    setFormData((prev) => ({
+    setFormData((prev: any) => ({
       ...prev,
-      involvedAssociates: prev.involvedAssociates.filter((_, i) => i !== index),
+      involvedAssociates: prev.involvedAssociates.filter((_ : any, i: number) => i !== index),
     }));
   };
 
@@ -1465,9 +1476,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="INR">Indian Rupee (₹)</option>
+                      {/* <option value="INR">Indian Rupee (₹)</option>
                       <option value="USD">US Dollar ($)</option>
-                      <option value="EUR">Euro (€)</option>
+                      <option value="EUR">Euro (€)</option> */}
+                      {/* <option value="">Select Branch</option> */}
+                      {customerBranches.map((branch) => (
+                        <option key={branch.id} value={branch.currency}>
+                          {branch.currency}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1889,7 +1906,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   {formData.involvedAssociates.length > 0 && (
                     <div className="space-y-2">
-                      {formData.involvedAssociates.map((a, idx) => (
+                      {formData.involvedAssociates.map((a: any, idx: number) => (
                         <div
                           key={idx}
                           className="flex items-center justify-between bg-gray-50 p-2 rounded"
@@ -2069,7 +2086,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       Communication History
                     </h4>
                     <div className="space-y-3 max-h-60 overflow-y-auto">
-                      {formData.followUpComments.map((comment) => (
+                      {formData.followUpComments.map((comment: any) => (
                         <div
                           key={comment.id}
                           className="p-3 bg-gray-50 rounded-md"

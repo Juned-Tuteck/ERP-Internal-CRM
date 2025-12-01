@@ -77,7 +77,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       contactNo: "",
       email: "",
       country: "India",
-      currency: "INR",
+      currency: [] as string[],
       state: "",
       district: "",
       city: "",
@@ -127,6 +127,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     Record<string, ValidationErrors>
   >({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
 
   // Clear modal state function
   const clearModalState = () => {
@@ -137,7 +138,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         contactNo: "",
         email: "",
         country: "India",
-        currency: "INR",
+        currency: [],
         state: "",
         district: "",
         city: "",
@@ -164,6 +165,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     setContactPersonErrors({});
     setBranchErrors({});
     setTouched({});
+    setFileErrors([]);
     setActiveFileTab(0);
     setIsLoading(false);
   };
@@ -400,7 +402,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     value: any,
     rule: any
   ): string | null => {
-    // Handle required validation
+    // Handle required validation for arrays (like currency)
+    if (rule.required && Array.isArray(value) && value.length === 0) {
+      return `${getFieldDisplayName(fieldName)} is required`;
+    }
+
+    // Handle required validation for strings
     if (
       rule.required &&
       (!value || (typeof value === "string" && value.trim() === ""))
@@ -409,7 +416,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }
 
     // If field is empty and not required, skip other validations
-    if (!value || (typeof value === "string" && value.trim() === "")) {
+    if (!value || (typeof value === "string" && value.trim() === "") || (Array.isArray(value) && value.length === 0)) {
       return null;
     }
 
@@ -495,6 +502,53 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       ...prev,
       [name]: !prev[name as keyof typeof prev],
     }));
+  };
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = e.target.options;
+    const selectedCurrencies: string[] = [];
+    for (let i = 0; i < options.length; i++) {
+      if (options[i].selected) {
+        selectedCurrencies.push(options[i].value);
+      }
+    }
+
+    setFormData((prev: typeof formData) => ({
+      ...prev,
+      currency: selectedCurrencies,
+    }));
+
+    setTouched((prev) => ({
+      ...prev,
+      currency: true,
+    }));
+
+    const rule = validationRules.currency;
+    if (rule) {
+      const fieldError = validateField("currency", selectedCurrencies, rule);
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        if (fieldError) {
+          newErrors.currency = fieldError;
+        } else {
+          delete newErrors.currency;
+        }
+        return newErrors;
+      });
+    }
+
+    if (initialData && JSON.stringify(initialData.currency) !== JSON.stringify(selectedCurrencies)) {
+      setFieldChanges((prev) => ({
+        ...prev,
+        currency: selectedCurrencies,
+      }));
+    } else {
+      setFieldChanges((prev) => {
+        const updatedChanges = { ...prev };
+        delete updatedChanges.currency;
+        return updatedChanges;
+      });
+    }
   };
 
   // Contact Person Management
@@ -753,7 +807,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       contactNumber: "",
       email: "",
       country: "India",
-      currency: "INR",
+      currency: "",
       state: "",
       district: "",
       city: "",
@@ -784,7 +838,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             contactNumber: prev.contactNo,
             email: prev.email,
             country: prev.country,
-            currency: prev.currency,
+            currency: prev.currency.length > 0 ? prev.currency[0] : "",
             state: prev.state,
             district: prev.district,
             city: prev.city,
@@ -976,12 +1030,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         const actualBranchId = response.data.data?.customer_branch_id || response.data.data?.id;
 
         // update branch id inside formData so future contact person POST uses actual id
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
           ...prev,
-          branches: prev.branches.map(b =>
-            b.id === id ? { ...b, id: actualBranchId } : b
+          branches: prev.branches.map((b: any) =>
+            b.id === id ? { ...b, id: actualBranchId, isEditing: false } : b
           ),
         }));
+
+        // Add the newly created branch to originalBranches so it's recognized as existing
+
+        setOriginalBranches((prev) => [
+
+          ...prev,
+
+          { ...branch, id: actualBranchId, isEditing: false }
+
+        ]);
 
         console.log("Branch ID replaced (temp → actual):", id, "→", actualBranchId);
 
@@ -1025,15 +1089,28 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
           console.log("Branch updated successfully:", response.data);
         }
+        // Update UI state for existing branch
+
+        setFormData((prev: typeof formData) => ({
+
+          ...prev,
+
+          branches: prev.branches.map((branch: Branch) =>
+
+            branch.id === id ? { ...branch, isEditing: false } : branch
+
+          ),
+
+        }));
       }
 
       // Update UI state
-      setFormData((prev: typeof formData) => ({
-        ...prev,
-        branches: prev.branches.map((branch: Branch) =>
-          branch.id === id ? { ...branch, isEditing: false } : branch
-        ),
-      }));
+      // setFormData((prev: typeof formData) => ({
+      //   ...prev,
+      //   branches: prev.branches.map((branch: Branch) =>
+      //     branch.id === id ? { ...branch, isEditing: false } : branch
+      //   ),
+      // }));
     } catch (error) {
       console.error("Error saving branch:", error);
       // You might want to show a toast notification or error message here
@@ -1373,10 +1450,87 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }
   };
 
+  // File validation functions
+  const validateFileSize = (file: File): boolean => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    return file.size <= maxSize;
+  };
+
+  const validateFileType = (file: File): boolean => {
+    const allowedTypes = [
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".dwg",
+      ".xls",
+      ".xlsx",
+    ];
+    const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+    return allowedTypes.includes(fileExtension);
+  };
+
   // File Management
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles((prev) => [...prev, ...files]);
+    const newFileErrors: string[] = [];
+    const validFiles: File[] = [];
+
+    files.forEach((file) => {
+      // Validate file type
+      if (!validateFileType(file)) {
+        newFileErrors.push(
+          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX`
+        );
+        return;
+      }
+
+      // Validate file size
+      if (!validateFileSize(file)) {
+        newFileErrors.push(`${file.name}: File size exceeds 10MB limit`);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    setFileErrors(newFileErrors);
+    if (validFiles.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...validFiles]);
+    }
+  };
+
+  // Upload files for customer
+  const uploadFilesForCustomer = async (
+    customerId: string,
+    files: File[],
+    onProgress?: (percent: number) => void
+  ) => {
+    if (!customerId || files.length === 0) return;
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/customer-file/${customerId}/files`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
+        },
+        onUploadProgress: (event) => {
+          if (!onProgress) return;
+          const total = event.total ?? 0;
+          const percent = total ? Math.round((event.loaded * 100) / total) : 0;
+          onProgress(percent);
+        },
+      }
+    );
+
+    return response.data;
   };
 
   // Remove uploaded file (newly added in this session)
@@ -1529,9 +1683,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           }
         });
 
+        // Set approval_status to DRAFT if branches are not completed, otherwise use default (PENDING)
+        // if (formData.branches.length === 0) {
+        //   customerPayload.approval_status = "DRAFT";
+        // }
+
         // add created_by for audit
         if (currentUserId) customerPayload.created_by = currentUserId;
- 
+
         // Call POST API for customer
         const customerResponse = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/customer`,
@@ -1676,6 +1835,24 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             branchResponse.data.data || branchResponse.data;
           setCreatedBranches(createdBranchesData);
 
+          // Update customer status from DRAFT to PENDING since branches are now completed
+          if (createdCustomerId) {
+            try {
+              await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/customer/${createdCustomerId}`,
+                { approval_status: "PENDING" },
+                {
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+              console.log("Customer status updated to PENDING");
+            } catch (updateError) {
+              console.error("Failed to update customer status:", updateError);
+            }
+          }
+
           // Step 2: Create branch contact persons in bulk if any exist
           const allBranchContactPersons: any[] = [];
 
@@ -1750,6 +1927,38 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         console.error("Error in step 2 API calls:", error);
         // You might want to show a toast notification or error message here
         // For now, we'll prevent moving to the next step
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (currentStep === 3) {
+      // Step 3: Upload files
+      console.log("Uploading files for customer...");
+      const customerId = createdCustomerId || formData.id;
+
+      if (!customerId) {
+        console.error("No customerId found. Cannot upload files.");
+        return;
+      }
+
+      if (uploadedFiles.length === 0) {
+        // No files to upload, just close the modal
+        // handleSubmit();
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        await uploadFilesForCustomer(customerId, uploadedFiles, (percent) => {
+          console.log("Upload progress:", percent);
+        });
+
+        console.log("Files uploaded successfully");
+        // Close modal after successful upload
+        // handleSubmit();
+        onClose();
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Failed to upload files. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -1905,7 +2114,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         contactNo: "",
         email: "",
         country: "India",
-        currency: "INR",
+        currency: [],
         state: "",
         district: "",
         city: "",
@@ -2098,14 +2307,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Currency *
+                        Currency * (Hold Ctrl/Cmd to select multiple)
                       </label>
                       <select
                         name="currency"
                         value={formData.currency}
-                        onChange={handleInputChange}
+                        onChange={handleCurrencyChange}
+                        multiple
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
                       >
                         {currencies.map((currency) => (
                           <option key={currency} value={currency}>
@@ -2113,6 +2323,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           </option>
                         ))}
                       </select>
+                      {formData.currency.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Selected: {formData.currency.join(", ")}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -2586,6 +2801,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 </div>
 
                 {formData.branches.map((branch: Branch, index: number) => (
+                  console.log("branch", branch),
                   <div
                     key={branch.id}
                     className="border border-gray-200 rounded-lg p-6"
@@ -2755,19 +2971,25 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           onChange={(e) =>
                             updateBranch(branch.id, "currency", e.target.value)
                           }
-                          disabled={!branch.isEditing}
+                          disabled={!branch.isEditing || formData.currency.length === 0}
                           required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing || formData.currency.length === 0
                             ? "bg-gray-50 cursor-not-allowed"
                             : ""
                             }`}
                         >
-                          {currencies.map((currency) => (
+                          <option value="">Select Currency</option>
+                          {formData.currency.map((currency) => (
                             <option key={currency} value={currency}>
                               {currency}
                             </option>
                           ))}
                         </select>
+                        {formData.currency.length === 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Please select currencies in Step 1 first
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -2778,6 +3000,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           name="gstNumber"
                           value={branch.gstNumber || ""}
                           onChange={(e) => updateBranch(branch.id, "gstNumber", e.target.value)}
+                          disabled={!branch.isEditing}
                           placeholder="GST Number"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
@@ -2926,7 +3149,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             !branch.isEditing ||
                             branch.contactPersons.some(
                               (person: ContactPerson) => person.isEditing
-                            )
+                            ) ||
+                            (isEditMode && !originalBranches.some(
+                              (originalBranch) => originalBranch.id === branch.id
+                            ))
                           }
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
@@ -3117,13 +3343,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       relevant documents
                     </p>
                     <p className="text-xs text-gray-500 mb-4">
-                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG, XLS, XLSX (Max
-                      15MB per file)
+                      Supported formats: DOC, DOCX, PDF, JPG, JPEG, PNG, DWG, XLS, XLSX (Max
+                      10MB per file)
                     </p>
                     <input
                       type="file"
                       multiple
-                      accept=".doc,.docx,.pdf,.jpg,.jpeg,.png"
+                      accept=".doc,.docx,.pdf,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
                       onChange={handleFileUpload}
                       className="hidden"
                       id="file-upload"
@@ -3135,6 +3361,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       Choose Files
                     </label>
                   </div>
+
+                  {/* Display file validation errors */}
+                  {fileErrors.length > 0 && (
+                    <div className="mt-2">
+                      {fileErrors.map((error, index) => (
+                        <p
+                          key={index}
+                          className="text-red-500 text-xs mt-1 flex items-center"
+                        >
+                          <span className="mr-1">⚠</span>
+                          {error}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tabs for initial files (edit mode) and newly uploaded files */}
@@ -3145,8 +3386,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     </h4>
                     <div className="border-b border-gray-200 mb-2 flex flex-wrap">
                       {initialFiles.map((file, idx) => (
+                        console.log("Initial file:", file),
+                        console.log("Active file tab:", uploadedFiles),
                         <div
-                          key={file.name + idx}
+                          key={file.original_name + idx}
                           className={`flex items-center px-3 py-1 mr-2 mb-2 rounded-t cursor-pointer ${activeFileTab === idx
                             ? "bg-blue-100 border-t-2 border-blue-500"
                             : "bg-gray-100"
@@ -3154,7 +3397,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           onClick={() => setActiveFileTab(idx)}
                         >
                           <span className="text-xs font-medium text-gray-800 mr-2">
-                            {file.name}
+                            {file.original_name}
                           </span>
                           <button
                             type="button"
@@ -3276,7 +3519,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               Cancel
             </button>
             {/* If in edit mode, show Save button always, else show Next/Save as per step */}
-            {isEditMode ? (
+            {isEditMode && currentStep < 3 ? (
               <button
                 type="submit"
                 onClick={handleEditSubmit}
@@ -3298,7 +3541,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={handleNext}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />

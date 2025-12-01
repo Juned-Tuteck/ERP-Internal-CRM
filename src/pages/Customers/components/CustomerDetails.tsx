@@ -16,6 +16,7 @@ import {
   SquarePen,
   Trash2,
   Power,
+  Image, FileSpreadsheet, File, Download, FileCheck
 } from "lucide-react";
 import axios from "axios";
 import AddCustomerModal from "./AddCustomerModal";
@@ -135,7 +136,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             contactNo: apiData.contact_number || "",
             email: apiData.email || "",
             country: apiData.country || "",
-            currency: apiData.currency || "",
+            currency: typeof apiData.currency === 'string' 
+              ? apiData.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
+              : [],
             state: apiData.state || "",
             district: apiData.district || "",
             city: apiData.city || "",
@@ -165,7 +168,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 contactNumber: branch.contactNumber,
                 email: branch.emailId,
                 country: branch.country || "India",
-                currency: branch.currency || "INR",
+                currency: typeof branch.currency === 'string'
+                  ? branch.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
+                  : [],
                 state: branch.state || "",
                 district: branch.district || "",
                 city: branch.city || "",
@@ -270,6 +275,38 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     }
   };
 
+  function formatBytes(bytes?: string | number | null) {
+    if (bytes == null || isNaN(Number(bytes))) return "-";
+    const b = Number(bytes);
+    if (b === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  function getIconByMime(mime?: string | null, filename?: string) {
+    const ext = filename?.split(".").pop()?.toLowerCase() ?? "";
+    if (!mime && !ext) return File;
+    if (mime?.includes("pdf") || ext === "pdf") return FileText;
+    if (mime?.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(ext))
+      return Image;
+    if (
+      mime?.includes("spreadsheet") ||
+      ["xls", "xlsx", "csv"].includes(ext) ||
+      mime === "application/vnd.ms-excel" ||
+      mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+      return FileSpreadsheet;
+    if (
+      ["doc", "docx", "rtf", "msword"].some((t) => mime?.includes(t)) ||
+      ["doc", "docx"].includes(ext)
+    )
+      return FileText;
+    // fallback
+    return File;
+  }
+
   const [activeTab, setActiveTab] = useState("general");
 
   const tabs = [
@@ -330,7 +367,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <p className="text-xs text-gray-500">Total Revenue</p>
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {customer.status === "pending" && hasActionAccess('edit', 'All customers', 'customers') && (
+              {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('edit', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
@@ -339,7 +376,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <SquarePen className="h-5 w-5" />
                 </button>
               )}
-              {customer.status === "pending" && hasActionAccess('Deactivate', 'All customers', 'customers') && (
+              {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('Deactivate', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsDeactivateModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
@@ -703,7 +740,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               Customer Documents
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {mappedApiData.uploadedFiles?.map((file: any, index: number) => (
                 <div
                   key={index}
@@ -713,7 +750,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     <FileText className="h-8 w-8 text-blue-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {file.name}
+                        {file.original_name}
                       </p>
                       <p className="text-xs text-gray-500">{file.size}</p>
                     </div>
@@ -721,7 +758,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-gray-500">
                       Uploaded:{" "}
-                      {new Date(file.uploadDate).toLocaleDateString("en-IN")}
+                      {new Date(file.created_at).toLocaleDateString("en-IN")}
                     </span>
                     <button className="text-xs text-blue-600 hover:text-blue-800">
                       View
@@ -729,6 +766,38 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   </div>
                 </div>
               ))}
+            </div> */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(mappedApiData?.uploadedFiles ?? []).map((file : any) => {
+                console.log("Rendering file:", mappedApiData);
+                const Icon = getIconByMime(file.mime, file.original_name);
+                const sizeLabel = formatBytes(file.size);
+
+                return (
+                  <a
+                    key={file.id}
+                    href={`${import.meta.env.VITE_API_BASE_URL}/customer-file/${file.customerId}/files/${file.id}/download`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <Icon className="h-8 w-8 text-blue-600 mr-3" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
+                        {file.original_name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {sizeLabel} • {file.mime ?? "unknown"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                      </p>
+                    </div>
+
+                    <Download className="h-4 w-4 text-gray-400 ml-3" />
+                  </a>
+                );
+              })}
             </div>
           </div>
         )}

@@ -41,7 +41,8 @@ const CustomerApproval: React.FC = () => {
       const filteredCustomers = customers.filter(
         (customer: any) =>
           customer.approval_status !== "APPROVED" &&
-          customer.approval_status !== "REJECTED"
+          customer.approval_status !== "REJECTED" &&
+          customer.approval_status !== "DRAFT"
       );
 
       // Map API keys to UI keys
