@@ -1027,9 +1027,19 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         setFormData((prev: any) => ({
           ...prev,
           branches: prev.branches.map((b: any) =>
-            b.id === id ? { ...b, id: actualBranchId } : b
+            b.id === id ? { ...b, id: actualBranchId, isEditing: false } : b
           ),
         }));
+
+        // Add the newly created branch to originalBranches so it's recognized as existing
+
+        setOriginalBranches((prev) => [
+
+          ...prev,
+
+          { ...branch, id: actualBranchId, isEditing: false }
+
+        ]);
 
         console.log("Branch ID replaced (temp → actual):", id, "→", actualBranchId);
 
@@ -1071,15 +1081,28 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
           console.log("Branch updated successfully:", response.data);
         }
+        // Update UI state for existing branch
+
+        setFormData((prev: typeof formData) => ({
+
+          ...prev,
+
+          branches: prev.branches.map((branch: Branch) =>
+
+            branch.id === id ? { ...branch, isEditing: false } : branch
+
+          ),
+
+        }));
       }
 
       // Update UI state
-      setFormData((prev: typeof formData) => ({
-        ...prev,
-        branches: prev.branches.map((branch: Branch) =>
-          branch.id === id ? { ...branch, isEditing: false } : branch
-        ),
-      }));
+      // setFormData((prev: typeof formData) => ({
+      //   ...prev,
+      //   branches: prev.branches.map((branch: Branch) =>
+      //     branch.id === id ? { ...branch, isEditing: false } : branch
+      //   ),
+      // }));
     } catch (error) {
       console.error("Error saving branch:", error);
       // You might want to show a toast notification or error message here
@@ -1650,9 +1673,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         });
 
         // Set approval_status to DRAFT if branches are not completed, otherwise use default (PENDING)
-        if (formData.branches.length === 0) {
-          customerPayload.approval_status = "DRAFT";
-        }
+        // if (formData.branches.length === 0) {
+        //   customerPayload.approval_status = "DRAFT";
+        // }
 
         // Call POST API for customer
         const customerResponse = await axios.post(
@@ -1889,7 +1912,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       } finally {
         setIsLoading(false);
       }
-    } else if ( currentStep === 3) {
+    } else if (currentStep === 3) {
       // Step 3: Upload files
       console.log("Uploading files for customer...");
       const customerId = createdCustomerId || formData.id;
@@ -2957,6 +2980,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           name="gstNumber"
                           value={branch.gstNumber || ""}
                           onChange={(e) => updateBranch(branch.id, "gstNumber", e.target.value)}
+                          disabled={!branch.isEditing}
                           placeholder="GST Number"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
@@ -3475,10 +3499,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               Cancel
             </button>
             {/* If in edit mode, show Save button always, else show Next/Save as per step */}
-            {isEditMode ? (
+            {isEditMode && currentStep < 3 ? (
               <button
                 type="submit"
-                onClick={handleNext}
+                onClick={handleEditSubmit}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
               >
                 <Save className="h-4 w-4 mr-2" />
