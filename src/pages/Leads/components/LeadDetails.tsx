@@ -26,7 +26,8 @@ import {
   File,
   Download,
   FileCheck,
-  MessageSquare
+  MessageSquare,
+  User
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
@@ -48,7 +49,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { hasActionAccess } = useCRM();
+  const { hasActionAccess, userData } = useCRM();
 
   // Add state for edit modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -174,6 +175,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       const commentPayload = {
         lead_id: displayLead.id,
         comment: newComment.trim(),
+        created_by: userData?.id
       };
 
       await axios.post(
@@ -940,6 +942,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                                       })
                                     : 'No timestamp'}
                                 </span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <User className="h-3 w-3" />
+                                <span>{comment.created_by || 'Unknown'}</span>
                               </div>
                             </div>
                           </div>

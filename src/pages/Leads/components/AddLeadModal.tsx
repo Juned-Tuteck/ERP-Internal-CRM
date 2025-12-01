@@ -13,6 +13,7 @@ import axios from "axios";
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
+import { create } from "domain";
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -1008,6 +1009,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const commentPayload = {
         lead_id: leadId,
         comment: newComment.trim(),
+        created_by: userData?.id || 'unknown',
       };
 
       await axios.post(
