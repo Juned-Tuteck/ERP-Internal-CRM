@@ -46,16 +46,18 @@ const CustomerList: React.FC<CustomerListProps> = ({
     id: customer.customer_id,
     name: customer.business_name,
     customerNumber: customer.customer_number,
+    contactNumber: customer.contact_number,
+    email: customer.email,
     industry: customer.customer_type,
     location: `${customer.city}, ${customer.state}`,
-    revenue: `${customer.currency} ${customer.customer_potential}`,
+    revenue: `${customer.customer_potential}`,
     joinDate: new Date(customer.created_at).toISOString(),
     status: customer.approval_status.toLowerCase(),
     avatar: customer.business_name
       .split(" ")
       .map((word: string) => word[0])
       .join(""),
-    dealCount: customer.is_active ? 1 : 0,
+    dealCount: customer.lead_count ,
   }));
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -150,8 +152,8 @@ const CustomerList: React.FC<CustomerListProps> = ({
                     {customer.location.split(",")[0]}
                   </div>
                   <div className="flex items-center text-xs text-green-600">
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    {customer.revenue.replace("₹", "₹")}
+                    {/* <DollarSign className="h-3 w-3 mr-1" /> */}
+                    {/* {customer.revenue.replace("₹", "₹")} */}
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-1">
@@ -164,7 +166,7 @@ const CustomerList: React.FC<CustomerListProps> = ({
                     })}
                   </div>
                   <div className="text-xs text-blue-600">
-                    {customer.dealCount} deals
+                    {/* {customer.dealCount} deals */}
                   </div>
                 </div>
               </div>

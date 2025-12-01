@@ -350,21 +350,21 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   Customer : {customer.customerNumber || "-"}
                 </p>
               </div>
-              <span
+              {/* <span
                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${getStatusColor(
                   customer.status
                 )}`}
               >
                 {customer.status}
-              </span>
+              </span> */}
             </div>
           </div>
           <div className="flex flex-col md:items-end gap-1 w-full md:w-auto">
             <div className="flex flex-col items-end">
-              <div className="text-2xl font-bold text-green-600">
-                {customer.revenue}
+              <div className={`text-2xl font-bold px-6 py-1 rounded-full text-green-600 capitalize ${getStatusColor(customer.status)}`}>
+                {customer.status}
               </div>
-              <p className="text-xs text-gray-500">Total Revenue</p>
+              {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
             <div className="flex items-center gap-2 mt-1">
               {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('edit', 'All customers', 'customers') && (
@@ -469,7 +469,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">Phone</p>
                     <p className="text-sm font-medium text-gray-900">
-                      +91 98765 43210
+                     {customer.contactNumber}
                     </p>
                   </div>
                 </div>
@@ -479,7 +479,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
                     <p className="text-sm font-medium text-gray-900">
-                      contact@{customer.avatar.toLowerCase()}.in
+                      {customer.email}
                     </p>
                   </div>
                 </div>
@@ -487,9 +487,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 <div className="flex items-center space-x-3">
                   <Users className="h-5 w-5 text-gray-400" />
                   <div>
-                    <p className="text-sm text-gray-500">Total Deals</p>
+                    <p className="text-sm text-gray-500">Total Leads</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {customer.dealCount} deals
+                      {customer.dealCount} leads
                     </p>
                   </div>
                 </div>
@@ -615,7 +615,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 <p className="text-2xl font-bold text-gray-900">
                   {customer.dealCount}
                 </p>
-                <p className="text-sm text-gray-500">Total Deals</p>
+                <p className="text-sm text-gray-500">Total Leads</p>
               </div>
 
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
