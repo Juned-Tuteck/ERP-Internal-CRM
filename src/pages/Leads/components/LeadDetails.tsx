@@ -314,11 +314,11 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   const getStageColor = (stage: string) => {
     switch (stage) {
-      case "New Lead":
+      case "Information Stage":
         return "bg-gray-100 text-gray-800";
-      case "Qualified":
+      case "Enquiry":
         return "bg-blue-100 text-blue-800";
-      case "Meeting":
+      case "Quotation Stage":
         return "bg-yellow-100 text-yellow-800";
       case "Quotation Submitted":
         return "bg-purple-100 text-purple-800";
@@ -339,7 +339,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         return "text-orange-600";
       case "Medium":
         return "text-yellow-600";
-      case "Low":
+      case "Normal":
         return "text-green-600";
       default:
         return "text-gray-600";
@@ -457,8 +457,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       setShowWinLossModal(false);
       setWinLossReason("");
 
-      // Optionally refresh the lead details or trigger a re-fetch
-      // You might want to call a refresh function here
+      // Refresh the lead details to show updated data
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error("Error updating lead status:", error);
       // You might want to show an error message to the user here
@@ -724,13 +724,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                 style={{
                   width:
-                    displayLead.leadStage === "New Lead"
+                    displayLead.leadStage === "Information Stage"
                       ? "20%"
-                      : displayLead.leadStage === "Qualified"
+                      : displayLead.leadStage === "Enquiry"
                         ? "40%"
                         : displayLead.leadStage === "Meeting"
                           ? "60%"
-                          : displayLead.leadStage === "Quotation Submitted"
+                          : displayLead.leadStage === "Quotation Stage"
                             ? "80%"
                             : displayLead.leadStage === "Won"
                               ? "100%"
@@ -738,7 +738,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 }}
               ></div>
             </div>
-
+            
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Submitted Date</span>

@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   BarChart3,
   Settings,
+  FileClock ,
   X,
 } from "lucide-react";
 import { useCRM } from "../../context/CRMContext";
@@ -67,6 +68,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: BarChart3,
       accessKey: "Reports",
     },
+    { name: 'Audit Logs',
+      href: '/audit',
+      icon: FileClock ,
+      accessKey: 'Audit Logs'
+    }
     // { name: 'Settings', href: '/settings', icon: Settings, accessKey: 'Settings' },
   ];
 

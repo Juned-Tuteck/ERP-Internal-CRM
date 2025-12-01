@@ -68,6 +68,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
   //------------------------------------------------------------------------------------
+  const currentUserId = userData?.id || "";
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(
     initialData || {
@@ -604,8 +605,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           email: contactPerson.email,
           designation: contactPerson.designation || "",
           customer_id: formData.id,
+          created_by : currentUserId
         };
-
+        
         const response = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/customer-contact`,
           payload,
@@ -640,6 +642,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             changedFields.designation = contactPerson.designation || "";
         }
 
+        if(currentUserId) changedFields.updated_by = currentUserId;
+        
         // Only make API call if there are changes
         if (Object.keys(changedFields).length > 0) {
           const response = await axios.put(
@@ -1005,6 +1009,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           }
         });
 
+        if (currentUserId) payload.created_by = currentUserId;
+
         const response = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/customer-branch`,
           payload,
@@ -1062,6 +1068,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             }
           });
         }
+
+        if (currentUserId) changedFields.created_by = currentUserId;
 
         // Only make API call if there are changes
         if (Object.keys(changedFields).length > 0) {
@@ -1215,6 +1223,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           }
         });
 
+        if (currentUserId) payload.created_by = currentUserId;
         const response = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact`,
           payload,
@@ -1255,6 +1264,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             }
           });
         }
+
+        if(currentUserId) changedFields.updated_by = currentUserId;
 
         // Only make API call if there are changes
         if (Object.keys(changedFields).length > 0) {
@@ -1677,6 +1688,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         //   customerPayload.approval_status = "DRAFT";
         // }
 
+        // add created_by for audit
+        if (currentUserId) customerPayload.created_by = currentUserId;
+
         // Call POST API for customer
         const customerResponse = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/customer`,
@@ -1734,6 +1748,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               email: contact.email,
               designation: contact.designation || "",
               customer_id: customerId,
+              created_by: currentUserId
             })
           );
           console.log("Creating contact persons:", contactPersonsPayload);
@@ -1793,6 +1808,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               }
             });
 
+            if (currentUserId) payload.created_by = currentUserId;
             return payload;
           });
 
@@ -1866,6 +1882,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       contact[uiKey as keyof ContactPerson];
                   }
                 });
+
+                if (currentUserId) contactPayload.created_by = currentUserId;
 
                 allBranchContactPersons.push(contactPayload);
               });
@@ -1974,6 +1992,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         }
         return acc;
       }, {});
+
+      if (currentUserId) backendPayload.updated_by = currentUserId;
 
       const response = await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/customer/${formData.id}`,

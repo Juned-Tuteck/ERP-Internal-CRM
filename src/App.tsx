@@ -16,6 +16,7 @@ import Settings from "./pages/Settings/Settings";
 import HomeRedirect from "./components/HomeRedirect";
 import { CRMProvider, useCRM } from "./context/CRMContext";
 import { validateUserAccessWithCRM } from "./utils/accessValidationApi";
+import Audit from "./pages/Audit/Audit";
 
 const AppContent: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -131,6 +132,7 @@ const AppContent: React.FC = () => {
               <Route path="/sales-orders" element={<SalesOrders />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/audit" element={<Audit />} />
             </Routes>
           </main>
         </div>
