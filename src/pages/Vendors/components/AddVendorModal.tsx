@@ -718,7 +718,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     formDataObj.append("upload_by", userData?.id || "");
 
     const response = await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/vendor/${vendorId}/files`,
+      `${import.meta.env.VITE_API_BASE_URL}/vendor-file/${vendorId}/files`,
       formDataObj,
       {
         headers: {
@@ -944,6 +944,39 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       } finally {
         setIsLoading(false);
       }
+    } else if (currentStep === 3) {
+      // Step 3: Upload files
+      console.log("Uploading files for vendor...");
+      const vendorId = createdVendorId || formData.vendorId || formData.id || formData.vendor_id;
+
+      if (!vendorId) {
+        console.error("No vendorId found. Cannot upload files.");
+        return;
+      }
+
+      if (uploadedFiles.length === 0) {
+        // No files to upload, just close the modal
+        if (typeof onRefresh === "function") await onRefresh();
+        onClose();
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        await uploadFilesForVendor(vendorId, uploadedFiles, (percent) => {
+          console.log("Upload progress:", percent);
+        });
+
+        console.log("Files uploaded successfully");
+        // Close modal after successful upload
+        if (typeof onRefresh === "function") await onRefresh();
+        onClose();
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Failed to upload files. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
     } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -958,33 +991,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Upload files if any (for create mode)
-    if (!isEditMode && uploadedFiles.length > 0) {
-      setIsLoading(true);
-      try {
-        const vendorId = createdVendorId || formData.vendorId || formData.id || formData.vendor_id;
-        if (!vendorId) {
-          alert("Vendor ID is missing. Cannot upload files.");
-          setIsLoading(false);
-          return;
-        }
-
-        console.log("Uploading files for vendor...", vendorId);
-        await uploadFilesForVendor(vendorId, uploadedFiles, (percent) => {
-          console.log("Upload progress:", percent);
-        });
-        console.log("Files uploaded successfully");
-      } catch (err) {
-        console.error("Upload failed", err);
-        alert("Failed to upload files. Please try again.");
-        setIsLoading(false);
-        return;
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    // Final validation before submission
+    // Final validation before submission (only for create mode, not needed anymore)
+    // File upload is now handled in handleNext for step 3
     const vendorValidationErrors = validateVendor(formData);
     const contactPersonValidationErrors: { [key: string]: ValidationErrors } =
       {};
@@ -2473,6 +2481,33 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {formData.uploadedFiles.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Uploaded Files
+                      </h4>
+
+                      <ul className="space-y-2">
+                        {formData.uploadedFiles.map((file) => (
+                          <li
+                            key={file.id}
+                            className="flex items-center justify-between p-2 bg-gray-100 rounded"
+                          >
+                            <p
+                              className="text-blue-600 text-sm"
+                            >
+                              {file.original_name}
+                            </p>
+
+                            <span className="text-xs text-gray-500">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                )}
               </div>
             )}
           </form>
@@ -2500,7 +2535,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
               Cancel
             </button>
 
-            {isEditMode ? (
+            {isEditMode && currentStep < 3 ? (
               <button
                 type="submit"
                 onClick={async (e) => {
@@ -2526,15 +2561,19 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       ...rest
                     } = formData;
                     const payload = toSnakeCase(rest);
+                    setIsLoading(true);
                     try {
                       await updateVendor(vendorId, payload);
                       if (typeof onRefresh === "function") await onRefresh();
                       onClose();
                     } catch (err) {
                       alert("Failed to update vendor.");
+                    } finally {
+                      setIsLoading(false);
                     }
                   } else if (currentStep === 2) {
                     // Branch Info: update all branches
+                    setIsLoading(true);
                     try {
                       const updatePromises = formData.branches.map(
                         async (branch: any) => {
@@ -2552,15 +2591,28 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       await Promise.all(updatePromises);
                       if (typeof onRefresh === "function") await onRefresh();
                       alert("All branches updated successfully.");
+                      onClose();
                     } catch (err) {
                       alert("Failed to update one or more branches.");
+                    } finally {
+                      setIsLoading(false);
                     }
                   }
                 }}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                disabled={isLoading}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                <Save className="h-4 w-4 mr-2" />
-                Save
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </>
+                )}
               </button>
             ) : currentStep < 3 ? (
               <button
@@ -2583,8 +2635,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
               </button>
             ) : (
               <button
-                type="submit"
-                onClick={handleSubmit}
+                type="button"
+                onClick={isEditMode ? handleNext : handleSubmit}
                 disabled={isLoading}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
@@ -2596,7 +2648,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Register Vendor
+                    {isEditMode ? "Save" : "Register Vendor"}
                   </>
                 )}
               </button>

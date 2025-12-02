@@ -209,7 +209,7 @@ const Vendors: React.FC = () => {
                 vendor: detailedVendor,
                 branches: detailedVendor?.branches || [],
                 contacts: detailedVendor?.contactPersons || [],
-                files: detailedVendor?.files || [],
+                files: detailedVendor?.uploadedFiles || [],
               }}
               onVendorDeleted={async () => {
                 setSelectedVendor(null);
@@ -222,6 +222,17 @@ const Vendors: React.FC = () => {
                   type: "success",
                   message: "Vendor deleted successfully!",
                 });
+              }}
+              onRefresh={async () => {
+                setLoading(true);
+                const data = await getAllVendors();
+                setVendors(data);
+                setLoading(false);
+                // Refresh the detailed vendor if one is selected
+                if (selectedVendor && selectedVendor.id) {
+                  const updatedVendor = await getVendorById(selectedVendor.id);
+                  setDetailedVendor(updatedVendor);
+                }
               }}
             />
           </div>

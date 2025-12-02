@@ -16,6 +16,8 @@ import {
   Trash2,
   Power,
   SquarePen,
+  FileSpreadsheet,
+  Download
 } from "lucide-react";
 import AddVendorModal from "./AddVendorModal";
 import { useCRM } from "../../../context/CRMContext";
@@ -30,8 +32,8 @@ interface VendorDetailsProps {
 }
 
 const VendorDetails: React.FC<
-  VendorDetailsProps & { onVendorDeleted?: () => void }
-> = ({ data, onVendorDeleted }) => {
+  VendorDetailsProps & { onVendorDeleted?: () => void; onRefresh?: () => Promise<void> }
+> = ({ data, onVendorDeleted, onRefresh }) => {
   console.log("Rendering VendorDetails component"); // Add debug logs to trace modal visibility
   // Debug log to inspect data.vendor
   console.log("Vendor data:", data.vendor);
@@ -60,7 +62,7 @@ const VendorDetails: React.FC<
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [branchDetails, setBranchDetails] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("general");
-  const { hasActionAccess } = useCRM();
+  const { hasActionAccess, userData } = useCRM();
 
   // No enhancedVendor, use vendor, branches, contacts, files directly
   const vendor = data?.vendor || null;
@@ -167,6 +169,38 @@ const VendorDetails: React.FC<
     }
   };
 
+  function getIconByMime(mime?: string | null, filename?: string) {
+    const ext = filename?.split(".").pop()?.toLowerCase() ?? "";
+    if (!mime && !ext) return File;
+    if (mime?.includes("pdf") || ext === "pdf") return FileText;
+    if (mime?.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(ext))
+      return Image;
+    if (
+      mime?.includes("spreadsheet") ||
+      ["xls", "xlsx", "csv"].includes(ext) ||
+      mime === "application/vnd.ms-excel" ||
+      mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+      return FileSpreadsheet;
+    if (
+      ["doc", "docx", "rtf", "msword"].some((t) => mime?.includes(t)) ||
+      ["doc", "docx"].includes(ext)
+    )
+      return FileText;
+    // fallback
+    return File;
+  }
+
+  function formatBytes(bytes?: string | number | null) {
+    if (bytes == null || isNaN(Number(bytes))) return "-";
+    const b = Number(bytes);
+    if (b === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
   {
     vendor.ifsc_code || "";
   }
@@ -241,7 +275,7 @@ const VendorDetails: React.FC<
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {vendor.status === "PENDING" && hasActionAccess('Edit', 'All vendors', 'Vendors') && (
+              {(vendor.status === "PENDING" || userData?.role == 'admin') && hasActionAccess('Edit', 'All vendors', 'Vendors') && (
                 <button
                   onClick={() => {
                     console.log("Edit button clicked");
@@ -250,7 +284,7 @@ const VendorDetails: React.FC<
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                   title="Edit Vendor"
                 >
-                  <SquarePen className="h-5 w-5" />
+                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(vendor.status === "PENDING")) && "Super Admin EDIT"}
                 </button>
               )}
               {vendor.status === "PENDING" && hasActionAccess('Deactivate', 'All vendors', 'Vendors') && (
@@ -286,6 +320,7 @@ const VendorDetails: React.FC<
                       console.log("Updated Vendor:", updatedVendorData);
                       setIsEditModalOpen(false);
                     }}
+                    onRefresh={onRefresh}
                     initialData={() => {
                       // Use contacts and branches from the data prop, not vendor.contacts/branches
                       const formData = transformToFormData({
@@ -704,33 +739,35 @@ const VendorDetails: React.FC<
               Vendor Documents
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(files || vendor.files || []).map((file: any, index: number) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
-                >
-                  <div className="flex items-center space-x-3 mb-3">
-                    <FileText className="h-8 w-8 text-indigo-600" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {file.name}
+              {(files || vendor.files || []).map((file: any, index: number) => {
+                const Icon = getIconByMime(file.mime, file.original_name);
+                const sizeLabel = formatBytes(file.size);
+
+                return (
+                  <a
+                    key={file.id}
+                    href={`${import.meta.env.VITE_API_BASE_URL}/vendor-file/${file.vendor_id}/files/${file.id}/download`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    {/* <Icon className="h-8 w-8 text-blue-600 mr-3" /> */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
+                        {file.original_name}
                       </p>
-                      <p className="text-xs text-gray-500">{file.size}</p>
+                      <p className="text-xs text-gray-500">
+                        {sizeLabel} • {file.mime ?? "unknown"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                      </p>
                     </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-500">
-                      Uploaded:{" "}
-                      {file.uploadDate
-                        ? new Date(file.uploadDate).toLocaleDateString("en-IN")
-                        : ""}
-                    </span>
-                    <button className="text-xs text-blue-600 hover:text-blue-800">
-                      View
-                    </button>
-                  </div>
-                </div>
-              ))}
+
+                    <Download className="h-4 w-4 text-gray-400 ml-3" />
+                  </a>
+                );
+              })}
             </div>
           </div>
         )}
