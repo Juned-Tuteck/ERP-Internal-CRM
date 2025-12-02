@@ -85,7 +85,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       contactNo: "",
       email: "",
       country: "India",
-      currency: "INR",
+      currency: [] as string[],
       state: "",
       district: "",
       city: "",
@@ -125,6 +125,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   const [branchContactErrors, setBranchContactErrors] = useState<{
     [key: string]: { [key: string]: ValidationErrors };
   }>({});
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
   const steps = [
     {
@@ -321,7 +322,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       contactNo: "",
       email: "",
       country: "India",
-      currency: "INR",
+      currency: [] as string[],
       state: "",
       district: "",
       city: "",
@@ -383,6 +384,42 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       ...prev,
       [name]: !prev[name as keyof typeof prev],
     }));
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showCurrencyDropdown && !target.closest('.relative')) {
+        setShowCurrencyDropdown(false);
+      }
+    };
+
+    if (showCurrencyDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCurrencyDropdown]);
+
+  const handleCurrencyToggle = (currency: string) => {
+    const selectedCurrencies = [...formData.currency];
+    const index = selectedCurrencies.indexOf(currency);
+
+    if (index > -1) {
+      selectedCurrencies.splice(index, 1);
+    } else {
+      selectedCurrencies.push(currency);
+    }
+
+    setFormData((prev: any) => ({
+      ...prev,
+      currency: selectedCurrencies,
+    }));
+
+    const vendorErrors = validateVendor({ ...formData, currency: selectedCurrencies });
+    setValidationErrors(vendorErrors);
   };
 
   // Contact Person Management
@@ -454,7 +491,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       contactNumber: "",
       email: "",
       country: "India",
-      currency: "INR",
+      currency: "",
       state: "",
       district: "",
       city: "",
@@ -477,7 +514,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
               contactNumber: prev.contactNo,
               email: prev.email,
               country: prev.country,
-              currency: prev.currency,
+              currency: prev.currency.length > 0 ? prev.currency[0] : "",
               state: prev.state,
               district: prev.district,
               city: prev.city,
@@ -1165,27 +1202,54 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       )}
                     </div>
 
-                    <div>
+                    <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Currency *
                       </label>
-                      <select
-                        name="currency"
-                        value={formData.currency}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          validationErrors.currency
-                            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {currencies.map((currency) => (
-                          <option key={currency} value={currency}>
-                            {currency}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <div
+                          onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                          className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${
+                            validationErrors.currency ? "border-red-300" : "border-gray-300"
+                          }`}
+                        >
+                          {formData.currency.length > 0 ? (
+                            <span className="text-gray-900">{formData.currency.join(", ")}</span>
+                          ) : (
+                            <span className="text-gray-400">Select currencies</span>
+                          )}
+                        </div>
+                        {showCurrencyDropdown && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                            {currencies.map((currency) => (
+                              <div
+                                key={currency}
+                                onClick={() => handleCurrencyToggle(currency)}
+                                className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center ${
+                                  formData.currency.includes(currency) ? "bg-blue-100" : ""
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={formData.currency.includes(currency)}
+                                  onChange={() => {}}
+                                  className="mr-2"
+                                />
+                                <span>{currency}</span>
+                              </div>
+                            ))}
+                            <div className="border-t border-gray-200 p-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowCurrencyDropdown(false)}
+                                className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       {validationErrors.currency && (
                         <p className="mt-1 text-sm text-red-600">
                           {validationErrors.currency}
@@ -1857,14 +1921,19 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                           onChange={(e) =>
                             updateBranch(branch.id, "currency", e.target.value)
                           }
+                          disabled={formData.currency.length === 0}
                           required
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                             branchErrors[branch.id]?.currency
                               ? "border-red-500 focus:ring-red-500 focus:border-red-500"
                               : "border-gray-300"
+                          } ${formData.currency.length === 0
+                            ? "bg-gray-50 cursor-not-allowed"
+                            : ""
                           }`}
                         >
-                          {currencies.map((currency) => (
+                          <option value="">Select Currency</option>
+                          {formData.currency.map((currency) => (
                             <option key={currency} value={currency}>
                               {currency}
                             </option>
@@ -1873,6 +1942,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         {branchErrors[branch.id]?.currency && (
                           <p className="mt-1 text-sm text-red-600">
                             {branchErrors[branch.id].currency}
+                          </p>
+                        )}
+                        {formData.currency.length === 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Please select currencies in Step 1 first
                           </p>
                         )}
                       </div>
