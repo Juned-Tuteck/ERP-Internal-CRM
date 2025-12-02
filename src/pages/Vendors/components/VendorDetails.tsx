@@ -62,7 +62,7 @@ const VendorDetails: React.FC<
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [branchDetails, setBranchDetails] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("general");
-  const { hasActionAccess } = useCRM();
+  const { hasActionAccess, userData } = useCRM();
 
   // No enhancedVendor, use vendor, branches, contacts, files directly
   const vendor = data?.vendor || null;
@@ -275,7 +275,7 @@ const VendorDetails: React.FC<
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {vendor.status === "PENDING" && hasActionAccess('Edit', 'All vendors', 'Vendors') && (
+              {(vendor.status === "PENDING" || userData?.role == 'admin') && hasActionAccess('Edit', 'All vendors', 'Vendors') && (
                 <button
                   onClick={() => {
                     console.log("Edit button clicked");
@@ -284,7 +284,7 @@ const VendorDetails: React.FC<
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                   title="Edit Vendor"
                 >
-                  <SquarePen className="h-5 w-5" />
+                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(vendor.status === "PENDING")) && "Super Admin EDIT"}
                 </button>
               )}
               {vendor.status === "PENDING" && hasActionAccess('Deactivate', 'All vendors', 'Vendors') && (
