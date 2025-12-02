@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Save,
@@ -129,6 +129,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+
+  // Customer autocomplete states
+  const [customerSuggestions, setCustomerSuggestions] = useState<Array<{id: string, name: string}>>([]);
+  const [showCustomerPopup, setShowCustomerPopup] = useState(false);
+  const customerInputRef = useRef<HTMLDivElement>(null);
 
   // Clear modal state function
   const clearModalState = () => {
@@ -350,6 +355,64 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setOriginalBranches(initialData.branches || []);
     }
   }, [initialData]);
+
+  // Fetch and filter customers when businessName changes
+  useEffect(() => {
+    const fetchAndFilterCustomers = async () => {
+      if (formData.businessName.length > 3) {
+        try {
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/customer`
+          );
+          const customerData = response.data.data;
+
+          const approvedCustomers = customerData.filter(
+            (customer: any) => customer.approval_status === "APPROVED"
+          );
+
+          const filteredCustomers = approvedCustomers
+            .filter((customer: any) =>
+              customer.business_name
+                .toLowerCase()
+                .includes(formData.businessName.toLowerCase())
+            )
+            .map((customer: any) => ({
+              id: customer.customer_id,
+              name: customer.business_name
+            }));
+
+          setCustomerSuggestions(filteredCustomers);
+          setShowCustomerPopup(filteredCustomers.length > 0);
+        } catch (error) {
+          console.error("Error fetching customers:", error);
+          setCustomerSuggestions([]);
+          setShowCustomerPopup(false);
+        }
+      } else {
+        setCustomerSuggestions([]);
+        setShowCustomerPopup(false);
+      }
+    };
+
+    fetchAndFilterCustomers();
+  }, [formData.businessName]);
+
+  // Handle click outside to close popup
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        customerInputRef.current &&
+        !customerInputRef.current.contains(event.target as Node)
+      ) {
+        setShowCustomerPopup(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -2283,7 +2346,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     Business Details
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
+                    <div ref={customerInputRef} className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Business Name *
                       </label>
@@ -2303,6 +2366,25 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         <p className="text-red-500 text-xs mt-1">
                           {validationErrors.businessName}
                         </p>
+                      )}
+                      {showCustomerPopup && customerSuggestions.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {customerSuggestions.map((customer) => (
+                            <div
+                              key={customer.id}
+                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 transition-colors"
+                              onClick={() => {
+                                setFormData((prev: typeof formData) => ({
+                                  ...prev,
+                                  businessName: customer.name
+                                }));
+                                setShowCustomerPopup(false);
+                              }}
+                            >
+                              {customer.name}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
 
