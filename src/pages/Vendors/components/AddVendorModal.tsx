@@ -944,6 +944,39 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       } finally {
         setIsLoading(false);
       }
+    } else if (currentStep === 3) {
+      // Step 3: Upload files
+      console.log("Uploading files for vendor...");
+      const vendorId = createdVendorId || formData.vendorId || formData.id || formData.vendor_id;
+
+      if (!vendorId) {
+        console.error("No vendorId found. Cannot upload files.");
+        return;
+      }
+
+      if (uploadedFiles.length === 0) {
+        // No files to upload, just close the modal
+        if (typeof onRefresh === "function") await onRefresh();
+        onClose();
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        await uploadFilesForVendor(vendorId, uploadedFiles, (percent) => {
+          console.log("Upload progress:", percent);
+        });
+
+        console.log("Files uploaded successfully");
+        // Close modal after successful upload
+        if (typeof onRefresh === "function") await onRefresh();
+        onClose();
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Failed to upload files. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
     } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -958,33 +991,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Upload files if any (for create mode)
-    if (!isEditMode && uploadedFiles.length > 0) {
-      setIsLoading(true);
-      try {
-        const vendorId = createdVendorId || formData.vendorId || formData.id || formData.vendor_id;
-        if (!vendorId) {
-          alert("Vendor ID is missing. Cannot upload files.");
-          setIsLoading(false);
-          return;
-        }
-
-        console.log("Uploading files for vendor...", vendorId);
-        await uploadFilesForVendor(vendorId, uploadedFiles, (percent) => {
-          console.log("Upload progress:", percent);
-        });
-        console.log("Files uploaded successfully");
-      } catch (err) {
-        console.error("Upload failed", err);
-        alert("Failed to upload files. Please try again.");
-        setIsLoading(false);
-        return;
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    // Final validation before submission
+    // Final validation before submission (only for create mode, not needed anymore)
+    // File upload is now handled in handleNext for step 3
     const vendorValidationErrors = validateVendor(formData);
     const contactPersonValidationErrors: { [key: string]: ValidationErrors } =
       {};
@@ -2500,7 +2508,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
               Cancel
             </button>
 
-            {isEditMode ? (
+            {isEditMode && currentStep < 3 ? (
               <button
                 type="submit"
                 onClick={async (e) => {
@@ -2583,8 +2591,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
               </button>
             ) : (
               <button
-                type="submit"
-                onClick={handleSubmit}
+                type="button"
+                onClick={isEditMode ? handleNext : handleSubmit}
                 disabled={isLoading}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
@@ -2596,7 +2604,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Register Vendor
+                    {isEditMode ? "Save" : "Register Vendor"}
                   </>
                 )}
               </button>
