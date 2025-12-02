@@ -2481,6 +2481,33 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {formData.uploadedFiles.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Uploaded Files
+                      </h4>
+
+                      <ul className="space-y-2">
+                        {formData.uploadedFiles.map((file) => (
+                          <li
+                            key={file.id}
+                            className="flex items-center justify-between p-2 bg-gray-100 rounded"
+                          >
+                            <p
+                              className="text-blue-600 text-sm"
+                            >
+                              {file.original_name}
+                            </p>
+
+                            <span className="text-xs text-gray-500">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                )}
               </div>
             )}
           </form>

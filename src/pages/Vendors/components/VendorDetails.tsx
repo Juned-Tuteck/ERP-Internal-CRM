@@ -750,7 +750,7 @@ const VendorDetails: React.FC<
                     rel="noopener noreferrer"
                     className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
                   >
-                    <Icon className="h-8 w-8 text-blue-600 mr-3" />
+                    {/* <Icon className="h-8 w-8 text-blue-600 mr-3" /> */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
                         {file.original_name}
