@@ -30,6 +30,7 @@ import {
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
+import axios from "axios";
 
 interface AddVendorModalProps {
   isOpen: boolean;
@@ -111,6 +112,13 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   );
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [initialFiles, setInitialFiles] = useState<any[]>(
+    initialData?.uploadedFiles || []
+  );
+  const [activeFileTab, setActiveFileTab] = useState<number>(0);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [createdVendorId, setCreatedVendorId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Validation states
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
@@ -231,7 +239,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
-      setUploadedFiles(formData.uploadedFiles || []);
+      setInitialFiles(initialData.uploadedFiles || []);
+      setUploadedFiles([]);
     }
   }, [initialData]);
 
@@ -344,6 +353,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     setBranchErrors({});
     setBranchContactErrors({});
     setUploadedFiles([]);
+    setInitialFiles([]);
+    setActiveFileTab(0);
+    setFileErrors([]);
+    setCreatedVendorId(null);
+    setIsLoading(false);
     setCurrentStep(1);
   };
 
@@ -613,13 +627,88 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   };
 
   // File Management
+  // File validation functions
+  const validateFileType = (file: File): boolean => {
+    const allowedTypes = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".xls", ".xlsx", ".dwg"];
+    const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+    return allowedTypes.includes(fileExtension);
+  };
+
+  const validateFileSize = (file: File): boolean => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    return file.size <= maxSize;
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles((prev) => [...prev, ...files]);
+    const newFileErrors: string[] = [];
+    const validFiles: File[] = [];
+
+    files.forEach((file) => {
+      // Validate file type
+      if (!validateFileType(file)) {
+        newFileErrors.push(
+          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX`
+        );
+        return;
+      }
+
+      // Validate file size
+      if (!validateFileSize(file)) {
+        newFileErrors.push(`${file.name}: File size exceeds 10MB limit`);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    setFileErrors(newFileErrors);
+    if (validFiles.length > 0) {
+      setUploadedFiles((prev) => [...prev, ...validFiles]);
+    }
+  };
+
+  // Upload files for vendor
+  const uploadFilesForVendor = async (
+    vendorId: string,
+    files: File[],
+    onProgress?: (percent: number) => void
+  ) => {
+    if (!vendorId || files.length === 0) return;
+
+    const formDataObj = new FormData();
+    files.forEach((file) => formDataObj.append("files", file));
+    formDataObj.append("upload_by", userData?.id || "");
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/vendor/${vendorId}/files`,
+      formDataObj,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
+        },
+        onUploadProgress: (event) => {
+          if (!onProgress) return;
+          const total = event.total ?? 0;
+          const percent = total ? Math.round((event.loaded * 100) / total) : 0;
+          onProgress(percent);
+        },
+      }
+    );
+
+    return response.data;
   };
 
   const removeFile = (index: number) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove file from initial files (already uploaded in edit mode)
+  const removeInitialFile = (index: number) => {
+    setInitialFiles((prev) => prev.filter((_, i) => i !== index));
+    // If the active tab is deleted, move to previous tab if possible
+    setActiveFileTab((prev) => (prev > 0 ? prev - 1 : 0));
   };
 
   // Utility to convert camelCase keys to snake_case
@@ -666,14 +755,16 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         return;
       }
 
+      setIsLoading(true);
       try {
         const vendorPayload = toSnakeCase(formData);
         const vendorRes = await registerVendor(vendorPayload);
         const vendorId =
           vendorRes?.data?.vendor_id || vendorRes?.vendor_id || vendorRes?.id;
         if (!vendorId) throw new Error("Vendor ID not returned");
-        // Save vendorId in formData for use in branch creation
+        // Save vendorId in formData for use in branch creation and file upload
         setFormData((prev: typeof formData) => ({ ...prev, vendorId }));
+        setCreatedVendorId(vendorId);
         // Prepare contact persons array for bulk upload
         const contacts = (formData.contactPersons || []).map(
           (cp: ContactPerson) => ({
@@ -712,8 +803,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         setCurrentStep(currentStep + 1);
       } catch (err) {
         alert("Failed to create vendor or bulk upload. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
     } else if (currentStep === 2) {
+      setIsLoading(true);
       // Validate all branches before proceeding
       const branchValidationErrors: { [key: string]: ValidationErrors } = {};
       const branchContactValidationErrors: {
@@ -810,6 +904,8 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         setCurrentStep(currentStep + 1);
       } catch (err) {
         alert("Failed to create branch or branch contacts. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
     } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
@@ -824,6 +920,32 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Upload files if any (for create mode)
+    if (!isEditMode && uploadedFiles.length > 0) {
+      setIsLoading(true);
+      try {
+        const vendorId = createdVendorId || formData.vendorId || formData.id || formData.vendor_id;
+        if (!vendorId) {
+          alert("Vendor ID is missing. Cannot upload files.");
+          setIsLoading(false);
+          return;
+        }
+
+        console.log("Uploading files for vendor...", vendorId);
+        await uploadFilesForVendor(vendorId, uploadedFiles, (percent) => {
+          console.log("Upload progress:", percent);
+        });
+        console.log("Files uploaded successfully");
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Failed to upload files. Please try again.");
+        setIsLoading(false);
+        return;
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
     // Final validation before submission
     const vendorValidationErrors = validateVendor(formData);
@@ -2229,6 +2351,23 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                   </div>
                 </div>
 
+                {/* File Error Display */}
+                {fileErrors.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                    <div className="flex items-center mb-2">
+                      <span className="text-red-500 mr-2">⚠</span>
+                      <h4 className="text-sm font-medium text-red-800">
+                        File Upload Errors:
+                      </h4>
+                    </div>
+                    <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                      {fileErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {uploadedFiles.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -2353,19 +2492,39 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                {currentStep == 1 ? "Register and Next" : "Next"}
-                <ChevronRight className="h-4 w-4 ml-2" />
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    {currentStep == 1 ? "Register and Next" : "Next"}
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
               </button>
             ) : (
               <button
                 type="submit"
                 onClick={handleSubmit}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                disabled={isLoading}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                <Save className="h-4 w-4 mr-2" />
-                Register Vendor
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Register Vendor
+                  </>
+                )}
               </button>
             )}
           </div>
