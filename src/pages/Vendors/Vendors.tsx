@@ -209,7 +209,7 @@ const Vendors: React.FC = () => {
                 vendor: detailedVendor,
                 branches: detailedVendor?.branches || [],
                 contacts: detailedVendor?.contactPersons || [],
-                files: detailedVendor?.files || [],
+                files: detailedVendor?.uploadedFiles || [],
               }}
               onVendorDeleted={async () => {
                 setSelectedVendor(null);

@@ -718,7 +718,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     formDataObj.append("upload_by", userData?.id || "");
 
     const response = await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/vendor/${vendorId}/files`,
+      `${import.meta.env.VITE_API_BASE_URL}/vendor-file/${vendorId}/files`,
       formDataObj,
       {
         headers: {
