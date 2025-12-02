@@ -23,6 +23,7 @@ import {
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
+import { log } from "console";
 
 interface AddCustomerModalProps {
   isOpen: boolean;
@@ -359,20 +360,16 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   // Fetch and filter customers when businessName changes
   useEffect(() => {
     const fetchAndFilterCustomers = async () => {
-      if (formData.businessName.length > 3) {
+      if (formData.businessName.length > 2) {
         try {
           const response = await axios.get(
             `${import.meta.env.VITE_API_BASE_URL}/customer`
           );
           const customerData = response.data.data;
 
-          const approvedCustomers = customerData.filter(
-            (customer: any) => customer.approval_status === "APPROVED"
-          );
-
-          const filteredCustomers = approvedCustomers
+          const filteredCustomers = customerData
             .filter((customer: any) =>
-              customer.business_name
+              customer.business_name.trim()
                 .toLowerCase()
                 .includes(formData.businessName.toLowerCase())
             )
@@ -380,7 +377,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               id: customer.customer_id,
               name: customer.business_name
             }));
-
+          
           setCustomerSuggestions(filteredCustomers);
           setShowCustomerPopup(filteredCustomers.length > 0);
         } catch (error) {
@@ -2071,7 +2068,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
       if (uploadedFiles.length === 0) {
         // No files to upload, just close the modal
-        // handleSubmit();
+        onClose();
         return;
       }
 
@@ -2367,7 +2364,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           {validationErrors.businessName}
                         </p>
                       )}
-                      {showCustomerPopup && customerSuggestions.length > 0 && (
+                      {showCustomerPopup && customerSuggestions.length > 0 &&(
                         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                           {customerSuggestions.map((customer) => (
                             <div

@@ -601,14 +601,14 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
                 <DollarSign className="h-8 w-8 text-green-500 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-gray-900">
                   {customer.revenue}
                 </p>
                 <p className="text-sm text-gray-500">Total Revenue</p>
-              </div>
+              </div> */}
 
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
                 <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
