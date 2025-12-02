@@ -2561,15 +2561,19 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       ...rest
                     } = formData;
                     const payload = toSnakeCase(rest);
+                    setIsLoading(true);
                     try {
                       await updateVendor(vendorId, payload);
                       if (typeof onRefresh === "function") await onRefresh();
                       onClose();
                     } catch (err) {
                       alert("Failed to update vendor.");
+                    } finally {
+                      setIsLoading(false);
                     }
                   } else if (currentStep === 2) {
                     // Branch Info: update all branches
+                    setIsLoading(true);
                     try {
                       const updatePromises = formData.branches.map(
                         async (branch: any) => {
@@ -2587,15 +2591,28 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                       await Promise.all(updatePromises);
                       if (typeof onRefresh === "function") await onRefresh();
                       alert("All branches updated successfully.");
+                      onClose();
                     } catch (err) {
                       alert("Failed to update one or more branches.");
+                    } finally {
+                      setIsLoading(false);
                     }
                   }
                 }}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                disabled={isLoading}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                <Save className="h-4 w-4 mr-2" />
-                Save
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </>
+                )}
               </button>
             ) : currentStep < 3 ? (
               <button
