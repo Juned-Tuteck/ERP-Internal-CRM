@@ -223,6 +223,17 @@ const Vendors: React.FC = () => {
                   message: "Vendor deleted successfully!",
                 });
               }}
+              onRefresh={async () => {
+                setLoading(true);
+                const data = await getAllVendors();
+                setVendors(data);
+                setLoading(false);
+                // Refresh the detailed vendor if one is selected
+                if (selectedVendor && selectedVendor.id) {
+                  const updatedVendor = await getVendorById(selectedVendor.id);
+                  setDetailedVendor(updatedVendor);
+                }
+              }}
             />
           </div>
         </div>

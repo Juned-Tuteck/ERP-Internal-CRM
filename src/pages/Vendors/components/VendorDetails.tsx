@@ -32,8 +32,8 @@ interface VendorDetailsProps {
 }
 
 const VendorDetails: React.FC<
-  VendorDetailsProps & { onVendorDeleted?: () => void }
-> = ({ data, onVendorDeleted }) => {
+  VendorDetailsProps & { onVendorDeleted?: () => void; onRefresh?: () => Promise<void> }
+> = ({ data, onVendorDeleted, onRefresh }) => {
   console.log("Rendering VendorDetails component"); // Add debug logs to trace modal visibility
   // Debug log to inspect data.vendor
   console.log("Vendor data:", data.vendor);
@@ -320,6 +320,7 @@ const VendorDetails: React.FC<
                       console.log("Updated Vendor:", updatedVendorData);
                       setIsEditModalOpen(false);
                     }}
+                    onRefresh={onRefresh}
                     initialData={() => {
                       // Use contacts and branches from the data prop, not vendor.contacts/branches
                       const formData = transformToFormData({
