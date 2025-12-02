@@ -523,6 +523,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               id: customer.customer_id,
               name: customer.business_name,
               approval_status: customer.approval_status,
+              currency: convertCurrencyString(customer.currency),
+              contacts: customer.contacts || [],
             }));
             console.log("Customer DATA **********", customerData);
             const approvedCustomers = customerData.filter(
@@ -584,12 +586,25 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     }
                   }
                 } else {
-                  // If not found, clear the value to avoid mismatch
+                  // If branch not found, clear the value and show customer contacts
                   setFormData((prev: any) => ({
                     ...prev,
                     customerBranch: "",
                   }));
                   setSelectedBranchId("");
+                  setContactPersons(selectedCustomer.contacts || []);
+                }
+              } else {
+                // No branch selected, show customer contacts
+                setContactPersons(selectedCustomer.contacts || []);
+                if (initialData.contactPerson) {
+                  const selectedContact = selectedCustomer.contacts.find(
+                    (contact: any) => contact.name === initialData.contactPerson
+                  );
+                  if (selectedContact) {
+                    setSelectedContactId(selectedContact.id);
+                    initialFormRef.current.contact_person_id = selectedContact.id;
+                  }
                 }
               }
             }
@@ -732,6 +747,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       if (selectedCustomer) {
         setSelectedCustomerId(selectedCustomer.id);
         fetchCustomerBranches(selectedCustomer.id);
+        // Set customer contacts as default
+        setContactPersons(selectedCustomer.contacts || []);
       }
       setFormData((prev: any) => ({
         ...prev,
@@ -744,12 +761,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     // Handle branch selection
     if (name === "customerBranch") {
-      const selectedBranch = customerBranches.find(
-        (branch) => branch.branch_name === value
-      );
-      if (selectedBranch) {
-        setSelectedBranchId(selectedBranch.id);
-        fetchContactPersons(selectedBranch.id);
+      if (value === "") {
+        // If branch is cleared, revert to customer contacts
+        const selectedCustomer = customers.find(
+          (customer) => customer.id === selectedCustomerId
+        );
+        setContactPersons(selectedCustomer?.contacts || []);
+        setSelectedBranchId("");
+      } else {
+        const selectedBranch = customerBranches.find(
+          (branch) => branch.branch_name === value
+        );
+        if (selectedBranch) {
+          setSelectedBranchId(selectedBranch.id);
+          fetchContactPersons(selectedBranch.id);
+        }
       }
       setFormData((prev: any) => ({
         ...prev,
@@ -1554,7 +1580,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.contactPerson}
                       onChange={handleInputChange}
                       required
-                      disabled={!formData.customerBranch}
+                      disabled={!formData.businessName}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.contactPerson
                         ? "border-red-500"
                         : "border-gray-300"
@@ -1568,6 +1594,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       ))}
                     </select>
                     <ValidationError fieldName="contactPerson" />
+                    {formData.businessName && contactPersons.length === 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        No contacts available for this {selectedBranchId ? 'branch' : 'customer'}
+                      </p>
+                    )}
                   </div>
 
                   <div>
