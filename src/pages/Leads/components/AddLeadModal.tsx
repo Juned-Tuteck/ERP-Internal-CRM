@@ -7,6 +7,7 @@ import {
   Upload,
   MessageSquare,
   Trash2,
+  Currency,
 } from "lucide-react";
 import axios from "axios";
 
@@ -84,13 +85,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   // State for API data
   const [customers, setCustomers] = useState<
-    Array<{ id: string; name: string }>
+    Array<{ id: string; name: string; currency: string[]; contacts: Array<{
+      id: string;
+      name: string;
+      email: string;
+      phone: string;
+      designation: string;
+    }>; }>
   >([]);
   const [customerBranches, setCustomerBranches] = useState<
     Array<{ id: string; branch_name: string, currency: string }>
   >([]);
   const [contactPersons, setContactPersons] = useState<
-    Array<{ id: string; name: string }>
+    Array<{ id: string; name: string, phone:number }>
   >([]);
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
@@ -393,6 +400,31 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   // NEW: ref to keep normalized snapshot of initial form for diffing
   const initialFormRef = useRef<any>(null);
 
+  const defaultFormData = {
+    businessName: "",
+    avatar: "",
+    customerBranch: "",
+    currency: "",
+    contactPerson: "",
+    contactNo: "",
+    leadGeneratedDate: new Date().toISOString().split("T")[0],
+    referencedBy: "",
+    projectName: "",
+    projectValue: "",
+    leadType: "",
+    workType: "",
+    leadCriticality: "",
+    leadSource: "",
+    leadStage: "Information Stage",
+    leadStagnation: "",
+    approximateResponseTime: "",
+    eta: "",
+    leadDetails: "",
+    involvedAssociates: [],
+    uploadedFiles: [],
+    followUpComments: [],
+  };
+
   useEffect(() => {
     const fetchAllForEdit = async () => {
       if (initialData) {
@@ -573,6 +605,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     fetchAllForEdit();
   }, [initialData, isOpen]);
 
+  const convertCurrencyString = (str: string): string[] => {
+    return str
+      .replace(/[{}"]/g, "") // remove { } and "
+      .split(",")             // split by comma
+      .map(s => s.trim());    // remove extra spaces
+  };
   // Fetch customers from API
   const fetchCustomers = async () => {
     try {
@@ -591,6 +629,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         approvedCustomers.map((customer: any) => ({
           id: customer.customer_id,
           name: customer.business_name,
+          currency: convertCurrencyString(customer.currency),
+          contacts: customer.contacts || [],
         }))
       );
     } catch (error) {
@@ -664,6 +704,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
+  const fallbackCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  const currenciesToShow = selectedBranchId ? customerBranches.map(b => b.currency) : fallbackCustomer?.currency ?? [];
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -729,7 +773,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         (contact) => contact.name === value
       );
       if (selectedContact) {
+        console.log("Selected Contact:", selectedContact);
         setSelectedContactId(selectedContact.id);
+        setFormData((prev: any) => ({
+          ...prev,
+          contactNo: selectedContact.phone,
+        }));
       }
     }
 
@@ -1313,6 +1362,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const handleClose = () => {
     setValidationErrors({});
     setFileErrors([]);
+    setFormData(defaultFormData);
     onClose();
   };
 
@@ -1443,6 +1493,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Customer Branch
+                      
                     </label>
                     <select
                       name="customerBranch"
@@ -1480,9 +1531,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       <option value="USD">US Dollar ($)</option>
                       <option value="EUR">Euro (€)</option> */}
                       {/* <option value="">Select Branch</option> */}
-                      {customerBranches.map((branch) => (
+                      {/* {customerBranches.map((branch) => (
                         <option key={branch.id} value={branch.currency}>
                           {branch.currency}
+                        </option>
+                      ))} */}
+
+                      {currenciesToShow.map((currency, index) => (
+                        <option key={index} value={currency}>
+                          {currency}
                         </option>
                       ))}
                     </select>
@@ -1873,7 +1930,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </div>
                       <div>
                         <input
-                          type="text"
+                          type="number"
                           name="otherInfo"
                           value={associateForm.otherInfo}
                           onChange={handleAssociateFormChange}

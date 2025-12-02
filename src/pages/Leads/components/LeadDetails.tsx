@@ -547,7 +547,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   </button>
                 )}
               {/* History Button */}
-              {hasActionAccess('View History', 'All Leads', 'Lead') && (
+              {/* {hasActionAccess('View History', 'All Leads', 'Lead') && (
                 <button
                   onClick={() => setShowHistoryModal(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition"
@@ -555,7 +555,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 >
                   <History className="h-5 w-5" />
                 </button>
-              )}
+              )} */}
               {/* Edit Button */}
               {hasActionAccess('Edit', 'All Leads', 'Lead') && (
                 <button

@@ -2524,7 +2524,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Customer Potential *
                       </label>
-                      <select
+                      <input
+                          type="number"
+                          name="customerPotential"
+                          value={formData.customerPotential}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
+                      />
+                      {/* <select
                         name="customerPotential"
                         value={formData.customerPotential}
                         onChange={handleInputChange}
@@ -2537,7 +2544,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             {potential}
                           </option>
                         ))}
-                      </select>
+                      </select> */}
                     </div>
 
                     <div>
