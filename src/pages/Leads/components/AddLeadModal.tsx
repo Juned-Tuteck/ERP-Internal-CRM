@@ -204,7 +204,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setFormData((prev: any) => ({ ...prev, eta: newEta }));
     }
   }, [formData.leadGeneratedDate, formData.approximateResponseTime]);
-  
+
 
   const validateFileSize = (file: File): boolean => {
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -523,6 +523,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               id: customer.customer_id,
               name: customer.business_name,
               approval_status: customer.approval_status,
+              contacts: customer.contacts || [],
             }));
             console.log("Customer DATA **********", customerData);
             const approvedCustomers = customerData.filter(
@@ -544,38 +545,38 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
               // Fetch branches for this customer
               const branchResponse = await axios.get(
-                `${import.meta.env.VITE_API_BASE_URL
-                }/customer-branch?customer_id=${localCustomerId}`
+                `${import.meta.env.VITE_API_BASE_URL}/customer-branch?customer_id=${localCustomerId}`
               );
               const branchData = branchResponse.data.data;
               setCustomerBranches(branchData);
-              // Always set selected branch in edit mode if available
+
+              // Check if there's a branch in initialData
               if (initialData.branch_name) {
                 const selectedBranch = branchData.find(
-                  (branch: any) =>
-                    branch.branch_name === initialData.branch_name
+                  (branch: any) => branch.branch_name === initialData.branch_name
                 );
+
                 if (selectedBranch) {
+                  // Branch exists: use branch contacts
                   const localBranchId = selectedBranch.id;
                   setSelectedBranchId(localBranchId);
                   initialFormRef.current.customer_branch_id = localBranchId;
-                  // Always update formData.customerBranch to the exact branch name from fetched data
+
                   setFormData((prev: any) => ({
                     ...prev,
                     customerBranch: selectedBranch.branch_name,
                   }));
+
                   // Fetch contacts for this branch
                   const contactResponse = await axios.get(
-                    `${import.meta.env.VITE_API_BASE_URL
-                    }/customer-branch-contact?customer_branch_id=${localBranchId
-                    }`
+                    `${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact?customer_branch_id=${localBranchId}`
                   );
                   const contactData = contactResponse.data.data;
                   setContactPersons(contactData);
+
                   if (initialData.contactPerson) {
                     const selectedContact = contactData.find(
-                      (contact: any) =>
-                        contact.name === initialData.contactPerson
+                      (contact: any) => contact.name === initialData.contactPerson
                     );
                     if (selectedContact) {
                       const localContactId = selectedContact.id;
@@ -584,12 +585,52 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     }
                   }
                 } else {
-                  // If not found, clear the value to avoid mismatch
+                  // Branch not found: clear and use customer contacts
                   setFormData((prev: any) => ({
                     ...prev,
                     customerBranch: "",
                   }));
                   setSelectedBranchId("");
+
+                  // Use customer's direct contacts
+                  if (selectedCustomer.contacts && selectedCustomer.contacts.length > 0) {
+                    const customerContacts = selectedCustomer.contacts.map((contact: any) => ({
+                      id: contact.id,
+                      name: contact.name,
+                      phone: contact.phone || contact.contact_no,
+                    }));
+                    setContactPersons(customerContacts);
+
+                    if (initialData.contactPerson) {
+                      const selectedContact = customerContacts.find(
+                        (contact: any) => contact.name === initialData.contactPerson
+                      );
+                      if (selectedContact) {
+                        setSelectedContactId(selectedContact.id);
+                        initialFormRef.current.contact_person_id = selectedContact.id;
+                      }
+                    }
+                  }
+                }
+              } else {
+                // No branch: use customer contacts
+                if (selectedCustomer.contacts && selectedCustomer.contacts.length > 0) {
+                  const customerContacts = selectedCustomer.contacts.map((contact: any) => ({
+                    id: contact.id,
+                    name: contact.name,
+                    phone: contact.phone || contact.contact_no,
+                  }));
+                  setContactPersons(customerContacts);
+
+                  if (initialData.contactPerson) {
+                    const selectedContact = customerContacts.find(
+                      (contact: any) => contact.name === initialData.contactPerson
+                    );
+                    if (selectedContact) {
+                      setSelectedContactId(selectedContact.id);
+                      initialFormRef.current.contact_person_id = selectedContact.id;
+                    }
+                  }
                 }
               }
             }
@@ -611,6 +652,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       .split(",")             // split by comma
       .map(s => s.trim());    // remove extra spaces
   };
+
   // Fetch customers from API
   const fetchCustomers = async () => {
     try {
@@ -642,15 +684,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const fetchCustomerBranches = async (customerId: string) => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL
-        }/customer-branch?customer_id=${customerId}`
+        `${import.meta.env.VITE_API_BASE_URL}/customer-branch?customer_id=${customerId}`
       );
       console.log("Customer Branches:", response);
       const branchData = response.data.data;
       console.log("Branch Data:-----", branchData);
       setCustomerBranches(branchData);
       // Reset dependent fields
-      setContactPersons([]);
       setSelectedBranchId("");
       setSelectedContactId("");
     } catch (error) {
@@ -663,8 +703,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const fetchContactPersons = async (branchId: string) => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL
-        }/customer-branch-contact?customer_branch_id=${branchId}`
+        `${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact?customer_branch_id=${branchId}`
       );
       const contactData = response.data.data;
       console.log("Contact Data:", contactData);
@@ -732,29 +771,60 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       if (selectedCustomer) {
         setSelectedCustomerId(selectedCustomer.id);
         fetchCustomerBranches(selectedCustomer.id);
+
+        // Set customer's direct contacts as the initial contact persons
+        if (selectedCustomer.contacts && selectedCustomer.contacts.length > 0) {
+          setContactPersons(selectedCustomer.contacts.map((contact: any) => ({
+            id: contact.id,
+            name: contact.name,
+            phone: contact.phone || contact.contact_no,
+          })));
+        } else {
+          setContactPersons([]);
+        }
       }
       setFormData((prev: any) => ({
         ...prev,
         businessName: value,
         customerBranch: "",
         contactPerson: "",
+        contactNo: "",
       }));
       return;
     }
 
     // Handle branch selection
     if (name === "customerBranch") {
-      const selectedBranch = customerBranches.find(
-        (branch) => branch.branch_name === value
-      );
-      if (selectedBranch) {
-        setSelectedBranchId(selectedBranch.id);
-        fetchContactPersons(selectedBranch.id);
+      if (value) {
+        // Branch selected: fetch branch contacts
+        const selectedBranch = customerBranches.find(
+          (branch) => branch.branch_name === value
+        );
+        if (selectedBranch) {
+          setSelectedBranchId(selectedBranch.id);
+          fetchContactPersons(selectedBranch.id);
+        }
+      } else {
+        // Branch cleared: revert to customer contacts
+        setSelectedBranchId("");
+        const selectedCustomer = customers.find(
+          (customer) => customer.id === selectedCustomerId
+        );
+        if (selectedCustomer && selectedCustomer.contacts && selectedCustomer.contacts.length > 0) {
+          setContactPersons(selectedCustomer.contacts.map((contact: any) => ({
+            id: contact.id,
+            name: contact.name,
+            phone: contact.phone || contact.contact_no,
+          })));
+        } else {
+          setContactPersons([]);
+        }
       }
       setFormData((prev: any) => ({
         ...prev,
         customerBranch: value,
         contactPerson: "",
+        contactNo: "",
       }));
       return;
     }
@@ -896,7 +966,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       console.error("Error updating lead stage:", error);
     }
   };
-
 
   const removeFile = (index: number) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
@@ -1493,13 +1562,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Customer Branch
-                      
+
                     </label>
                     <select
                       name="customerBranch"
                       value={formData.customerBranch}
                       onChange={handleInputChange}
-                      required
                       disabled={!formData.businessName}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.customerBranch
                         ? "border-red-500"
@@ -1527,16 +1595,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      {/* <option value="INR">Indian Rupee (₹)</option>
-                      <option value="USD">US Dollar ($)</option>
-                      <option value="EUR">Euro (€)</option> */}
-                      {/* <option value="">Select Branch</option> */}
-                      {/* {customerBranches.map((branch) => (
-                        <option key={branch.id} value={branch.currency}>
-                          {branch.currency}
-                        </option>
-                      ))} */}
-
                       {currenciesToShow.map((currency, index) => (
                         <option key={index} value={currency}>
                           {currency}
@@ -1547,14 +1605,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contact Person
+                      Contact Person {selectedBranchId ? "(Branch)" : "(Customer)"}
                     </label>
                     <select
                       name="contactPerson"
                       value={formData.contactPerson}
                       onChange={handleInputChange}
                       required
-                      disabled={!formData.customerBranch}
+                      disabled={!formData.businessName}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.contactPerson
                         ? "border-red-500"
                         : "border-gray-300"
@@ -1568,6 +1626,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       ))}
                     </select>
                     <ValidationError fieldName="contactPerson" />
+                    {contactPersons.length === 0 && formData.businessName && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        No contacts available for this {selectedBranchId ? "branch" : "customer"}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -1637,7 +1700,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <input
                       type="text"
                       name="projectName"
-                      value={formData.projectName}
+                      value={formData.projectName ? formData.projectName : formData.businessName}
                       onChange={handleInputChange}
                       required
                       placeholder="Enter project name"
@@ -2185,15 +2248,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </button>
             )}
           </div>
-          {/* <button
-            type="button"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </button> */}
 
           <div className="flex space-x-3">
             <button

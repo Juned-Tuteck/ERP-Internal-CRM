@@ -27,6 +27,7 @@ import {
   Download,
   FileCheck,
   MessageSquare,
+  SquarePen,
   User
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
@@ -557,7 +558,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 </button>
               )} */}
               {/* Edit Button */}
-              {hasActionAccess('Edit', 'All Leads', 'Lead') && (
+              {/* {hasActionAccess('Edit', 'All Leads', 'Lead') && (
                 <button
                   onClick={() => setShowEditModal(true)}
                   className={`rounded-full p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 transition ${displayLead.approvalStatus === "approved" ||
@@ -572,6 +573,16 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   }
                 >
                   <Edit2 className="h-5 w-5" />
+                </button>
+              )} */}
+
+              {(displayLead.approvalStatus === "pending" || displayLead.approvalStatus=== "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'customers') && (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                  title="Edit Customer"
+                >
+                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(displayLead.approvalStatus=== "pending" || displayLead.approvalStatus=== "draft")) && "Super Admin EDIT"}
                 </button>
               )}
               {/* Delete Button */}

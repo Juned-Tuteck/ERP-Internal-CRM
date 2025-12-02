@@ -31,7 +31,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   customer,
   setCustomerInitialData,
 }) => {
-  const { hasActionAccess } = useCRM();
+  const { hasActionAccess, userData } = useCRM();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
@@ -367,13 +367,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('edit', 'All customers', 'customers') && (
+              {(customer.status === "pending" || customer.status === "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                   title="Edit Customer"
                 >
-                  <SquarePen className="h-5 w-5" />
+                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(customer.status === "pending" || customer.status === "draft")) && "Super Admin EDIT"}
                 </button>
               )}
               {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('Deactivate', 'All customers', 'customers') && (
