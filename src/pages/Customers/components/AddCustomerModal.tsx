@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Save,
@@ -23,6 +23,7 @@ import {
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
+import { log } from "console";
 
 interface AddCustomerModalProps {
   isOpen: boolean;
@@ -128,6 +129,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   >({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+
+  // Customer autocomplete states
+  const [customerSuggestions, setCustomerSuggestions] = useState<Array<{id: string, name: string}>>([]);
+  const [showCustomerPopup, setShowCustomerPopup] = useState(false);
+  const customerInputRef = useRef<HTMLDivElement>(null);
 
   // Clear modal state function
   const clearModalState = () => {
@@ -224,6 +231,23 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   useEffect(() => {
     console.log("changed fields", fieldChanges);
   });
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showCurrencyDropdown && !target.closest('.relative')) {
+        setShowCurrencyDropdown(false);
+      }
+    };
+
+    if (showCurrencyDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCurrencyDropdown]);
 
   const steps = [
     {
@@ -332,6 +356,60 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setOriginalBranches(initialData.branches || []);
     }
   }, [initialData]);
+
+  // Fetch and filter customers when businessName changes
+  useEffect(() => {
+    const fetchAndFilterCustomers = async () => {
+      if (formData.businessName.length > 2) {
+        try {
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/customer`
+          );
+          const customerData = response.data.data;
+
+          const filteredCustomers = customerData
+            .filter((customer: any) =>
+              customer.business_name.trim()
+                .toLowerCase()
+                .includes(formData.businessName.toLowerCase())
+            )
+            .map((customer: any) => ({
+              id: customer.customer_id,
+              name: customer.business_name
+            }));
+          
+          setCustomerSuggestions(filteredCustomers);
+          setShowCustomerPopup(filteredCustomers.length > 0);
+        } catch (error) {
+          console.error("Error fetching customers:", error);
+          setCustomerSuggestions([]);
+          setShowCustomerPopup(false);
+        }
+      } else {
+        setCustomerSuggestions([]);
+        setShowCustomerPopup(false);
+      }
+    };
+
+    fetchAndFilterCustomers();
+  }, [formData.businessName]);
+
+  // Handle click outside to close popup
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        customerInputRef.current &&
+        !customerInputRef.current.contains(event.target as Node)
+      ) {
+        setShowCustomerPopup(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -502,6 +580,54 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       ...prev,
       [name]: !prev[name as keyof typeof prev],
     }));
+  };
+
+  const handleCurrencyToggle = (currency: string) => {
+    const selectedCurrencies = [...formData.currency];
+    const index = selectedCurrencies.indexOf(currency);
+
+    if (index > -1) {
+      selectedCurrencies.splice(index, 1);
+    } else {
+      selectedCurrencies.push(currency);
+    }
+
+    setFormData((prev: typeof formData) => ({
+      ...prev,
+      currency: selectedCurrencies,
+    }));
+
+    setTouched((prev) => ({
+      ...prev,
+      currency: true,
+    }));
+
+    const rule = validationRules.currency;
+    if (rule) {
+      const fieldError = validateField("currency", selectedCurrencies, rule);
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        if (fieldError) {
+          newErrors.currency = fieldError;
+        } else {
+          delete newErrors.currency;
+        }
+        return newErrors;
+      });
+    }
+
+    if (initialData && JSON.stringify(initialData.currency) !== JSON.stringify(selectedCurrencies)) {
+      setFieldChanges((prev) => ({
+        ...prev,
+        currency: selectedCurrencies,
+      }));
+    } else {
+      setFieldChanges((prev) => {
+        const updatedChanges = { ...prev };
+        delete updatedChanges.currency;
+        return updatedChanges;
+      });
+    }
   };
 
   const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -1942,7 +2068,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
       if (uploadedFiles.length === 0) {
         // No files to upload, just close the modal
-        // handleSubmit();
+        onClose();
         return;
       }
 
@@ -2217,7 +2343,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     Business Details
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
+                    <div ref={customerInputRef} className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Business Name *
                       </label>
@@ -2237,6 +2363,25 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         <p className="text-red-500 text-xs mt-1">
                           {validationErrors.businessName}
                         </p>
+                      )}
+                      {showCustomerPopup && customerSuggestions.length > 0 &&(
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {customerSuggestions.map((customer) => (
+                            <div
+                              key={customer.id}
+                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 transition-colors"
+                              onClick={() => {
+                                setFormData((prev: typeof formData) => ({
+                                  ...prev,
+                                  businessName: customer.name
+                                }));
+                                setShowCustomerPopup(false);
+                              }}
+                            >
+                              {customer.name}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
 
@@ -2305,28 +2450,56 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       </select>
                     </div>
 
-                    <div>
+                    <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Currency * (Hold Ctrl/Cmd to select multiple)
+                        Currency *
                       </label>
-                      <select
-                        name="currency"
-                        value={formData.currency}
-                        onChange={handleCurrencyChange}
-                        multiple
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
-                      >
-                        {currencies.map((currency) => (
-                          <option key={currency} value={currency}>
-                            {currency}
-                          </option>
-                        ))}
-                      </select>
-                      {formData.currency.length > 0 && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Selected: {formData.currency.join(", ")}
-                        </p>
+                      <div className="relative">
+                        <div
+                          onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                          className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${
+                            validationErrors.currency ? "border-red-300" : "border-gray-300"
+                          }`}
+                        >
+                          {formData.currency.length > 0 ? (
+                            <span className="text-gray-900">{formData.currency.join(", ")}</span>
+                          ) : (
+                            <span className="text-gray-400">Select currencies</span>
+                          )}
+                        </div>
+                        {showCurrencyDropdown && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                            {currencies.map((currency) => (
+                              <div
+                                key={currency}
+                                onClick={() => handleCurrencyToggle(currency)}
+                                className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center ${
+                                  formData.currency.includes(currency) ? "bg-blue-100" : ""
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={formData.currency.includes(currency)}
+                                  onChange={() => {}}
+                                  className="mr-2"
+                                />
+                                <span>{currency}</span>
+                              </div>
+                            ))}
+                            <div className="border-t border-gray-200 p-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowCurrencyDropdown(false)}
+                                className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {validationErrors.currency && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.currency}</p>
                       )}
                     </div>
 
@@ -2430,7 +2603,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Customer Potential *
                       </label>
-                      <select
+                      <input
+                          type="number"
+                          name="customerPotential"
+                          value={formData.customerPotential}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
+                      />
+                      {/* <select
                         name="customerPotential"
                         value={formData.customerPotential}
                         onChange={handleInputChange}
@@ -2443,7 +2623,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             {potential}
                           </option>
                         ))}
-                      </select>
+                      </select> */}
                     </div>
 
                     <div>

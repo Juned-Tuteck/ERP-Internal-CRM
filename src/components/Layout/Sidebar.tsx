@@ -41,7 +41,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: Building2,
       accessKey: "customers",
     },
-    { name: "Vendors", href: "/vendors", icon: Truck, accessKey: "Vendors" },
     { name: "Leads", href: "/leads", icon: UserPlus, accessKey: "Lead" },
     { name: "BOM", href: "/bom", icon: NotebookPen, accessKey: "BOM" },
     {
@@ -62,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: NotepadText,
       accessKey: "Projects",
     },
+    { name: "Vendors", href: "/vendors", icon: Truck, accessKey: "Vendors" },
     {
       name: "Reports",
       href: "/reports",

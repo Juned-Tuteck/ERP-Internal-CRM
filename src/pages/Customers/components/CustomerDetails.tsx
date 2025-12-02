@@ -31,7 +31,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
   customer,
   setCustomerInitialData,
 }) => {
-  const { hasActionAccess } = useCRM();
+  const { hasActionAccess, userData } = useCRM();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
@@ -367,13 +367,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('edit', 'All customers', 'customers') && (
+              {(customer.status === "pending" || customer.status === "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                   title="Edit Customer"
                 >
-                  <SquarePen className="h-5 w-5" />
+                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(customer.status === "pending" || customer.status === "draft")) && "Super Admin EDIT"}
                 </button>
               )}
               {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('Deactivate', 'All customers', 'customers') && (
@@ -601,14 +601,14 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
                 <DollarSign className="h-8 w-8 text-green-500 mx-auto mb-2" />
                 <p className="text-2xl font-bold text-gray-900">
                   {customer.revenue}
                 </p>
                 <p className="text-sm text-gray-500">Total Revenue</p>
-              </div>
+              </div> */}
 
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
                 <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />

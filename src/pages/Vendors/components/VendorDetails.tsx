@@ -102,7 +102,9 @@ const VendorDetails: React.FC<
     email: vendor.email || "",
     tanNumber: vendor.tan_number || vendor.tanNumber || "",
     country: vendor.country || "India",
-    currency: vendor.currency || "INR",
+    currency: typeof vendor.currency === 'string' 
+              ? vendor.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
+              : [],
     state: vendor.state || "",
     district: vendor.district || "",
     city: vendor.city || "",
