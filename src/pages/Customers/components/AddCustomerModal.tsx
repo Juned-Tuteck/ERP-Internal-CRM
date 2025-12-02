@@ -2369,14 +2369,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           {customerSuggestions.map((customer) => (
                             <div
                               key={customer.id}
-                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 transition-colors"
-                              onClick={() => {
-                                setFormData((prev: typeof formData) => ({
-                                  ...prev,
-                                  businessName: customer.name
-                                }));
-                                setShowCustomerPopup(false);
-                              }}
+                              className="px-3 py-2 text-sm text-gray-700 transition-colors"
+                              // onClick={() => {
+                              //   setFormData((prev: typeof formData) => ({
+                              //     ...prev,
+                              //     businessName: customer.name
+                              //   }));
+                              //   setShowCustomerPopup(false);
+                              // }}
                             >
                               {customer.name}
                             </div>
