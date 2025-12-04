@@ -136,6 +136,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [showCustomerPopup, setShowCustomerPopup] = useState(false);
   const customerInputRef = useRef<HTMLDivElement>(null);
 
+  // Customer details modal states
+  const [showCustomerDetailsModal, setShowCustomerDetailsModal] = useState(false);
+  const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<any>(null);
+  const [loadingCustomerDetails, setLoadingCustomerDetails] = useState(false);
+
   // Clear modal state function
   const clearModalState = () => {
     if (!isEditMode) {
@@ -410,6 +415,25 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Fetch customer details
+  const fetchCustomerDetails = async (customerId: string) => {
+    setLoadingCustomerDetails(true);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/customer/${customerId}`
+      );
+      if (response.data.success) {
+        setSelectedCustomerDetails(response.data.data);
+        setShowCustomerDetailsModal(true);
+      }
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+      alert("Failed to fetch customer details. Please try again.");
+    } finally {
+      setLoadingCustomerDetails(false);
+    }
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -2366,17 +2390,18 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       )}
                       {showCustomerPopup && customerSuggestions.length > 0 &&(
                         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                          {customerSuggestions.map((customer) => (
+                          {loadingCustomerDetails && (
+                            <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                              Loading customer details...
+                            </div>
+                          )}
+                          {!loadingCustomerDetails && customerSuggestions.map((customer) => (
                             <div
                               key={customer.id}
-                              className="px-3 py-2 text-sm text-gray-700 transition-colors"
-                              // onClick={() => {
-                              //   setFormData((prev: typeof formData) => ({
-                              //     ...prev,
-                              //     businessName: customer.name
-                              //   }));
-                              //   setShowCustomerPopup(false);
-                              // }}
+                              className="px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer transition-colors"
+                              onClick={() => {
+                                fetchCustomerDetails(customer.id);
+                              }}
                             >
                               {customer.name}
                             </div>
@@ -3731,6 +3756,318 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Customer Details Modal */}
+      {showCustomerDetailsModal && selectedCustomerDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Customer Details
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCustomerDetailsModal(false);
+                  setSelectedCustomerDetails(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Business Information */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">Business Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Customer Number</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.customer_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Business Name</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.business_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Contact Number</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.contact_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Email</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Customer Type</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.customer_type || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Customer Potential</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.customer_potential || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Currency</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.currency || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Status</p>
+                    <p className={`text-sm font-medium ${selectedCustomerDetails.active ? 'text-green-600' : 'text-red-600'}`}>
+                      {selectedCustomerDetails.active ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Approval Status</p>
+                    <p className={`text-sm font-medium ${
+                      selectedCustomerDetails.approval_status === 'APPROVED' ? 'text-green-600' :
+                      selectedCustomerDetails.approval_status === 'REJECTED' ? 'text-red-600' :
+                      'text-yellow-600'
+                    }`}>
+                      {selectedCustomerDetails.approval_status || '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location Information */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">Location Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Country</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.country || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">State</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.state || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">District</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.district || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">City</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.city || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Pincode</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.pincode || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tax & Bank Information */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">Tax & Bank Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">PAN Number</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.pan_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">TAN Number</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.tan_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">GST Number</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.gst_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Bank Name</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.bank_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Account Number</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.bank_account_number || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Branch Name</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.branch_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">IFSC Code</p>
+                    <p className="text-sm text-gray-900">{selectedCustomerDetails.ifsc_code || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Persons */}
+              {selectedCustomerDetails.contactpersons && selectedCustomerDetails.contactpersons.length > 0 && (
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Contact Persons</h4>
+                  <div className="space-y-3">
+                    {selectedCustomerDetails.contactpersons.map((contact: any, index: number) => (
+                      <div key={contact.contactId} className="bg-white p-3 rounded border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Name</p>
+                            <p className="text-sm text-gray-900">{contact.name || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Designation</p>
+                            <p className="text-sm text-gray-900">{contact.designation || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Email</p>
+                            <p className="text-sm text-gray-900">{contact.email || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Phone</p>
+                            <p className="text-sm text-gray-900">{contact.phone || '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Branches */}
+              {selectedCustomerDetails.branches && selectedCustomerDetails.branches.length > 0 && (
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Branches</h4>
+                  <div className="space-y-4">
+                    {selectedCustomerDetails.branches.map((branch: any, index: number) => (
+                      <div key={branch.branchId} className="bg-white p-4 rounded border border-gray-200">
+                        <h5 className="font-medium text-gray-900 mb-3">{branch.branchName}</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Contact Number</p>
+                            <p className="text-sm text-gray-900">{branch.contactNumber || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Email</p>
+                            <p className="text-sm text-gray-900">{branch.emailId || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Currency</p>
+                            <p className="text-sm text-gray-900">{branch.currency || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Country</p>
+                            <p className="text-sm text-gray-900">{branch.country || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">State</p>
+                            <p className="text-sm text-gray-900">{branch.state || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">District</p>
+                            <p className="text-sm text-gray-900">{branch.district || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">City</p>
+                            <p className="text-sm text-gray-900">{branch.city || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Pincode</p>
+                            <p className="text-sm text-gray-900">{branch.pincode || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">GST Number</p>
+                            <p className="text-sm text-gray-900">{branch.gstNumber || '-'}</p>
+                          </div>
+                        </div>
+
+                        {/* Branch Contact Persons */}
+                        {branch.contactPersons && branch.contactPersons.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <p className="text-xs text-gray-600 font-medium mb-2">Branch Contact Persons</p>
+                            <div className="space-y-2">
+                              {branch.contactPersons.map((contact: any) => (
+                                <div key={contact.contactId} className="bg-gray-50 p-2 rounded">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                                    <div>
+                                      <p className="text-xs text-gray-500 font-medium">Name</p>
+                                      <p className="text-sm text-gray-900">{contact.name || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500 font-medium">Designation</p>
+                                      <p className="text-sm text-gray-900">{contact.designation || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500 font-medium">Email</p>
+                                      <p className="text-sm text-gray-900">{contact.email || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-500 font-medium">Phone</p>
+                                      <p className="text-sm text-gray-900">{contact.phone || '-'}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Uploaded Files */}
+              {selectedCustomerDetails.uploadedfiles && selectedCustomerDetails.uploadedfiles.length > 0 && (
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Uploaded Files</h4>
+                  <div className="space-y-2">
+                    {selectedCustomerDetails.uploadedfiles.map((file: any) => (
+                      <div key={file.id} className="bg-white p-3 rounded border border-gray-200 flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{file.original_name}</p>
+                          <p className="text-xs text-gray-500">
+                            Size: {(file.size / 1024).toFixed(2)} KB • Type: {file.mime}
+                          </p>
+                        </div>
+                        <a
+                          href={`${import.meta.env.VITE_API_BASE_URL}${file.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          View
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">Metadata</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Created At</p>
+                    <p className="text-sm text-gray-900">
+                      {selectedCustomerDetails.created_at ? new Date(selectedCustomerDetails.created_at).toLocaleString() : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Updated At</p>
+                    <p className="text-sm text-gray-900">
+                      {selectedCustomerDetails.updated_at ? new Date(selectedCustomerDetails.updated_at).toLocaleString() : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowCustomerDetailsModal(false);
+                  setSelectedCustomerDetails(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
