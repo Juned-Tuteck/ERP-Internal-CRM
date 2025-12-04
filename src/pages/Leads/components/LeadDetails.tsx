@@ -135,6 +135,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           followUpComments: lead.followUpComments || [],
           leadNumber: apiLead.lead_number || lead.leadNumber,
           customerNumber: apiLead.customer_number || lead.customerNumber,
+          created_by_name: apiLead.created_by_name || null,
         };
 
         setLeadDetails(mappedLead);
@@ -576,13 +577,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 </button>
               )} */}
 
-              {(displayLead.approvalStatus === "pending" || displayLead.approvalStatus=== "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'customers') && (
+              {(displayLead.approvalStatus === "pending" || displayLead.approvalStatus === "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'customers') && (
                 <button
                   onClick={() => setShowEditModal(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                   title="Edit Customer"
                 >
-                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(displayLead.approvalStatus=== "pending" || displayLead.approvalStatus=== "draft")) && "Super Admin EDIT"}
+                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(displayLead.approvalStatus === "pending" || displayLead.approvalStatus === "draft")) && "Super Admin EDIT"}
                 </button>
               )}
               {/* Delete Button */}
@@ -614,21 +615,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveTab('basic')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'basic'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'basic'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Basic Information
             </button>
             <button
               onClick={() => setActiveTab('followup')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'followup'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'followup'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Follow-Up
             </button>
@@ -641,143 +640,155 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             <div className="space-y-6">
               {/* Lead Information Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Basic Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Lead Information
-          </h3>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Contact Person</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {displayLead.contactPerson}
-                  </p>
+                {/* Basic Information */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Lead Information
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-3">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">Contact Person</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.contactPerson}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Phone className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">Phone</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.phone || displayLead.contactNo}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Building className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">Lead Type</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.leadType}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Globe className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">Lead Source</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.leadSource}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">ETA</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead?.projectName}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <Clock className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">Response Time</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.approximateResponseTime} days
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Work Type</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {displayLead.workType || "N/A"}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <User className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500"> created by : </p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.created_by_name || "-"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Project Progress */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Project Progress
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Current Stage</span>
+                      <span className="font-medium">{displayLead.leadStage}</span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width:
+                            displayLead.leadStage === "Information Stage"
+                              ? "20%"
+                              : displayLead.leadStage === "Enquiry"
+                                ? "40%"
+                                : displayLead.leadStage === "Meeting"
+                                  ? "60%"
+                                  : displayLead.leadStage === "Quotation Stage"
+                                    ? "80%"
+                                    : displayLead.leadStage === "Won"
+                                      ? "100%"
+                                      : "0%",
+                        }}
+                      ></div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Submitted Date</span>
+                        <span>
+                          {displayLead.submittedDate
+                            ? new Date(displayLead.submittedDate).toLocaleDateString(
+                              "en-IN"
+                            )
+                            : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Days in Pipeline</span>
+                        <span>
+                          {displayLead.submittedDate
+                            ? Math.floor(
+                              (new Date().getTime() -
+                                new Date(displayLead.submittedDate).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                            )
+                            : 0}{" "}
+                          days
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {displayLead.phone || displayLead.contactNo}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Building className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Lead Type</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {displayLead.leadType}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Globe className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Lead Source</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {displayLead.leadSource}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Calendar className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">ETA</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {displayLead?.projectName}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <Clock className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Response Time</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {displayLead.approximateResponseTime} days
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Work Type</p>
-              <p className="text-sm font-medium text-gray-900">
-                {displayLead.workType || "N/A"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Project Progress */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Project Progress
-          </h3>
-          <div className="space-y-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Current Stage</span>
-              <span className="font-medium">{displayLead.leadStage}</span>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width:
-                    displayLead.leadStage === "Information Stage"
-                      ? "20%"
-                      : displayLead.leadStage === "Enquiry"
-                        ? "40%"
-                        : displayLead.leadStage === "Meeting"
-                          ? "60%"
-                          : displayLead.leadStage === "Quotation Stage"
-                            ? "80%"
-                            : displayLead.leadStage === "Won"
-                              ? "100%"
-                              : "0%",
-                }}
-              ></div>
-            </div>
-            
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Submitted Date</span>
-                <span>
-                  {displayLead.submittedDate
-                    ? new Date(displayLead.submittedDate).toLocaleDateString(
-                      "en-IN"
-                    )
-                    : "N/A"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Days in Pipeline</span>
-                <span>
-                  {displayLead.submittedDate
-                    ? Math.floor(
-                      (new Date().getTime() -
-                        new Date(displayLead.submittedDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                    )
-                    : 0}{" "}
-                  days
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
               {/* Uploaded Files */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -942,15 +953,15 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                                 <span>
                                   {comment.created_at || comment.timestamp
                                     ? new Date(
-                                        comment.created_at || comment.timestamp
-                                      ).toLocaleString('en-IN', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                        hour12: true,
-                                      })
+                                      comment.created_at || comment.timestamp
+                                    ).toLocaleString('en-IN', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true,
+                                    })
                                     : 'No timestamp'}
                                 </span>
                               </div>

@@ -45,7 +45,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       currency: "",
       contactPerson: "",
       contactNo: "",
-      leadGeneratedDate: new Date().toISOString().split("T")[0],
+      leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
       referencedBy: "",
       projectName: "",
       projectValue: "",
@@ -85,19 +85,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   // State for API data
   const [customers, setCustomers] = useState<
-    Array<{ id: string; name: string; currency: string[]; contacts: Array<{
-      id: string;
-      name: string;
-      email: string;
-      phone: string;
-      designation: string;
-    }>; }>
+    Array<{
+      id: string; name: string; currency: string[]; contacts: Array<{
+        id: string;
+        name: string;
+        email: string;
+        phone: string;
+        designation: string;
+      }>;
+    }>
   >([]);
   const [customerBranches, setCustomerBranches] = useState<
     Array<{ id: string; branch_name: string, currency: string }>
   >([]);
   const [contactPersons, setContactPersons] = useState<
-    Array<{ id: string; name: string, phone:number }>
+    Array<{ id: string; name: string, phone: number }>
   >([]);
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
@@ -116,7 +118,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   const leadTypes = ["Government", "Private", "Semi-Government"];
   const workTypes = [
-   "AMC", "BASEMENT VENTILLATION", "CHILLER", "CP", "CP (AHU)", "DEVELOPMENT", "RETROFIT", "SERVICE", "VRF"
+    "AMC", "BASEMENT VENTILLATION", "CHILLER", "CP", "CP (AHU)", "DEVELOPMENT", "RETROFIT", "SERVICE", "VRF"
   ];
   const leadCriticalities = ["Critical", "Normal"];
   const leadSources = [
@@ -407,7 +409,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     currency: "",
     contactPerson: "",
     contactNo: "",
-    leadGeneratedDate: new Date().toISOString().split("T")[0],
+    leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
     referencedBy: "",
     projectName: "",
     projectValue: "",
@@ -437,10 +439,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           if (!isNaN(dateObj.getTime())) {
             normalizedDate = dateObj.toISOString().split("T")[0];
           } else {
-            normalizedDate = new Date().toISOString().split("T")[0];
+            normalizedDate = new Date().toLocaleDateString("en-CA");
           }
         } else {
-          normalizedDate = new Date().toISOString().split("T")[0];
+          normalizedDate = new Date().toLocaleDateString("en-CA");
         }
         // Normalize eta
         let normalizedEta = "";
@@ -783,9 +785,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           setContactPersons([]);
         }
       }
+      // setFormData((prev: any) => ({
+      //   ...prev,
+      //   businessName: value,
+      //   customerBranch: "",
+      //   contactPerson: "",
+      //   contactNo: "",
+      // }));
       setFormData((prev: any) => ({
         ...prev,
         businessName: value,
+        projectName:  value,
         customerBranch: "",
         contactPerson: "",
         contactNo: "",
@@ -1011,46 +1021,46 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       // initial snapshot: try to use the ref snapshot; if missing, create minimal fallback from initialData
       const initialSnapshotBackend = initialFormRef.current
         ? {
-            business_name: initialFormRef.current.businessName || "",
-            customer_id: initialFormRef.current.customer_id || null,
-            customer_branch_id: initialFormRef.current.customer_branch_id || null,
-            contact_person: initialFormRef.current.contact_person_id || null,
-            contact_no: initialFormRef.current.contactNo || "",
-            lead_date_generated_on: initialFormRef.current.leadGeneratedDate || "",
-            referenced_by: initialFormRef.current.referencedBy || null,
-            project_name: initialFormRef.current.projectName || "",
-            project_value: parseFloat(String(initialFormRef.current.projectValue || "0")) || 0,
-            lead_type: initialFormRef.current.leadType || "",
-            work_type: initialFormRef.current.workType || null,
-            lead_criticality: initialFormRef.current.leadCriticality || "",
-            lead_source: initialFormRef.current.leadSource || "",
-            lead_stage: initialFormRef.current.leadStage || "",
-            approximate_response_time_day:
-              parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
-            eta: initialFormRef.current.eta || null,
-            lead_details: initialFormRef.current.leadDetails || null,
-          }
+          business_name: initialFormRef.current.businessName || "",
+          customer_id: initialFormRef.current.customer_id || null,
+          customer_branch_id: initialFormRef.current.customer_branch_id || null,
+          contact_person: initialFormRef.current.contact_person_id || null,
+          contact_no: initialFormRef.current.contactNo || "",
+          lead_date_generated_on: initialFormRef.current.leadGeneratedDate || "",
+          referenced_by: initialFormRef.current.referencedBy || null,
+          project_name: initialFormRef.current.projectName || "",
+          project_value: parseFloat(String(initialFormRef.current.projectValue || "0")) || 0,
+          lead_type: initialFormRef.current.leadType || "",
+          work_type: initialFormRef.current.workType || null,
+          lead_criticality: initialFormRef.current.leadCriticality || "",
+          lead_source: initialFormRef.current.leadSource || "",
+          lead_stage: initialFormRef.current.leadStage || "",
+          approximate_response_time_day:
+            parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
+          eta: initialFormRef.current.eta || null,
+          lead_details: initialFormRef.current.leadDetails || null,
+        }
         : {
-            // best-effort fallback from initialData prop
-            business_name: initialData.business_name || initialData.businessName || "",
-            customer_id: initialData.customer_id || null,
-            customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
-            contact_person: initialData.contact_person || null,
-            contact_no: initialData.contact_no || "",
-            lead_date_generated_on: initialData.lead_date_generated_on || initialData.leadGeneratedDate || "",
-            referenced_by: initialData.referenced_by || null,
-            project_name: initialData.project_name || initialData.projectName || "",
-            project_value: parseFloat(String(initialData.project_value || 0)) || 0,
-            lead_type: initialData.lead_type || initialData.leadType || "",
-            work_type: initialData.work_type || initialData.workType || null,
-            lead_criticality: initialData.lead_criticality || initialData.leadCriticality || "",
-            lead_source: initialData.lead_source || initialData.leadSource || "",
-            lead_stage: initialData.lead_stage || initialData.leadStage || "",
-            approximate_response_time_day:
-              parseInt(String(initialData.approximate_response_time_day || initialData.approximateResponseTime || 0)) || 0,
-            eta: initialData.eta || initialData.eta || null,
-            lead_details: initialData.lead_details || initialData.leadDetails || null,
-          };
+          // best-effort fallback from initialData prop
+          business_name: initialData.business_name || initialData.businessName || "",
+          customer_id: initialData.customer_id || null,
+          customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
+          contact_person: initialData.contact_person || null,
+          contact_no: initialData.contact_no || "",
+          lead_date_generated_on: initialData.lead_date_generated_on || initialData.leadGeneratedDate || "",
+          referenced_by: initialData.referenced_by || null,
+          project_name: initialData.project_name || initialData.projectName || "",
+          project_value: parseFloat(String(initialData.project_value || 0)) || 0,
+          lead_type: initialData.lead_type || initialData.leadType || "",
+          work_type: initialData.work_type || initialData.workType || null,
+          lead_criticality: initialData.lead_criticality || initialData.leadCriticality || "",
+          lead_source: initialData.lead_source || initialData.leadSource || "",
+          lead_stage: initialData.lead_stage || initialData.leadStage || "",
+          approximate_response_time_day:
+            parseInt(String(initialData.approximate_response_time_day || initialData.approximateResponseTime || 0)) || 0,
+          eta: initialData.eta || initialData.eta || null,
+          lead_details: initialData.lead_details || initialData.leadDetails || null,
+        };
 
       // Build diff: include only keys that changed (strict comparison)
       const diffPayload: any = {};
@@ -1366,7 +1376,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       currency: "INR",
       contactPerson: "",
       contactNo: "",
-      leadGeneratedDate: new Date().toISOString().split("T")[0],
+      leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
       referencedBy: "",
       projectName: "",
       projectValue: "",
@@ -1421,7 +1431,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const removeAssociate = (index: number) => {
     setFormData((prev: any) => ({
       ...prev,
-      involvedAssociates: prev.involvedAssociates.filter((_ : any, i: number) => i !== index),
+      involvedAssociates: prev.involvedAssociates.filter((_: any, i: number) => i !== index),
     }));
   };
 
@@ -1662,10 +1672,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.leadGeneratedDate}
                       onChange={handleInputChange}
                       required
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadGeneratedDate
-                        ? "border-red-500"
-                        : "border-gray-300"
-                        }`}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
                     />
                     <ValidationError fieldName="leadGeneratedDate" />
                   </div>
@@ -1700,7 +1708,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <input
                       type="text"
                       name="projectName"
-                      value={formData.projectName ? formData.projectName : formData.businessName}
+                      value={formData.projectName}
                       onChange={handleInputChange}
                       required
                       placeholder="Enter project name"
