@@ -1486,28 +1486,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             {steps.map((step, index) => {
               const isCompleted = currentStep > step.id;
               const isCurrent = currentStep === step.id;
-              const isClickable = isCompleted || (isEditMode && step.id <= 3);
 
               return (
                 <div key={step.id} className="flex items-center">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (isClickable) {
-                        setCurrentStep(step.id);
-                      }
-                    }}
-                    disabled={!isClickable && !isCurrent}
-                    className={`flex items-center space-x-2 ${
+                    onClick={() => setCurrentStep(step.id)}
+                    className={`flex items-center space-x-2 cursor-pointer hover:text-blue-700 transition-colors ${
                       isCurrent
                         ? "text-blue-600"
                         : isCompleted
                           ? "text-green-600"
                           : "text-gray-400"
-                    } ${
-                      isClickable
-                        ? "cursor-pointer hover:text-blue-700 transition-colors"
-                        : "cursor-not-allowed"
                     }`}
                   >
                     <div
