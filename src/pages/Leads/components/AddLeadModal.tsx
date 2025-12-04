@@ -1483,42 +1483,55 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         {/* Breadcrumb Navigation */}
         <div className="px-6 py-4 border-b border-gray-200">
           <nav className="flex space-x-4">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isEditMode) {
-                      setCurrentStep(step.id);
-                    }
-                  }}
-                  className={`flex items-center space-x-2 ${currentStep === step.id
-                    ? "text-blue-600"
-                    : currentStep > step.id
-                      ? "text-green-600"
-                      : "text-gray-400"
-                    } ${isEditMode ? "cursor-pointer hover:text-blue-700" : ""}`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id
-                      ? "bg-blue-100 text-blue-600"
-                      : currentStep > step.id
-                        ? "bg-green-100 text-green-600"
-                        : "bg-gray-100 text-gray-400"
-                      }`}
+            {steps.map((step, index) => {
+              const isCompleted = currentStep > step.id;
+              const isCurrent = currentStep === step.id;
+              const isClickable = isCompleted || (isEditMode && step.id <= 3);
+
+              return (
+                <div key={step.id} className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isClickable) {
+                        setCurrentStep(step.id);
+                      }
+                    }}
+                    disabled={!isClickable && !isCurrent}
+                    className={`flex items-center space-x-2 ${
+                      isCurrent
+                        ? "text-blue-600"
+                        : isCompleted
+                          ? "text-green-600"
+                          : "text-gray-400"
+                    } ${
+                      isClickable
+                        ? "cursor-pointer hover:text-blue-700 transition-colors"
+                        : "cursor-not-allowed"
+                    }`}
                   >
-                    {step.id}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{step.name}</p>
-                    <p className="text-xs">{step.description}</p>
-                  </div>
-                </button>
-                {index < steps.length - 1 && (
-                  <ChevronRight className="h-4 w-4 text-gray-400 mx-2" />
-                )}
-              </div>
-            ))}
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        isCurrent
+                          ? "bg-blue-100 text-blue-600"
+                          : isCompleted
+                            ? "bg-green-100 text-green-600"
+                            : "bg-gray-100 text-gray-400"
+                      }`}
+                    >
+                      {step.id}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{step.name}</p>
+                      <p className="text-xs">{step.description}</p>
+                    </div>
+                  </button>
+                  {index < steps.length - 1 && (
+                    <ChevronRight className="h-4 w-4 text-gray-400 mx-2" />
+                  )}
+                </div>
+              );
+            })}
           </nav>
         </div>
 
