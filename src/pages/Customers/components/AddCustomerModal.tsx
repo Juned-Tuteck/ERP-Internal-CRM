@@ -1662,7 +1662,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
-
+    formData.append("upload_by", userData?.id || "");
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/customer-file/${customerId}/files`,
       formData,
@@ -4016,41 +4016,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-gray-900">{file.original_name}</p>
-                            <p className="text-xs text-gray-500 mt-1">Stored as: {file.stored_name}</p>
                           </div>
-                          <a
-                            href={`${import.meta.env.VITE_API_BASE_URL}${file.url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
-                          >
-                            View File
-                          </a>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          <div>
-                            <p className="text-xs text-gray-500 font-medium">File ID</p>
-                            <p className="text-sm text-gray-900">{file.id || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-medium">Customer ID</p>
-                            <p className="text-sm text-gray-900">{file.customerId || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-medium">Reference File ID</p>
-                            <p className="text-sm text-gray-900">{file.file_id || '-'}</p>
-                          </div>
+                  
                           <div>
                             <p className="text-xs text-gray-500 font-medium">File Size</p>
                             <p className="text-sm text-gray-900">{(file.size / 1024).toFixed(2)} KB</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-medium">MIME Type</p>
-                            <p className="text-sm text-gray-900">{file.mime || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-medium">File Path</p>
-                            <p className="text-sm text-gray-900 break-all">{file.url || '-'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Uploaded At</p>
@@ -4060,17 +4032,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Uploaded By</p>
-                            <p className="text-sm text-gray-900">{file.created_by || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-medium">Last Updated</p>
-                            <p className="text-sm text-gray-900">
-                              {file.updated_at ? new Date(file.updated_at).toLocaleString() : '-'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-medium">Updated By</p>
-                            <p className="text-sm text-gray-900">{file.updated_by || '-'}</p>
+                            <p className="text-sm text-gray-900">{file.created_by_name || '-'}</p>
                           </div>
                         </div>
                       </div>
@@ -4090,9 +4052,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 font-medium">Updated At</p>
+                    <p className="text-xs text-gray-500 font-medium">Created By</p>
                     <p className="text-sm text-gray-900">
-                      {selectedCustomerDetails.updated_at ? new Date(selectedCustomerDetails.updated_at).toLocaleString() : '-'}
+                      {selectedCustomerDetails.created_by_name || '-'}
                     </p>
                   </div>
                 </div>
