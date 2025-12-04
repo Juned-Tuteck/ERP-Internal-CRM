@@ -4010,23 +4010,69 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               {selectedCustomerDetails.uploadedfiles && selectedCustomerDetails.uploadedfiles.length > 0 && (
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Uploaded Files</h4>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {selectedCustomerDetails.uploadedfiles.map((file: any) => (
-                      <div key={file.id} className="bg-white p-3 rounded border border-gray-200 flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{file.original_name}</p>
-                          <p className="text-xs text-gray-500">
-                            Size: {(file.size / 1024).toFixed(2)} KB • Type: {file.mime}
-                          </p>
+                      <div key={file.id} className="bg-white p-4 rounded border border-gray-200">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-900">{file.original_name}</p>
+                            <p className="text-xs text-gray-500 mt-1">Stored as: {file.stored_name}</p>
+                          </div>
+                          <a
+                            href={`${import.meta.env.VITE_API_BASE_URL}${file.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                          >
+                            View File
+                          </a>
                         </div>
-                        <a
-                          href={`${import.meta.env.VITE_API_BASE_URL}${file.url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          View
-                        </a>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">File ID</p>
+                            <p className="text-sm text-gray-900">{file.id || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Customer ID</p>
+                            <p className="text-sm text-gray-900">{file.customerId || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Reference File ID</p>
+                            <p className="text-sm text-gray-900">{file.file_id || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">File Size</p>
+                            <p className="text-sm text-gray-900">{(file.size / 1024).toFixed(2)} KB</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">MIME Type</p>
+                            <p className="text-sm text-gray-900">{file.mime || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">File Path</p>
+                            <p className="text-sm text-gray-900 break-all">{file.url || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Uploaded At</p>
+                            <p className="text-sm text-gray-900">
+                              {file.created_at ? new Date(file.created_at).toLocaleString() : '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Uploaded By</p>
+                            <p className="text-sm text-gray-900">{file.created_by || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Last Updated</p>
+                            <p className="text-sm text-gray-900">
+                              {file.updated_at ? new Date(file.updated_at).toLocaleString() : '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Updated By</p>
+                            <p className="text-sm text-gray-900">{file.updated_by || '-'}</p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
