@@ -1722,7 +1722,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Project Value *
+                      Project Value ( lakh )* 
                     </label>
                     <input
                       type="number"

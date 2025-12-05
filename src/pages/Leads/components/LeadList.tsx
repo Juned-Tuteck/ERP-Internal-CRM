@@ -397,7 +397,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
                     <div className="flex items-center space-x-2">
                       <div className="flex items-center text-xs text-green-600">
                         <TrendingUp className="h-3 w-3 mr-1" />₹
-                        {parseInt(lead.projectValue).toLocaleString("en-IN")}
+                        {(parseInt(lead.projectValue) / 100000).toLocaleString("en-IN")}L
                       </div>
                     </div>
                   </div>

@@ -533,7 +533,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           <div className="text-right">
             <div className="flex items-center text-lg font-bold text-green-600">
               <TrendingUp className="h-5 w-5 mr-1" />
-              {displayLead.projectValue}
+              {displayLead.projectValue}L
             </div>
             <div className="flex space-x-2 mt-2">
               {/* Update Status: Only visible when lead is approved */}
