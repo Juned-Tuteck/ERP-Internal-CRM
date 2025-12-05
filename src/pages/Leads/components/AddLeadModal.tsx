@@ -815,19 +815,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       return;
     }
 
-    // Handle multi-select workType in CREATE mode
-    if (name === "workType" && !isEditMode) {
-      const selectElement = e.target as HTMLSelectElement;
-      const selectedOptions = Array.from(selectElement.selectedOptions).map(
-        (option) => option.value
-      );
-      setFormData((prev: any) => ({
-        ...prev,
-        workType: selectedOptions,
-      }));
-      return;
-    }
-
     // Handle branch selection
     if (name === "customerBranch") {
       if (value) {
@@ -1175,77 +1162,73 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     if (currentStep === 1) {
       if (isEditMode) {
+        // EDIT mode: Update lead and move to step 2
         handleUpdateLead();
       } else {
-        handleCreateLead();
+        // CREATE mode: Just validate and move to step 2 (save to state only)
+        if (!Array.isArray(formData.workType) || formData.workType.length === 0) {
+          alert("Please select at least one work type.");
+          return;
+        }
+        // Store Step 1 data in multi-worktype state
+        setMultiWorktypeState((prev) => ({
+          ...prev,
+          step1: { ...formData },
+        }));
+        setCurrentStep(2);
       }
-    }
-    if (currentStep === 2) {
-      console.log("Uploading files for lead...");
-      const leadId = createdLeadId || (isEditMode && initialData?.id);
-      if (!leadId) {
-        // safety: leadId should exist if step 1 succeeded
-        console.error("No leadId found. Cannot upload files.");
-        return;
-      }
-
-      if (uploadedFiles.length === 0) {
-        setCurrentStep(3); // or close modal
-        return;
-      }
-
-      // setIsUploading(true);
-      try {
-        if (isEditMode) {
-          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
-            console.log("Upload progress:", percent);
-          });
-        } else {
-          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
-            console.log("Upload progress:", percent);
-          });
+    } else if (currentStep === 2) {
+      if (isEditMode) {
+        // EDIT mode: Upload files for existing lead
+        const leadId = createdLeadId || initialData?.id;
+        if (!leadId) {
+          console.error("No leadId found. Cannot upload files.");
+          return;
         }
 
-        // Auto-update lead stage to "Enquiry" when files are uploaded
-        await updateLeadStageAfterFileUpload(leadId);
+        if (uploadedFiles.length === 0) {
+          setCurrentStep(3);
+          return;
+        }
 
-        // setIsUploadDone(true);
+        try {
+          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
+            console.log("Upload progress:", percent);
+          });
+          await updateLeadStageAfterFileUpload(leadId);
+          setCurrentStep(3);
+        } catch (err) {
+          console.error("Upload failed", err);
+        }
+      } else {
+        // CREATE mode: Just move to step 3 (documents already in state)
         setCurrentStep(3);
-      } catch (err) {
-        console.error("Upload failed", err);
       }
-    }
-    else if (currentStep < 3) {
+    } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
 
-  // Complete Registration for multi-worktype CREATE mode
+  // Complete Registration for multi-worktype CREATE mode (called from Step 3)
   const handleCompleteRegistration = async () => {
-    // Step 1: Validate mandatory fields
-    if (!validateForm()) {
-      alert("Please fill all mandatory fields in Step 1 before continuing.");
-      return;
-    }
-
-    // Check if at least one worktype is selected
-    if (!Array.isArray(formData.workType) || formData.workType.length === 0) {
-      alert("Please select at least one work type.");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const selectedWorktypes = formData.workType as string[];
+      const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
+
+      if (selectedWorktypes.length === 0) {
+        alert("No work types selected.");
+        setIsLoading(false);
+        return;
+      }
       const results: { [worktype: string]: { success: boolean; leadId?: string; error?: string } } = {};
 
-      // Step 2: Create leads sequentially for each worktype
+      // Create leads sequentially for each worktype
       for (const worktype of selectedWorktypes) {
         try {
           console.log(`Creating lead for worktype: ${worktype}`);
 
-          // Build lead payload
+          // Build lead payload from stored state
           const leadPayload = {
             business_name: formData.businessName,
             customer_id: selectedCustomerId || null,
@@ -1268,7 +1251,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             created_by: userData?.id || null,
           };
 
-          // Create lead
+          // POST: Create lead
           const leadResponse = await axios.post(
             `${import.meta.env.VITE_API_BASE_URL}/lead`,
             leadPayload
@@ -1289,7 +1272,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
           results[worktype] = { success: true, leadId };
 
-          // Step 3: Upload documents for this worktype (if any)
+          // POST: Upload documents for this worktype (if any)
           const documents = multiWorktypeState.step2.documents[worktype] || [];
           if (documents.length > 0) {
             try {
@@ -1297,15 +1280,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               await uploadFilesForLead(leadId, documents);
               console.log(`Documents uploaded for ${worktype}`);
 
-              // Update lead stage to "Enquiry"
+              // PUT: Update lead stage to "Enquiry"
               await updateLeadStageAfterFileUpload(leadId);
             } catch (uploadError) {
               console.error(`Error uploading documents for ${worktype}:`, uploadError);
-              // Continue even if upload fails
             }
           }
 
-          // Step 4: Upload comment for this worktype (if any)
+          // POST: Upload comment for this worktype (if any)
           const comment = multiWorktypeState.step3.comments[worktype];
           if (comment && comment.trim()) {
             try {
@@ -1322,11 +1304,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               console.log(`Comment uploaded for ${worktype}`);
             } catch (commentError) {
               console.error(`Error uploading comment for ${worktype}:`, commentError);
-              // Continue even if comment fails
             }
           }
 
-          // Associates (shared across all worktypes)
+          // POST: Associates (shared across all worktypes)
           if (formData.involvedAssociates && formData.involvedAssociates.length > 0) {
             try {
               const associatePayload = formData.involvedAssociates.map((associate: any) => ({
@@ -1358,7 +1339,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       }
 
-      // Update customer flag
+      // PUT: Update customer flag
       if (selectedCustomerId) {
         try {
           await updateCustomer(selectedCustomerId, { is_lead_generated: true });
@@ -1367,7 +1348,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       }
 
-      // Send notifications
+      // POST: Send notifications
       try {
         await sendNotification({
           receiver_ids: ["admin"],
@@ -1995,7 +1976,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Work Type {!isEditMode && <span className="text-blue-600">(Multi-select for CREATE)</span>}
+                      Work Type {!isEditMode && <span className="text-blue-600">(Select multiple)</span>}
                     </label>
                     {isEditMode ? (
                       <select
@@ -2012,24 +1993,59 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         ))}
                       </select>
                     ) : (
-                      <select
-                        name="workType"
-                        multiple
-                        value={Array.isArray(formData.workType) ? formData.workType : []}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
-                      >
+                      <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
                         {workTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
+                          <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
+                              onChange={(e) => {
+                                const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
+                                let newWorktypes;
+                                if (e.target.checked) {
+                                  newWorktypes = [...currentWorktypes, type];
+                                } else {
+                                  newWorktypes = currentWorktypes.filter((w) => w !== type);
+                                }
+                                setFormData((prev: any) => ({
+                                  ...prev,
+                                  workType: newWorktypes,
+                                }));
+                              }}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm text-gray-700">{type}</span>
+                          </label>
                         ))}
-                      </select>
+                      </div>
                     )}
                     {!isEditMode && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Hold Ctrl/Cmd to select multiple work types
-                      </p>
+                      <div className="mt-2">
+                        {Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.workType.map((type: string) => (
+                              <span
+                                key={type}
+                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {type}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData((prev: any) => ({
+                                      ...prev,
+                                      workType: prev.workType.filter((w: string) => w !== type),
+                                    }));
+                                  }}
+                                  className="ml-1 hover:text-blue-900"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -2652,16 +2668,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               )
             ) : (
               <>
-                {currentStep === 1 && Array.isArray(formData.workType) && formData.workType.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleCompleteRegistration}
-                    disabled={isLoading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-purple-600 hover:bg-purple-700"
-                  >
-                    {isLoading ? "Processing..." : "Complete Registration"}
-                  </button>
-                )}
                 {currentStep < 3 ? (
                   <button
                     type="button"
@@ -2669,18 +2675,32 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     disabled={isLoading}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                   >
-                    {isLoading ? "Creating..." : "Next"}
+                    {isLoading ? "Saving..." : "Next"}
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </button>
                 ) : (
-                  <button
-                    type="submit"
-                    onClick={handleSubmit}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Complete
-                  </button>
+                  <>
+                    {Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={handleCompleteRegistration}
+                        disabled={isLoading}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-purple-600 hover:bg-purple-700"
+                      >
+                        {isLoading ? "Processing..." : "Complete Registration"}
+                        <Save className="h-4 w-4 ml-2" />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        onClick={handleSubmit}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Complete
+                      </button>
+                    )}
+                  </>
                 )}
               </>
             )}
