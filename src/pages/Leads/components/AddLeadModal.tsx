@@ -188,24 +188,24 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     return date >= today;
   };
 
-  // Compute ETA as leadGeneratedDate + days
-  const computeEta = (leadDateStr: string, daysStr: string | number) => {
-    if (!leadDateStr) return "";
-    const days = parseInt(String(daysStr || "0"), 10);
-    const base = new Date(leadDateStr);
-    if (isNaN(base.getTime()) || isNaN(days)) return "";
-    const etaDate = new Date(base);
-    etaDate.setDate(etaDate.getDate() + (days || 0));
-    return etaDate.toISOString().split("T")[0];
-  };
+    // Compute ETA as leadGeneratedDate + days
+  // const computeEta = (leadDateStr: string, daysStr: string | number) => {
+  //   if (!leadDateStr) return "";
+  //   const days = parseInt(String(daysStr || "0"), 10);
+  //   const base = new Date(leadDateStr);
+  //   if (isNaN(base.getTime()) || isNaN(days)) return "";
+  //   const etaDate = new Date(base);
+  //   etaDate.setDate(etaDate.getDate() + (days || 0));
+  //   return etaDate.toISOString().split("T")[0];
+  // };
 
-  // Keep ETA in sync when lead date or approximate response time changes
-  useEffect(() => {
-    const newEta = computeEta(formData.leadGeneratedDate, formData.approximateResponseTime);
-    if (newEta !== formData.eta) {
-      setFormData((prev: any) => ({ ...prev, eta: newEta }));
-    }
-  }, [formData.leadGeneratedDate, formData.approximateResponseTime]);
+  // // Keep ETA in sync when lead date or approximate response time changes
+  // useEffect(() => {
+  //   const newEta = computeEta(formData.leadGeneratedDate, formData.approximateResponseTime);
+  //   if (newEta !== formData.eta) {
+  //     setFormData((prev: any) => ({ ...prev, eta: newEta }));
+  //   }
+  // }, [formData.leadGeneratedDate, formData.approximateResponseTime]);
 
 
   const validateFileSize = (file: File): boolean => {
@@ -1917,7 +1917,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <input
                       type="date"
                       name="eta"
-                      readOnly
                       value={formData.eta}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.eta
