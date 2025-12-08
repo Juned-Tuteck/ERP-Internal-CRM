@@ -8,12 +8,14 @@ import {
   MessageSquare,
   Trash2,
   Currency,
+  UserCheck
 } from "lucide-react";
 import axios from "axios";
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
+import { CustomLoader} from '../../../components/CustomLoader';
 import { create } from "domain";
 
 interface AddLeadModalProps {
@@ -102,6 +104,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     leads: {},
   });
 
+  const [showWorkTypeDropdown, setShowWorkTypeDropdown] = useState(false);
+  const [showCancelAlert, setShowCancelAlert] = useState(false);
+
   // State for API data
   const [customers, setCustomers] = useState<
     Array<{
@@ -137,7 +142,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   const leadTypes = ["Government", "Private", "Semi-Government"];
   const workTypes = [
-    "AMC", "BASEMENT VENTILLATION", "CHILLER", "CP", "CP (AHU)", "DEVELOPMENT", "RETROFIT", "SERVICE", "VRF"
+    "HVAC", "Ventilation", "Fire", "MGPS", "Electrical", "CCTV", "Plumbing MEP", "Interior", "Civil"
   ];
   const leadCriticalities = ["Critical", "Normal"];
   const leadSources = [
@@ -296,6 +301,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         errors.leadType = "Lead Type is required";
       }
 
+      if (!(formData.workType.length > 0)) {
+        errors.workType = "Work Type is required";
+      }
+
       if (!formData.leadCriticality?.trim()) {
         errors.leadCriticality = "Lead Criticality is required";
       }
@@ -450,7 +459,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     const fetchAllForEdit = async () => {
       if (initialData) {
         // Debug log for initialData
-        console.log("initialData received in AddLeadModal:", initialData);
+        
         // Normalize leadGeneratedDate to YYYY-MM-DD
         let normalizedDate = "";
         if (initialData.leadGeneratedDate) {
@@ -514,10 +523,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           ...normalizedFormSnapshot,
         });
         setUploadedFiles(initialData.uploadedFiles || []);
-        console.log(
-          "THE INITIAL DATA ____________________:::::: ",
-          initialData
-        );
 
         // Check if lead source is a custom value (not in predefined list)
         const leadSourceValue = initialData.leadSource || initialData.lead_source || "";
@@ -531,7 +536,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
         if (initialData.businessName && isOpen) {
           // Fetch customers and use the response directly
-          console.log("INSIDE THE MODAL :::::::::::::");
+          
           try {
             // Fetch users for Referenced By dropdown
             fetchUsers();
@@ -546,17 +551,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               approval_status: customer.approval_status,
               contacts: customer.contacts || [],
             }));
-            console.log("Customer DATA **********", customerData);
+            
             const approvedCustomers = customerData.filter(
               (customer: any) => customer.approval_status === "APPROVED"
             );
-            console.log("Approved Customers:", approvedCustomers);
+            
             setCustomers(approvedCustomers);
             const selectedCustomer = approvedCustomers.find(
               (customer: any) => customer.name === initialData.businessName
             );
 
-            console.log("THE SELECTED CUSTOMER:", selectedCustomer);
+            
             if (selectedCustomer) {
               // use local ids to snapshot accurately
               const localCustomerId = selectedCustomer.id;
@@ -667,6 +672,23 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     fetchAllForEdit();
   }, [initialData, isOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showWorkTypeDropdown && !target.closest('.relative')) {
+        setShowWorkTypeDropdown(false);
+      }
+    };
+
+    if (showWorkTypeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showWorkTypeDropdown]);
+  
   const convertCurrencyString = (str: string): string[] => {
     return str
       .replace(/[{}"]/g, "") // remove { } and "
@@ -682,11 +704,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       );
       const customerData = response.data.data;
 
-      console.log("Customer DATA **********", customerData);
+      
       const approvedCustomers = customerData.filter(
         (customer: any) => customer.approval_status === "APPROVED"
       );
-      console.log("Approved Customers:", approvedCustomers);
+      
 
       setCustomers(
         approvedCustomers.map((customer: any) => ({
@@ -707,9 +729,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const response = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/customer-branch?customer_id=${customerId}`
       );
-      console.log("Customer Branches:", response);
+      
       const branchData = response.data.data;
-      console.log("Branch Data:-----", branchData);
+      
       setCustomerBranches(branchData);
       // Reset dependent fields
       setSelectedBranchId("");
@@ -727,7 +749,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         `${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact?customer_branch_id=${branchId}`
       );
       const contactData = response.data.data;
-      console.log("Contact Data:", contactData);
+      
       setContactPersons(contactData);
       // Reset contact selection
       setSelectedContactId("");
@@ -750,7 +772,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       );
       const userData = response.data.data;
-      console.log("Users Data:", userData);
+      
 
       setUsers(
         userData.map((user: any) => ({
@@ -804,6 +826,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           setContactPersons([]);
         }
       }
+      if (selectedCustomer?.currency && selectedCustomer.currency.length > 0) {
+        setFormData((prev: any) => ({
+          ...prev,
+          currency: selectedCustomer.currency[0], // default to first currency
+        }));
+      }
       setFormData((prev: any) => ({
         ...prev,
         businessName: value,
@@ -825,6 +853,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         if (selectedBranch) {
           setSelectedBranchId(selectedBranch.id);
           fetchContactPersons(selectedBranch.id);
+          if (selectedBranch.currency && selectedBranch.currency.length > 0) {
+            setFormData((prev: any) => ({
+              ...prev,
+              currency: selectedBranch.currency, // default to first currency
+            }));
+          }
         }
       } else {
         // Branch cleared: revert to customer contacts
@@ -865,7 +899,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         (contact) => contact.name === value
       );
       if (selectedContact) {
-        console.log("Selected Contact:", selectedContact);
+        
         setSelectedContactId(selectedContact.id);
         setFormData((prev: any) => ({
           ...prev,
@@ -914,6 +948,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       }
     }
   };
+
+  useEffect(() => {
+    console.log("Currncy on change", formData.currency);
+  }, [formData.currency]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, worktype?: string) => {
     const files = Array.from(e.target.files || []);
@@ -967,7 +1005,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
-
+    formData.append("upload_by", userData?.id || "");
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/lead-file/${leadId}/files`,
       formData,
@@ -1213,6 +1251,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const handleCompleteRegistration = async () => {
     setIsLoading(true);
 
+    console.log("form data for lead :", formData);
+    
     try {
       const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
 
@@ -1669,6 +1709,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   if (!isOpen) return null;
 
+  if (isLoading) {
+    return <CustomLoader message="Creating Lead..."/>
+  }
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
@@ -1684,7 +1728,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </p>
           </div>
           <button
-            onClick={handleClose}
+            onClick={() => setShowCancelAlert(true)}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -1983,7 +2027,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         name="workType"
                         value={formData.workType}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.workType
+                        ? "border-red-500"
+                        : "border-gray-300"}`}
                       >
                         <option value="">Select Work Type</option>
                         {workTypes.map((type) => (
@@ -1993,30 +2039,56 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         ))}
                       </select>
                     ) : (
-                      <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
-                        {workTypes.map((type) => (
-                          <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
-                            <input
-                              type="checkbox"
-                              checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
-                              onChange={(e) => {
-                                const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
-                                let newWorktypes;
-                                if (e.target.checked) {
-                                  newWorktypes = [...currentWorktypes, type];
-                                } else {
-                                  newWorktypes = currentWorktypes.filter((w) => w !== type);
-                                }
-                                setFormData((prev: any) => ({
-                                  ...prev,
-                                  workType: newWorktypes,
-                                }));
-                              }}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-gray-700">{type}</span>
-                          </label>
-                        ))}
+                      <div className="relative">
+                          <div
+                            onClick={() => setShowWorkTypeDropdown(!showWorkTypeDropdown)}
+                            className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${
+                              validationErrors.workType ? "border-red-500" : "border-gray-300"
+                            }`}
+                          >
+                            {formData.workType.length > 0 ? (
+                              <span className="text-gray-900">{formData.workType.join(", ")}</span>
+                            ) : (
+                              <span className="text-gray-400">Select Work types</span>
+                            )}
+                        </div>
+                        {showWorkTypeDropdown &&(
+                        <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+                          {workTypes.map((type) => (
+                            <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
+                              <input
+                                type="checkbox"
+                                checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
+                                onChange={(e) => {
+                                  const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
+                                  let newWorktypes;
+                                  if (e.target.checked) {
+                                    newWorktypes = [...currentWorktypes, type];
+                                  } else {
+                                    newWorktypes = currentWorktypes.filter((w) => w !== type);
+                                  }
+                                  setFormData((prev: any) => ({
+                                    ...prev,
+                                    workType: newWorktypes,
+                                  }));
+                                }}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              />
+                              <span className="text-sm text-gray-700">{type}</span>
+                            </label>
+                          ))}
+
+                          <div className="border-t border-gray-200 p-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowWorkTypeDropdown(false)}
+                                className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                              >
+                                Done
+                              </button>
+                          </div>
+                        </div>
+                        )}
                       </div>
                     )}
                     {!isEditMode && (
@@ -2047,6 +2119,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         )}
                       </div>
                     )}
+
+                    <ValidationError fieldName="workType" />
                   </div>
 
                   <div>
@@ -2629,7 +2703,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={() => setShowCancelAlert(true)}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
@@ -2706,6 +2780,38 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Cancellation Alert */}
+        {showCancelAlert && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirm Cancellation
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Your unsaved data will be lost. Do you want to cancel?
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowCancelAlert(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  No, Continue
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCancelAlert(false);
+                    handleClose();
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                >
+                  Yes, Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -249,8 +249,6 @@ const QuotationStep1: React.FC<QuotationStep1Props> = ({
           workType: lead.work_type,
           approvalStatus: lead.approval_status,
         }));
-        console.log("Fetched leads:", mappedLeads);
-
         setLeads(mappedLeads);
       } catch (error) {
         console.error("Error fetching leads:", error);

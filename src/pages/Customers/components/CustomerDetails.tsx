@@ -769,7 +769,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             </div> */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {(mappedApiData?.uploadedFiles ?? []).map((file : any) => {
-                console.log("Rendering file:", mappedApiData);
                 const Icon = getIconByMime(file.mime, file.original_name);
                 const sizeLabel = formatBytes(file.size);
 

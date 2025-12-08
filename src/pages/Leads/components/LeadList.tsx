@@ -107,8 +107,6 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
           `${import.meta.env.VITE_API_BASE_URL}/lead/`
         );
         const apiLeads = response.data.data;
-        console.log("Fetched leads:", apiLeads);
-
         // Map API response to UI Lead interface
         const mappedLeads: Lead[] = apiLeads.map((apiLead: any) => ({
           id: apiLead.lead_id?.toString() || "",
@@ -143,8 +141,6 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
           uploadedFiles: [],
           followUpComments: [],
         }));
-
-        console.log("Mapped leads:", mappedLeads);
 
         setLeads(mappedLeads);
       } catch (error) {
@@ -248,10 +244,6 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
       onSelectLead(lead);
     }
   };
-
-  useEffect(() => {
-    console.log("Selected lead changed:", leads);
-  });
 
   const getStageColor = (stage: string) => {
     switch (stage) {
