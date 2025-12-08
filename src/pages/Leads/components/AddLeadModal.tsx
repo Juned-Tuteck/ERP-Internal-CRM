@@ -8,12 +8,14 @@ import {
   MessageSquare,
   Trash2,
   Currency,
+  UserCheck
 } from "lucide-react";
 import axios from "axios";
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
+import { CustomLoader} from '../../../components/CustomLoader';
 import { create } from "domain";
 
 interface AddLeadModalProps {
@@ -83,6 +85,28 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     otherInfo: "",
   });
 
+  // Multi-worktype state for CREATE mode only
+  const [multiWorktypeState, setMultiWorktypeState] = useState<{
+    step1: any;
+    step2: { documents: { [worktype: string]: File[] } };
+    step3: { comments: { [worktype: string]: string } };
+    leads: {
+      [worktype: string]: {
+        leadId: string | null;
+        status: "pending" | "success" | "failed";
+        error?: string;
+      };
+    };
+  }>({
+    step1: null,
+    step2: { documents: {} },
+    step3: { comments: {} },
+    leads: {},
+  });
+
+  const [showWorkTypeDropdown, setShowWorkTypeDropdown] = useState(false);
+  const [showCancelAlert, setShowCancelAlert] = useState(false);
+
   // State for API data
   const [customers, setCustomers] = useState<
     Array<{
@@ -118,7 +142,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   const leadTypes = ["Government", "Private", "Semi-Government"];
   const workTypes = [
-    "AMC", "BASEMENT VENTILLATION", "CHILLER", "CP", "CP (AHU)", "DEVELOPMENT", "RETROFIT", "SERVICE", "VRF"
+    "HVAC", "Ventilation", "Fire", "MGPS", "Electrical", "CCTV", "Plumbing MEP", "Interior", "Civil"
   ];
   const leadCriticalities = ["Critical", "Normal"];
   const leadSources = [
@@ -277,6 +301,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         errors.leadType = "Lead Type is required";
       }
 
+      if (!(formData.workType.length > 0)) {
+        errors.workType = "Work Type is required";
+      }
+
       if (!formData.leadCriticality?.trim()) {
         errors.leadCriticality = "Lead Criticality is required";
       }
@@ -431,7 +459,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     const fetchAllForEdit = async () => {
       if (initialData) {
         // Debug log for initialData
-        console.log("initialData received in AddLeadModal:", initialData);
+        
         // Normalize leadGeneratedDate to YYYY-MM-DD
         let normalizedDate = "";
         if (initialData.leadGeneratedDate) {
@@ -495,10 +523,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           ...normalizedFormSnapshot,
         });
         setUploadedFiles(initialData.uploadedFiles || []);
-        console.log(
-          "THE INITIAL DATA ____________________:::::: ",
-          initialData
-        );
 
         // Check if lead source is a custom value (not in predefined list)
         const leadSourceValue = initialData.leadSource || initialData.lead_source || "";
@@ -512,7 +536,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
         if (initialData.businessName && isOpen) {
           // Fetch customers and use the response directly
-          console.log("INSIDE THE MODAL :::::::::::::");
+          
           try {
             // Fetch users for Referenced By dropdown
             fetchUsers();
@@ -527,17 +551,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               approval_status: customer.approval_status,
               contacts: customer.contacts || [],
             }));
-            console.log("Customer DATA **********", customerData);
+            
             const approvedCustomers = customerData.filter(
               (customer: any) => customer.approval_status === "APPROVED"
             );
-            console.log("Approved Customers:", approvedCustomers);
+            
             setCustomers(approvedCustomers);
             const selectedCustomer = approvedCustomers.find(
               (customer: any) => customer.name === initialData.businessName
             );
 
-            console.log("THE SELECTED CUSTOMER:", selectedCustomer);
+            
             if (selectedCustomer) {
               // use local ids to snapshot accurately
               const localCustomerId = selectedCustomer.id;
@@ -648,6 +672,23 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     fetchAllForEdit();
   }, [initialData, isOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showWorkTypeDropdown && !target.closest('.relative')) {
+        setShowWorkTypeDropdown(false);
+      }
+    };
+
+    if (showWorkTypeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showWorkTypeDropdown]);
+  
   const convertCurrencyString = (str: string): string[] => {
     return str
       .replace(/[{}"]/g, "") // remove { } and "
@@ -663,11 +704,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       );
       const customerData = response.data.data;
 
-      console.log("Customer DATA **********", customerData);
+      
       const approvedCustomers = customerData.filter(
         (customer: any) => customer.approval_status === "APPROVED"
       );
-      console.log("Approved Customers:", approvedCustomers);
+      
 
       setCustomers(
         approvedCustomers.map((customer: any) => ({
@@ -688,9 +729,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const response = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/customer-branch?customer_id=${customerId}`
       );
-      console.log("Customer Branches:", response);
+      
       const branchData = response.data.data;
-      console.log("Branch Data:-----", branchData);
+      
       setCustomerBranches(branchData);
       // Reset dependent fields
       setSelectedBranchId("");
@@ -708,7 +749,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         `${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact?customer_branch_id=${branchId}`
       );
       const contactData = response.data.data;
-      console.log("Contact Data:", contactData);
+      
       setContactPersons(contactData);
       // Reset contact selection
       setSelectedContactId("");
@@ -731,7 +772,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       );
       const userData = response.data.data;
-      console.log("Users Data:", userData);
+      
 
       setUsers(
         userData.map((user: any) => ({
@@ -785,13 +826,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           setContactPersons([]);
         }
       }
-      // setFormData((prev: any) => ({
-      //   ...prev,
-      //   businessName: value,
-      //   customerBranch: "",
-      //   contactPerson: "",
-      //   contactNo: "",
-      // }));
+      if (selectedCustomer?.currency && selectedCustomer.currency.length > 0) {
+        setFormData((prev: any) => ({
+          ...prev,
+          currency: selectedCustomer.currency[0], // default to first currency
+        }));
+      }
       setFormData((prev: any) => ({
         ...prev,
         businessName: value,
@@ -813,6 +853,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         if (selectedBranch) {
           setSelectedBranchId(selectedBranch.id);
           fetchContactPersons(selectedBranch.id);
+          if (selectedBranch.currency && selectedBranch.currency.length > 0) {
+            setFormData((prev: any) => ({
+              ...prev,
+              currency: selectedBranch.currency, // default to first currency
+            }));
+          }
         }
       } else {
         // Branch cleared: revert to customer contacts
@@ -853,7 +899,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         (contact) => contact.name === value
       );
       if (selectedContact) {
-        console.log("Selected Contact:", selectedContact);
+        
         setSelectedContactId(selectedContact.id);
         setFormData((prev: any) => ({
           ...prev,
@@ -903,7 +949,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    console.log("Currncy on change", formData.currency);
+  }, [formData.currency]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, worktype?: string) => {
     const files = Array.from(e.target.files || []);
     const newFileErrors: string[] = [];
     const validFiles: File[] = [];
@@ -928,7 +978,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     setFileErrors(newFileErrors);
     if (validFiles.length > 0) {
-      setUploadedFiles((prev) => [...prev, ...validFiles]);
+      if (!isEditMode && worktype) {
+        // Multi-worktype mode: store files per worktype
+        setMultiWorktypeState((prev) => ({
+          ...prev,
+          step2: {
+            documents: {
+              ...prev.step2.documents,
+              [worktype]: [...(prev.step2.documents[worktype] || []), ...validFiles],
+            },
+          },
+        }));
+      } else {
+        // Edit mode or single worktype: use existing state
+        setUploadedFiles((prev) => [...prev, ...validFiles]);
+      }
     }
   };
 
@@ -941,7 +1005,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
-
+    formData.append("upload_by", userData?.id || "");
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/lead-file/${leadId}/files`,
       formData,
@@ -1136,48 +1200,238 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     if (currentStep === 1) {
       if (isEditMode) {
+        // EDIT mode: Update lead and move to step 2
         handleUpdateLead();
       } else {
-        handleCreateLead();
+        // CREATE mode: Just validate and move to step 2 (save to state only)
+        if (!Array.isArray(formData.workType) || formData.workType.length === 0) {
+          alert("Please select at least one work type.");
+          return;
+        }
+        // Store Step 1 data in multi-worktype state
+        setMultiWorktypeState((prev) => ({
+          ...prev,
+          step1: { ...formData },
+        }));
+        setCurrentStep(2);
       }
-    }
-    if (currentStep === 2) {
-      console.log("Uploading files for lead...");
-      const leadId = createdLeadId || (isEditMode && initialData?.id);
-      if (!leadId) {
-        // safety: leadId should exist if step 1 succeeded
-        console.error("No leadId found. Cannot upload files.");
-        return;
-      }
-
-      if (uploadedFiles.length === 0) {
-        setCurrentStep(3); // or close modal
-        return;
-      }
-
-      // setIsUploading(true);
-      try {
-        if (isEditMode) {
-          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
-            console.log("Upload progress:", percent);
-          });
-        } else {
-          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
-            console.log("Upload progress:", percent);
-          });
+    } else if (currentStep === 2) {
+      if (isEditMode) {
+        // EDIT mode: Upload files for existing lead
+        const leadId = createdLeadId || initialData?.id;
+        if (!leadId) {
+          console.error("No leadId found. Cannot upload files.");
+          return;
         }
 
-        // Auto-update lead stage to "Enquiry" when files are uploaded
-        await updateLeadStageAfterFileUpload(leadId);
+        if (uploadedFiles.length === 0) {
+          setCurrentStep(3);
+          return;
+        }
 
-        // setIsUploadDone(true);
+        try {
+          await uploadFilesForLead(leadId, uploadedFiles, (percent) => {
+            console.log("Upload progress:", percent);
+          });
+          await updateLeadStageAfterFileUpload(leadId);
+          setCurrentStep(3);
+        } catch (err) {
+          console.error("Upload failed", err);
+        }
+      } else {
+        // CREATE mode: Just move to step 3 (documents already in state)
         setCurrentStep(3);
-      } catch (err) {
-        console.error("Upload failed", err);
       }
-    }
-    else if (currentStep < 3) {
+    } else if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
+    }
+  };
+
+  // Complete Registration for multi-worktype CREATE mode (called from Step 3)
+  const handleCompleteRegistration = async () => {
+    setIsLoading(true);
+
+    console.log("form data for lead :", formData);
+    
+    try {
+      const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
+
+      if (selectedWorktypes.length === 0) {
+        alert("No work types selected.");
+        setIsLoading(false);
+        return;
+      }
+      const results: { [worktype: string]: { success: boolean; leadId?: string; error?: string } } = {};
+
+      // Create leads sequentially for each worktype
+      for (const worktype of selectedWorktypes) {
+        try {
+          console.log(`Creating lead for worktype: ${worktype}`);
+
+          // Build lead payload from stored state
+          const leadPayload = {
+            business_name: formData.businessName,
+            customer_id: selectedCustomerId || null,
+            customer_branch_id: selectedBranchId || null,
+            contact_person: selectedContactId || null,
+            contact_no: formData.contactNo,
+            lead_date_generated_on: formData.leadGeneratedDate,
+            referenced_by: formData.referencedBy || null,
+            project_name: formData.projectName,
+            project_value: parseFloat(formData.projectValue) || 0,
+            lead_type: formData.leadType,
+            work_type: worktype,
+            lead_criticality: formData.leadCriticality,
+            lead_source: formData.leadSource,
+            lead_stage: formData.leadStage,
+            approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
+            eta: formData.eta || null,
+            lead_details: formData.leadDetails || null,
+            currency: formData.currency || null,
+            created_by: userData?.id || null,
+          };
+
+          // POST: Create lead
+          const leadResponse = await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead`,
+            leadPayload
+          );
+          const leadData = leadResponse.data.data;
+          const leadId = leadData.lead_id;
+
+          console.log(`Lead created for ${worktype}: ${leadId}`);
+
+          // Store lead ID
+          setMultiWorktypeState((prev) => ({
+            ...prev,
+            leads: {
+              ...prev.leads,
+              [worktype]: { leadId, status: "success" },
+            },
+          }));
+
+          results[worktype] = { success: true, leadId };
+
+          // POST: Upload documents for this worktype (if any)
+          const documents = multiWorktypeState.step2.documents[worktype] || [];
+          if (documents.length > 0) {
+            try {
+              console.log(`Uploading ${documents.length} documents for ${worktype}`);
+              await uploadFilesForLead(leadId, documents);
+              console.log(`Documents uploaded for ${worktype}`);
+
+              // PUT: Update lead stage to "Enquiry"
+              await updateLeadStageAfterFileUpload(leadId);
+            } catch (uploadError) {
+              console.error(`Error uploading documents for ${worktype}:`, uploadError);
+            }
+          }
+
+          // POST: Upload comment for this worktype (if any)
+          const comment = multiWorktypeState.step3.comments[worktype];
+          if (comment && comment.trim()) {
+            try {
+              console.log(`Uploading comment for ${worktype}`);
+              const commentPayload = {
+                lead_id: leadId,
+                comment: comment.trim(),
+                created_by: userData?.id || "unknown",
+              };
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-follow-up`,
+                commentPayload
+              );
+              console.log(`Comment uploaded for ${worktype}`);
+            } catch (commentError) {
+              console.error(`Error uploading comment for ${worktype}:`, commentError);
+            }
+          }
+
+          // POST: Associates (shared across all worktypes)
+          if (formData.involvedAssociates && formData.involvedAssociates.length > 0) {
+            try {
+              const associatePayload = formData.involvedAssociates.map((associate: any) => ({
+                lead_id: leadId,
+                associate_type: associate.designation,
+                associate_name: associate.associateName,
+                other_information: associate.otherInfo || null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-associate/bulk`,
+                associatePayload
+              );
+            } catch (associateError) {
+              console.error(`Error adding associates for ${worktype}:`, associateError);
+            }
+          }
+        } catch (error: any) {
+          console.error(`Error creating lead for ${worktype}:`, error);
+          const errorMessage = error.response?.data?.message || error.message || "Unknown error";
+          results[worktype] = { success: false, error: errorMessage };
+
+          setMultiWorktypeState((prev) => ({
+            ...prev,
+            leads: {
+              ...prev.leads,
+              [worktype]: { leadId: null, status: "failed", error: errorMessage },
+            },
+          }));
+        }
+      }
+
+      // PUT: Update customer flag
+      if (selectedCustomerId) {
+        try {
+          await updateCustomer(selectedCustomerId, { is_lead_generated: true });
+        } catch (custErr) {
+          console.error("Failed to update customer is_lead_generated flag:", custErr);
+        }
+      }
+
+      // POST: Send notifications
+      try {
+        await sendNotification({
+          receiver_ids: ["admin"],
+          title: `New Leads Created Successfully : ${formData.businessName || "Lead"}`,
+          message: `${selectedWorktypes.length} lead(s) registered successfully for ${formData.businessName || "Lead"} by ${userData?.name || "a user"}`,
+          service_type: "CRM",
+          link: "/leads",
+          sender_id: userRole || "user",
+          access: {
+            module: "CRM",
+            menu: "Lead",
+          },
+        });
+      } catch (notifError) {
+        console.error("Failed to send notification:", notifError);
+      }
+
+      // Show results summary
+      const successCount = Object.values(results).filter((r) => r.success).length;
+      const failCount = Object.values(results).filter((r) => !r.success).length;
+
+      let message = `Registration Complete!\n\n`;
+      message += `Successful: ${successCount}\n`;
+      if (failCount > 0) {
+        message += `Failed: ${failCount}\n\n`;
+        message += `Failed worktypes:\n`;
+        Object.entries(results).forEach(([worktype, result]) => {
+          if (!result.success) {
+            message += `- ${worktype}: ${result.error}\n`;
+          }
+        });
+      }
+
+      alert(message);
+
+      // Close modal and refresh
+      onSubmit({ success: true });
+      handleClose();
+    } catch (error) {
+      console.error("Error in complete registration:", error);
+      alert("An unexpected error occurred during registration.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1197,7 +1451,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         project_name: formData.projectName,
         project_value: parseFloat(formData.projectValue) || 0,
         lead_type: formData.leadType,
-        work_type: formData.workType || null,
+        work_type: Array.isArray(formData.workType) ? formData.workType[0] : formData.workType || null,
         lead_criticality: formData.leadCriticality,
         lead_source: formData.leadSource,
         lead_stage: formData.leadStage,
@@ -1224,7 +1478,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           await updateCustomer(selectedCustomerId, { is_lead_generated: true });
         } catch (custErr) {
           console.error('Failed to update customer is_lead_generated flag:', custErr);
-          // Not blocking: continue the flow even if customer update fails
         }
       }
 
@@ -1248,7 +1501,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         );
       }
 
-      // ------------------------------------------------------------------------------------------For notifications
+      // Notifications
       try {
         await sendNotification({
           receiver_ids: ['admin'],
@@ -1265,9 +1518,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         console.log(`Notification sent for CRM Lead ${formData.businessName || 'Lead'}`);
       } catch (notifError) {
         console.error('Failed to send notification:', notifError);
-        // Continue with the flow even if notification fails
       }
-      // ----------------------------------------------------------------------------------------
 
       // Move to next step
       setCurrentStep(2);
@@ -1458,6 +1709,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   if (!isOpen) return null;
 
+  if (isLoading) {
+    return <CustomLoader message="Creating Lead..."/>
+  }
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
@@ -1473,7 +1728,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             </p>
           </div>
           <button
-            onClick={handleClose}
+            onClick={() => setShowCancelAlert(true)}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -1765,21 +2020,107 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Work Type
+                      Work Type {!isEditMode && <span className="text-blue-600">(Select multiple)</span>}
                     </label>
-                    <select
-                      name="workType"
-                      value={formData.workType}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select Work Type</option>
-                      {workTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
+                    {isEditMode ? (
+                      <select
+                        name="workType"
+                        value={formData.workType}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.workType
+                        ? "border-red-500"
+                        : "border-gray-300"}`}
+                      >
+                        <option value="">Select Work Type</option>
+                        {workTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="relative">
+                          <div
+                            onClick={() => setShowWorkTypeDropdown(!showWorkTypeDropdown)}
+                            className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${
+                              validationErrors.workType ? "border-red-500" : "border-gray-300"
+                            }`}
+                          >
+                            {formData.workType.length > 0 ? (
+                              <span className="text-gray-900">{formData.workType.join(", ")}</span>
+                            ) : (
+                              <span className="text-gray-400">Select Work types</span>
+                            )}
+                        </div>
+                        {showWorkTypeDropdown &&(
+                        <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+                          {workTypes.map((type) => (
+                            <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
+                              <input
+                                type="checkbox"
+                                checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
+                                onChange={(e) => {
+                                  const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
+                                  let newWorktypes;
+                                  if (e.target.checked) {
+                                    newWorktypes = [...currentWorktypes, type];
+                                  } else {
+                                    newWorktypes = currentWorktypes.filter((w) => w !== type);
+                                  }
+                                  setFormData((prev: any) => ({
+                                    ...prev,
+                                    workType: newWorktypes,
+                                  }));
+                                }}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              />
+                              <span className="text-sm text-gray-700">{type}</span>
+                            </label>
+                          ))}
+
+                          <div className="border-t border-gray-200 p-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowWorkTypeDropdown(false)}
+                                className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                              >
+                                Done
+                              </button>
+                          </div>
+                        </div>
+                        )}
+                      </div>
+                    )}
+                    {!isEditMode && (
+                      <div className="mt-2">
+                        {Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.workType.map((type: string) => (
+                              <span
+                                key={type}
+                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {type}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData((prev: any) => ({
+                                      ...prev,
+                                      workType: prev.workType.filter((w: string) => w !== type),
+                                    }));
+                                  }}
+                                  className="ml-1 hover:text-blue-900"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <ValidationError fieldName="workType" />
                   </div>
 
                   <div>
@@ -2076,81 +2417,148 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             {/* Step 2: Upload Files */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Supporting Documents
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      Upload RFQ documents, technical drawings, site photos,
-                      etc.
-                    </p>
-                    <p className="text-xs text-gray-500 mb-4">
-                      Supported formats: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX (Max 10MB
-                      per file)
-                    </p>
-                    <input
-                      type="file"
-                      multiple
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                    >
-                      Choose Files
-                    </label>
-                  </div>
-
-                  {/* Display file validation errors */}
-                  {fileErrors.length > 0 && (
-                    <div className="mt-2">
-                      {fileErrors.map((error, index) => (
-                        <p
-                          key={index}
-                          className="text-red-500 text-xs mt-1 flex items-center"
-                        >
-                          <span className="mr-1">⚠</span>
-                          {error}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {uploadedFiles.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      Uploaded Files
-                    </h4>
-                    <div className="space-y-2">
-                      {uploadedFiles.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {file.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="text-red-600 hover:text-red-800"
+                {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                  // Multi-worktype mode: show upload per worktype
+                  formData.workType.map((worktype: string) => (
+                    <div key={worktype} className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                        Documents for: {worktype}
+                      </h4>
+                      <div>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-xs text-gray-600 mb-2">
+                            Upload documents for {worktype}
+                          </p>
+                          <input
+                            type="file"
+                            multiple
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg"
+                            onChange={(e) => handleFileUpload(e, worktype)}
+                            className="hidden"
+                            id={`file-upload-${worktype}`}
+                          />
+                          <label
+                            htmlFor={`file-upload-${worktype}`}
+                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
                           >
-                            <X className="h-4 w-4" />
-                          </button>
+                            Choose Files
+                          </label>
                         </div>
-                      ))}
+
+                        {multiWorktypeState.step2.documents[worktype] &&
+                          multiWorktypeState.step2.documents[worktype].length > 0 && (
+                            <div className="mt-3 space-y-1">
+                              {multiWorktypeState.step2.documents[worktype].map((file, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+                                >
+                                  <span className="truncate">{file.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMultiWorktypeState((prev) => ({
+                                        ...prev,
+                                        step2: {
+                                          documents: {
+                                            ...prev.step2.documents,
+                                            [worktype]: prev.step2.documents[worktype].filter(
+                                              (_, i) => i !== idx
+                                            ),
+                                          },
+                                        },
+                                      }));
+                                    }}
+                                    className="text-red-600 hover:text-red-800 ml-2"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  // Edit mode or single worktype: original layout
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Upload Supporting Documents
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-sm text-gray-600 mb-2">
+                        Upload RFQ documents, technical drawings, site photos,
+                        etc.
+                      </p>
+                      <p className="text-xs text-gray-500 mb-4">
+                        Supported formats: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX (Max 10MB
+                        per file)
+                      </p>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg"
+                        onChange={(e) => handleFileUpload(e)}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                      >
+                        Choose Files
+                      </label>
+                    </div>
+
+                    {/* Display file validation errors */}
+                    {fileErrors.length > 0 && (
+                      <div className="mt-2">
+                        {fileErrors.map((error, index) => (
+                          <p
+                            key={index}
+                            className="text-red-500 text-xs mt-1 flex items-center"
+                          >
+                            <span className="mr-1">⚠</span>
+                            {error}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {uploadedFiles.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          Uploaded Files
+                        </h4>
+                        <div className="space-y-2">
+                          {uploadedFiles.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {file.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(index)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2159,81 +2567,117 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             {/* Step 3: Follow-up Leads */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Add Follow-up Comment
-                  </label>
-                  <div className="flex space-x-2">
-                    <div className="flex-1">
+                {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                  // Multi-worktype mode: show comment per worktype
+                  formData.workType.map((worktype: string) => (
+                    <div key={worktype} className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                        Follow-up for: {worktype}
+                      </h4>
                       <textarea
-                        value={newComment}
+                        value={multiWorktypeState.step3.comments[worktype] || ""}
                         onChange={(e) => {
-                          setNewComment(e.target.value);
-                          // Clear validation error when user starts typing
-                          if (validationErrors.newComment) {
-                            setValidationErrors((prev) => {
-                              const newErrors = { ...prev };
-                              delete newErrors.newComment;
-                              return newErrors;
-                            });
-                          }
+                          setMultiWorktypeState((prev) => ({
+                            ...prev,
+                            step3: {
+                              comments: {
+                                ...prev.step3.comments,
+                                [worktype]: e.target.value,
+                              },
+                            },
+                          }));
                         }}
-                        rows={3}
-                        placeholder="Enter follow-up notes, meeting details, customer feedback..."
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.newComment
-                          ? "border-red-500"
-                          : "border-gray-300"
-                          }`}
+                        rows={2}
+                        placeholder={`Enter follow-up notes for ${worktype}...`}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                       />
-                      <ValidationError fieldName="newComment" />
-                      {newComment && (
+                      {multiWorktypeState.step3.comments[worktype] && (
                         <p className="text-xs text-gray-500 mt-1">
-                          {newComment.length}/500 characters
+                          {multiWorktypeState.step3.comments[worktype].length}/500 characters
                         </p>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleCommentSubmit}
-                      disabled={
-                        !newComment.trim() ||
-                        isLoading ||
-                        !!validationErrors.newComment
-                      }
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {formData.followUpComments.length > 0 && (
+                  ))
+                ) : (
+                  // Edit mode or single worktype: original layout
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      Communication History
-                    </h4>
-                    <div className="space-y-3 max-h-60 overflow-y-auto">
-                      {formData.followUpComments.map((comment: any) => (
-                        <div
-                          key={comment.id}
-                          className="p-3 bg-gray-50 rounded-md"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-900">
-                              {comment.author}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(comment.timestamp).toLocaleString(
-                                "en-IN"
-                              )}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700">
-                            {comment.text}
-                          </p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Add Follow-up Comment
+                      </label>
+                      <div className="flex space-x-2">
+                        <div className="flex-1">
+                          <textarea
+                            value={newComment}
+                            onChange={(e) => {
+                              setNewComment(e.target.value);
+                              // Clear validation error when user starts typing
+                              if (validationErrors.newComment) {
+                                setValidationErrors((prev) => {
+                                  const newErrors = { ...prev };
+                                  delete newErrors.newComment;
+                                  return newErrors;
+                                });
+                              }
+                            }}
+                            rows={3}
+                            placeholder="Enter follow-up notes, meeting details, customer feedback..."
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.newComment
+                              ? "border-red-500"
+                              : "border-gray-300"
+                              }`}
+                          />
+                          <ValidationError fieldName="newComment" />
+                          {newComment && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {newComment.length}/500 characters
+                            </p>
+                          )}
                         </div>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={handleCommentSubmit}
+                          disabled={
+                            !newComment.trim() ||
+                            isLoading ||
+                            !!validationErrors.newComment
+                          }
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
+
+                    {formData.followUpComments.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          Communication History
+                        </h4>
+                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                          {formData.followUpComments.map((comment: any) => (
+                            <div
+                              key={comment.id}
+                              className="p-3 bg-gray-50 rounded-md"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {comment.author}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(comment.timestamp).toLocaleString(
+                                    "en-IN"
+                                  )}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700">
+                                {comment.text}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2259,7 +2703,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={() => setShowCancelAlert(true)}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
@@ -2296,28 +2740,78 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   Update Complete
                 </button>
               )
-            ) : currentStep < 3 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                {isLoading ? "Creating..." : "Next"}
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </button>
             ) : (
-              <button
-                type="submit"
-                onClick={handleSubmit}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Complete
-              </button>
+              <>
+                {currentStep < 3 ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isLoading}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isLoading ? "Saving..." : "Next"}
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </button>
+                ) : (
+                  <>
+                    {Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={handleCompleteRegistration}
+                        disabled={isLoading}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-purple-600 hover:bg-purple-700"
+                      >
+                        {isLoading ? "Processing..." : "Complete Registration"}
+                        <Save className="h-4 w-4 ml-2" />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        onClick={handleSubmit}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Complete
+                      </button>
+                    )}
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
+
+        {/* Cancellation Alert */}
+        {showCancelAlert && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirm Cancellation
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Your unsaved data will be lost. Do you want to cancel?
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowCancelAlert(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  No, Continue
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCancelAlert(false);
+                    handleClose();
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                >
+                  Yes, Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

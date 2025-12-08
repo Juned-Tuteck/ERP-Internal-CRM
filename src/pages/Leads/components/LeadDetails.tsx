@@ -63,10 +63,6 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [followUpComments, setFollowUpComments] = useState<any[]>([]);
   const [isAddingComment, setIsAddingComment] = useState(false);
 
-  useEffect(() => {
-    console.log("Lead Details Component Mounted", lead);
-  });
-
   // Fetch detailed lead information when lead is selected
 
   useEffect(() => {
@@ -79,10 +75,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           `${import.meta.env.VITE_API_BASE_URL}/lead/${lead.id}`
         );
         const apiLead = response.data.data;
-        console.log("Fetched Lead Details:", apiLead.customer_branch_id);
 
         let branchName = null;
-        let branchCurrency = "INR";
+        let branchCurrency = apiLead.currency || "INR";
 
         // Fetch customer branch details if customer_branch exists
         if (apiLead.customer_branch_id) {
@@ -97,7 +92,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           } catch (err) {
             // fallback to null if branch fetch fails
             branchName = null;
-            branchCurrency = "INR";
+            branchCurrency = apiLead.currency || "INR";
           }
         }
 
@@ -796,7 +791,6 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {(displayLead?.uploadedFiles ?? []).map((file) => {
-                    console.log("Rendering file:", displayLead);
                     const Icon = getIconByMime(file.mime, file.original_name);
                     const sizeLabel = formatBytes(file.size);
 
@@ -818,6 +812,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                           </p>
                           <p className="text-xs text-gray-500">
                             {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-3">
+                            <User className="inline-block h-4 w-4 " /><b>{file.created_by_name || "-"}</b>
                           </p>
                         </div>
 
