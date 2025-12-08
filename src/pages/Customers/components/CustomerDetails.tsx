@@ -270,6 +270,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
         return "bg-red-100 text-red-800";
       case "pending":
         return "bg-yellow-100 text-yellow-800";
+      case "revisit":
+        return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -367,13 +369,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {(customer.status === "pending" || customer.status === "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'customers') && (
+              { hasActionAccess('edit', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
                   title="Edit Customer"
                 >
-                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(customer.status === "pending" || customer.status === "draft")) && "Super Admin EDIT"}
+                  <SquarePen className="h-5 w-5" /> {((customer.status === "approved" || customer.status === "revisit")) && "EDIT after approval"}
                 </button>
               )}
               {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('Deactivate', 'All customers', 'customers') && (
