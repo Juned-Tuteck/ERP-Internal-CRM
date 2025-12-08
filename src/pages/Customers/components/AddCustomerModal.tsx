@@ -377,7 +377,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               id: customer.customer_id,
               name: customer.business_name
             }));
-          
+
           setCustomerSuggestions(filteredCustomers);
           setShowCustomerPopup(filteredCustomers.length > 0);
         } catch (error) {
@@ -733,7 +733,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           customer_id: formData.id,
           created_by : currentUserId
         };
-        
+
         const response = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/customer-contact`,
           payload,
@@ -769,7 +769,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         }
 
         if(currentUserId) changedFields.updated_by = currentUserId;
-        
+
         // Only make API call if there are changes
         if (Object.keys(changedFields).length > 0) {
           const response = await axios.put(
@@ -1199,6 +1199,19 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
         // Only make API call if there are changes
         if (Object.keys(changedFields).length > 0) {
+
+          if (initialData?.status === "approved" || initialData?.approvalStatus === "approved") {
+            await axios.put(
+              `${import.meta.env.VITE_API_BASE_URL}/customer/${formData.id}`,
+              { approval_status: "REVISIT" },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+          }
+
           const response = await axios.put(
             `${import.meta.env.VITE_API_BASE_URL}/customer-branch/${id}`,
             changedFields,
@@ -2119,8 +2132,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         return acc;
       }, {});
 
+      console.log("Initial data:", initialData);
+      if (initialData?.status === "approved" || initialData?.approvalStatus === "approved") {
+        backendPayload.approval_status = "REVISIT";
+      }
+
       if (currentUserId) backendPayload.updated_by = currentUserId;
 
+      console.log("Submitting edit with payload:", backendPayload);
       const response = await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/customer/${formData.id}`,
         backendPayload,
@@ -2370,13 +2389,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             <div
                               key={customer.id}
                               className="px-3 py-2 text-sm text-gray-700 transition-colors"
-                              // onClick={() => {
-                              //   setFormData((prev: typeof formData) => ({
-                              //     ...prev,
-                              //     businessName: customer.name
-                              //   }));
-                              //   setShowCustomerPopup(false);
-                              // }}
+                            // onClick={() => {
+                            //   setFormData((prev: typeof formData) => ({
+                            //     ...prev,
+                            //     businessName: customer.name
+                            //   }));
+                            //   setShowCustomerPopup(false);
+                            // }}
                             >
                               {customer.name}
                             </div>
@@ -2459,7 +2478,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
                           className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${
                             validationErrors.currency ? "border-red-300" : "border-gray-300"
-                          }`}
+                            }`}
                         >
                           {formData.currency.length > 0 ? (
                             <span className="text-gray-900">{formData.currency.join(", ")}</span>
@@ -2473,14 +2492,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                               <div
                                 key={currency}
                                 onClick={() => handleCurrencyToggle(currency)}
-                                className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center ${
-                                  formData.currency.includes(currency) ? "bg-blue-100" : ""
-                                }`}
+                                className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center ${formData.currency.includes(currency) ? "bg-blue-100" : ""
+                                  }`}
                               >
                                 <input
                                   type="checkbox"
                                   checked={formData.currency.includes(currency)}
-                                  onChange={() => {}}
+                                  onChange={() => { }}
                                   className="mr-2"
                                 />
                                 <span>{currency}</span>
@@ -2604,11 +2622,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         Customer Potential *
                       </label>
                       <input
-                          type="number"
-                          name="customerPotential"
-                          value={formData.customerPotential}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
+                        type="number"
+                        name="customerPotential"
+                        value={formData.customerPotential}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
                       />
                       {/* <select
                         name="customerPotential"
