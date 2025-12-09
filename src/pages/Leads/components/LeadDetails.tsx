@@ -29,7 +29,8 @@ import {
   MessageSquare,
   SquarePen,
   User,
-  FileBarChart
+  FileBarChart,
+  PauseCircle
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
@@ -46,7 +47,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [loading, setLoading] = useState(false);
   const [showWinLossModal, setShowWinLossModal] = useState(false);
   const [winLossReason, setWinLossReason] = useState("");
-  const [selectedOutcome, setSelectedOutcome] = useState<"Won" | "Lost">("Won");
+  const [selectedOutcome, setSelectedOutcome] = useState<"Won" | "Lost" | "Hold">("Won");
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -320,13 +321,15 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       case "Enquiry":
         return "bg-blue-100 text-blue-800";
       case "Quoted":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-purple-100 text-purple-800";
       case "Quotation Submitted":
         return "bg-purple-100 text-purple-800";
       case "Won":
         return "bg-green-100 text-green-800";
       case "Lost":
         return "bg-red-100 text-red-800";
+      case "Hold":
+        return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -364,13 +367,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     try {
       setIsSubmitting(true);
 
+      const payload: any = {
+        reason: winLossReason,
+        lead_stage: selectedOutcome,
+      };
+
+      if (selectedOutcome === "Hold") {
+        payload.hold_stage = displayLead.leadStage;
+      }
+
       // Call PUT API to update lead status with lead ID in path params
       const response = await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/lead/${displayLead.id}`,
-        {
-          reason: winLossReason,
-          lead_stage: selectedOutcome,
-        }
+        payload
       );
 
       console.log("Lead status updated successfully:", response.data);
@@ -580,7 +589,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               {displayLead.approvalStatus === "approved" &&
                 displayLead.leadStage !== "Quoted" &&
                 displayLead.leadStage !== "Won" &&
-                displayLead.leadStage !== "Lost" && (
+                displayLead.leadStage !== "Lost" &&
+                displayLead.leadStage !== "Hold" && (
                   <button
                     onClick={() => setShowGenerateQuotationModal(true)}
                     disabled={isGeneratingQuotation}
@@ -598,7 +608,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 )}
               {/* Update Status: Only visible when lead is approved */}
               {displayLead.approvalStatus === "approved" &&
-                displayLead.leadStage === "Quoted" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
+                displayLead.leadStage !== "Won" && displayLead.leadStage !== "Lost" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
                   <button
                     onClick={() => setShowWinLossModal(true)}
                     className="rounded-full p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition"
@@ -1084,31 +1094,49 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     Select Outcome
                   </label>
                   <div className="flex space-x-4">
+                    {displayLead.leadStage === "Quoted" && (
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="Won"
+                          checked={selectedOutcome === "Won"}
+                          onChange={(e) =>
+                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
+                          }
+                          className="mr-2"
+                        />
+                        <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
+                        <span className="text-sm text-green-600">Won</span>
+                      </label>
+                    )}
+                    {displayLead.leadStage === "Quoted" && (
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="Lost"
+                          checked={selectedOutcome === "Lost"}
+                          onChange={(e) =>
+                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
+                          }
+                          className="mr-2"
+                        />
+                        <XCircle className="h-4 w-4 text-red-600 mr-1" />
+                        <span className="text-sm text-red-600">Lost</span>
+                      </label>
+                    )}
+
                     <label className="flex items-center">
                       <input
                         type="radio"
-                        value="Won"
-                        checked={selectedOutcome === "Won"}
+                        value="Hold"
+                        checked={selectedOutcome === "Hold"}
                         onChange={(e) =>
-                          setSelectedOutcome(e.target.value as "Won" | "Lost")
+                          setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
                         }
                         className="mr-2"
                       />
-                      <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                      <span className="text-sm text-green-600">Won</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="Lost"
-                        checked={selectedOutcome === "Lost"}
-                        onChange={(e) =>
-                          setSelectedOutcome(e.target.value as "Won" | "Lost")
-                        }
-                        className="mr-2"
-                      />
-                      <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                      <span className="text-sm text-red-600">Lost</span>
+                      <PauseCircle className="h-4 w-4 text-yellow-600 mr-1" />
+                      <span className="text-sm text-yellow-600">Hold</span>
                     </label>
                   </div>
                 </div>
@@ -1145,7 +1173,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 disabled={!winLossReason.trim() || isSubmitting}
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${selectedOutcome === "Won"
                   ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
+                  : selectedOutcome === "Hold"
+                    ? "bg-yellow-600 hover:bg-yellow-700"
+                    : "bg-red-600 hover:bg-red-700"
                   } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {isSubmitting ? (
@@ -1154,11 +1184,18 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     {selectedOutcome === "Won"
                       ? "Marking as Won..."
                       : "Marking as Lost..."}
+
+                    {selectedOutcome === "Hold" ? ("Marking as Hold...") : ""}
                   </>
                 ) : selectedOutcome === "Won" ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Mark as Won
+                  </>
+                ) : selectedOutcome === "Hold" ? (
+                  <>
+                    <PauseCircle className="h-4 w-4 mr-2" />
+                    Mark as Hold
                   </>
                 ) : (
                   <>
