@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react";
 import axios from "axios";
+import { useCRM } from "../../../context/CRMContext";
 
 interface Lead {
   id: string;
@@ -65,9 +66,23 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [assignedLeadIds, setAssignedLeadIds] = useState<string[]>([]);
+  const { userData } = useCRM();
 
-  // Filter leads based on search term
+  // Check if user is a design engineer
+  const isDesignEngineer = userData?.role === 'design engineer' ||
+                           (userData?.roles && userData.roles.includes('design engineer'));
+
+  // Filter leads based on role and search term
   const filteredLeads = leads.filter((lead) => {
+    // Role-based filtering for design engineers
+    if (isDesignEngineer) {
+      if (!assignedLeadIds.includes(lead.id)) {
+        return false;
+      }
+    }
+
+    // Search term filtering
     if (!searchTerm) return true;
 
     const searchLower = searchTerm.toLowerCase();
@@ -98,6 +113,29 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
       )
     );
   });
+
+  // Fetch assigned leads for design engineers
+  useEffect(() => {
+    const fetchAssignedLeads = async () => {
+      if (!isDesignEngineer || !userData?.id) {
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/design-help?user_id=${userData.id}`
+        );
+        if (response.data.success && response.data.data) {
+          const leadIds = response.data.data.map((item: any) => item.lead_id);
+          setAssignedLeadIds(leadIds);
+        }
+      } catch (error) {
+        console.error("Error fetching assigned leads:", error);
+      }
+    };
+
+    fetchAssignedLeads();
+  }, [isDesignEngineer, userData?.id]);
 
   // Fetch leads from API
   useEffect(() => {

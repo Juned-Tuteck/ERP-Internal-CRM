@@ -72,6 +72,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [selectedDesignEngineerId, setSelectedDesignEngineerId] = useState('');
   const [isLoadingEngineers, setIsLoadingEngineers] = useState(false);
   const [isSendingHelp, setIsSendingHelp] = useState(false);
+  const [designHelpSent, setDesignHelpSent] = useState(false);
 
   // Fetch detailed lead information when lead is selected
 
@@ -148,6 +149,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
         // Fetch follow-up comments
         fetchFollowUpComments(lead.id);
+
+        // Check if design help was sent
+        checkDesignHelpStatus(lead.id);
       } catch (error) {
         console.error("Error fetching lead details:", error);
         // Fallback to the lead data passed as prop
@@ -159,6 +163,23 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
     fetchLeadDetails();
   }, [lead, refreshTrigger]);
+
+  // Check if design help was sent for this lead
+  const checkDesignHelpStatus = async (leadId: string) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/design-help?lead_id=${leadId}`
+      );
+      if (response.data.success && response.data.data && response.data.data.length > 0) {
+        setDesignHelpSent(true);
+      } else {
+        setDesignHelpSent(false);
+      }
+    } catch (error) {
+      console.error('Error checking design help status:', error);
+      setDesignHelpSent(false);
+    }
+  };
 
   // Fetch follow-up comments
   const fetchFollowUpComments = async (leadId: string) => {
@@ -257,6 +278,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       );
 
       alert('Design help request sent successfully!');
+      setDesignHelpSent(true);
       setShowDesignHelpModal(false);
       setSelectedDesignEngineerId('');
     } catch (error) {
@@ -937,10 +959,16 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <h3 className="text-lg font-semibold text-gray-900">Supporting Documents</h3>
                   <button
                     onClick={handleDesignHelpModalOpen}
-                    className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 transition"
+                    disabled={designHelpSent}
+                    className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${
+                      designHelpSent
+                        ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
+                        : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                    }`}
+                    title={designHelpSent ? 'This lead has already been assigned for design help.' : ''}
                   >
                     <Users className="h-4 w-4 mr-2" />
-                    Send for Design Help
+                    {designHelpSent ? 'Sent to Design Engineer' : 'Send for Design Help'}
                   </button>
                 </div>
 
