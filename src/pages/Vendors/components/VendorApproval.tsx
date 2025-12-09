@@ -102,7 +102,9 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
         const decision = actionType === "approve" ? "approved" : "rejected";
         await axios.patch(
           `${baseURL}/vendor/${selectedVendor.id}/decision`,
-          null,
+          {
+            'approved_by': userData?.id
+          },
           {
             params: { status: decision },
           }

@@ -795,6 +795,10 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
       setIsLoading(true);
       try {
         const vendorPayload = toSnakeCase(formData);
+        console.log("Registering vendor with payload:", vendorPayload);
+        vendorPayload.created_by = userData?.id || '';
+        console.log("After Created by field added", vendorPayload);
+        
         const vendorRes = await registerVendor(vendorPayload);
         const vendorId =
           vendorRes?.data?.vendor_id || vendorRes?.vendor_id || vendorRes?.id;
@@ -839,6 +843,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
         setCurrentStep(currentStep + 1);
       } catch (err) {
+        console.error("---", err);
         alert("Failed to create vendor or bulk upload. Please try again.");
       } finally {
         setIsLoading(false);
@@ -903,6 +908,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
             district: branch.district,
             city: branch.city,
             pincode: branch.pincode,
+            created_by: userData?.id || '',
           };
           const branchRes: any = await registerVendorBranch(branchPayload);
           // Accept id from branchRes.data.id (API returns id as branch id)
@@ -2563,6 +2569,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     const payload = toSnakeCase(rest);
                     setIsLoading(true);
                     try {
+                      payload.updated_by = userData?.id || '';
                       await updateVendor(vendorId, payload);
                       if (typeof onRefresh === "function") await onRefresh();
                       onClose();
