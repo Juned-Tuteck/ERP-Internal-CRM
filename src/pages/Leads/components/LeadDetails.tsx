@@ -207,7 +207,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     setIsLoadingEngineers(true);
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_AUTH_BASE_URL}/users`
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+        }
       );
 
       if (response.data.success && response.data.data) {
