@@ -128,7 +128,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const leadStages = [
     "Information Stage",
     "Enquiry",
-    "Quotation Stage",
+    "Quoted",
     "Won",
     "Lost",
   ];
@@ -489,6 +489,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
           contact_person_id: initialData.contact_person || initialData.contact_person_id || null,
         };
+        console.log("Normalized Form Snapshot for Edit:", normalizedFormSnapshot);
 
         // Set form data for editing
         setFormData({

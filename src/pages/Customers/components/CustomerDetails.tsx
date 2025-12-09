@@ -16,7 +16,8 @@ import {
   SquarePen,
   Trash2,
   Power,
-  Image, FileSpreadsheet, File, Download, FileCheck
+  Image, FileSpreadsheet, File, Download, FileCheck,
+  User
 } from "lucide-react";
 import axios from "axios";
 import AddCustomerModal from "./AddCustomerModal";
@@ -153,6 +154,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             bankAccountNumber: apiData.bank_account_number || "",
             branchName: apiData.branch_name || "",
             ifscCode: apiData.ifsc_code || "",
+            status: apiData.approval_status || customer.status || "",
             contactPersons:
               apiData.contactpersons?.map((person: any) => ({
                 id: person.contactId,
@@ -270,7 +272,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
         return "bg-red-100 text-red-800";
       case "pending":
         return "bg-yellow-100 text-yellow-800";
-      case "revisit":
+      case "REVISIT":
         return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -363,8 +365,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
           </div>
           <div className="flex flex-col md:items-end gap-1 w-full md:w-auto">
             <div className="flex flex-col items-end">
-              <div className={`text-2xl font-bold px-6 py-1 rounded-full text-green-600 capitalize ${getStatusColor(customer.status)}`}>
-                {customer.status}
+              <div className={`text-2xl font-bold px-6 py-1 rounded-full text-green-600 capitalize ${getStatusColor(mappedApiData.status)}`}>
+                {mappedApiData.status}
               </div>
               {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
@@ -437,7 +439,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">Industry</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {customer.industry}
+                      {mappedApiData.customerType}
                     </p>
                   </div>
                 </div>
@@ -447,7 +449,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">Location</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {customer.location}
+                      {mappedApiData.city}, {mappedApiData.state}
                     </p>
                   </div>
                 </div>
@@ -471,7 +473,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">Phone</p>
                     <p className="text-sm font-medium text-gray-900">
-                     {customer.contactNumber}
+                     {mappedApiData.contactNo}
                     </p>
                   </div>
                 </div>
@@ -481,7 +483,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {customer.email}
+                      {mappedApiData.email}
                     </p>
                   </div>
                 </div>
@@ -793,6 +795,10 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                       </p>
                       <p className="text-xs text-gray-500">
                         {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                      </p>
+                      <p className="">
+                        <User className="h-3 w-3 inline-block mr-1 text-gray-400" />
+                        {file.created_by_name || "-"}
                       </p>
                     </div>
 

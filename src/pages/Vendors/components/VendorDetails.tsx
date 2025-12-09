@@ -17,7 +17,8 @@ import {
   Power,
   SquarePen,
   FileSpreadsheet,
-  Download
+  Download,
+  User
 } from "lucide-react";
 import AddVendorModal from "./AddVendorModal";
 import { useCRM } from "../../../context/CRMContext";
@@ -761,6 +762,10 @@ const VendorDetails: React.FC<
                       </p>
                       <p className="text-xs text-gray-500">
                         {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        <User className="h-3 w-3 inline-block mr-1 text-gray-400" />
+                        {file.created_by_name || "-"}
                       </p>
                     </div>
 
