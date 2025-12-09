@@ -28,7 +28,8 @@ import {
   FileCheck,
   MessageSquare,
   SquarePen,
-  User
+  User,
+  FileBarChart
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
@@ -50,6 +51,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isGeneratingQuotation, setIsGeneratingQuotation] = useState(false);
+  const [showGenerateQuotationModal, setShowGenerateQuotationModal] = useState(false);
   const { hasActionAccess, userData } = useCRM();
 
   // Add state for edit modal
@@ -131,6 +134,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           leadNumber: apiLead.lead_number || lead.leadNumber,
           customerNumber: apiLead.customer_number || lead.customerNumber,
           created_by_name: apiLead.created_by_name || null,
+          temp_quotation_number: apiLead.temp_quotation_number || lead.temp_quotation_number || null,
         };
 
         setLeadDetails(mappedLead);
@@ -315,7 +319,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         return "bg-gray-100 text-gray-800";
       case "Enquiry":
         return "bg-blue-100 text-blue-800";
-      case "Quotation Stage":
+      case "Quoted":
         return "bg-yellow-100 text-yellow-800";
       case "Quotation Submitted":
         return "bg-purple-100 text-purple-800";
@@ -465,6 +469,47 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     }
   };
 
+  // Generate Quotation Number Handler
+  const handleGenerateQuotationNumber = async () => {
+    if (!displayLead?.id || !displayLead?.leadNumber) {
+      alert('Missing required information to generate quotation number.');
+      return;
+    }
+
+    setIsGeneratingQuotation(true);
+    try {
+      const quotationNumber = `QUOT-${displayLead.id.substring(0, 5)}-${displayLead.leadNumber.split("-")[1]}-${Date.now()}`;
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/lead/${displayLead.id}`,
+        {
+          temp_quotation_number: quotationNumber,
+          lead_stage: "Quoted"
+        }
+      );
+
+      console.log("Quotation number generated successfully:", response.data);
+
+      // Update local state
+      setLeadDetails((prev: any) => ({
+        ...prev,
+        temp_quotation_number: quotationNumber,
+        leadStage: "Quoted"
+      }));
+
+      alert(`Quotation number generated: ${quotationNumber}`);
+
+      // Close modal and refresh
+      setShowGenerateQuotationModal(false);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error("Error generating quotation number:", error);
+      alert("Failed to generate quotation number. Please try again.");
+    } finally {
+      setIsGeneratingQuotation(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Lead Header */}
@@ -531,10 +576,29 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               {displayLead.projectValue}L
             </div>
             <div className="flex space-x-2 mt-2">
+              {/* Generate Quotation Number Button */}
+              {displayLead.approvalStatus === "approved" &&
+                displayLead.leadStage !== "Quoted" &&
+                displayLead.leadStage !== "Won" &&
+                displayLead.leadStage !== "Lost" && (
+                  <button
+                    onClick={() => setShowGenerateQuotationModal(true)}
+                    disabled={isGeneratingQuotation}
+                    className="rounded-full p-2 text-gray-500 hover:text-purple-500 hover:bg-purple-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Generate Quotation Number"
+                  >
+                    {isGeneratingQuotation ? (
+                      <div className="animate-spin">
+                        <FileBarChart className="h-5 w-5" />
+                      </div>
+                    ) : (
+                      <FileBarChart className="h-5 w-5" />
+                    )}
+                  </button>
+                )}
               {/* Update Status: Only visible when lead is approved */}
               {displayLead.approvalStatus === "approved" &&
-                displayLead.leadStage !== "Won" &&
-                displayLead.leadStage !== "Lost" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
+                displayLead.leadStage === "Quoted" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
                   <button
                     onClick={() => setShowWinLossModal(true)}
                     className="rounded-full p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition"
@@ -703,6 +767,16 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                       </div>
                     </div>
 
+                    <div className="flex items-center space-x-3">
+                      <FileBarChart className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Quotation Number</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {displayLead.temp_quotation_number || "-"}
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-500">Work Type</p>
@@ -747,7 +821,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                                 ? "40%"
                                 : displayLead.leadStage === "Meeting"
                                   ? "60%"
-                                  : displayLead.leadStage === "Quotation Stage"
+                                  : displayLead.leadStage === "Quoted"
                                     ? "80%"
                                     : displayLead.leadStage === "Won"
                                       ? "100%"
@@ -1224,6 +1298,76 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           }}
           initialData={displayLead}
         />
+      )}
+
+      {/* Generate Quotation Number Confirmation Modal */}
+      {showGenerateQuotationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Generate Quotation Number
+              </h3>
+              <button
+                onClick={() => setShowGenerateQuotationModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex-shrink-0">
+                  <FileBarChart className="h-8 w-8 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-gray-900 font-medium">
+                    Are you sure you want to generate a quotation number?
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    This will create a unique quotation number and update the lead stage to "Quoted".
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold">Quotation Number Format:</span>
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  QUOT-{displayLead.id.substring(0, 8)}-{displayLead.leadNumber.split("-")[1]}-{new Date().getTime()}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowGenerateQuotationModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateQuotationNumber}
+                disabled={isGeneratingQuotation}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {isGeneratingQuotation ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileBarChart className="h-4 w-4 mr-2" />
+                    Generate
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

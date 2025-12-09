@@ -2157,7 +2157,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       }, {});
 
       console.log("Initial data:", initialData);
-      if (initialData?.status === "approved" || initialData?.approvalStatus === "approved") {
+      if (initialData?.status === "APPROVED" || initialData?.approvalStatus === "approved") {
         backendPayload.approval_status = "REVISIT";
       }
 
