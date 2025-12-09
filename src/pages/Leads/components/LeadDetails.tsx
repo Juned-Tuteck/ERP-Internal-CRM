@@ -66,6 +66,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [followUpComments, setFollowUpComments] = useState<any[]>([]);
   const [isAddingComment, setIsAddingComment] = useState(false);
 
+  // Design Help state
+  const [showDesignHelpModal, setShowDesignHelpModal] = useState(false);
+  const [designEngineers, setDesignEngineers] = useState<any[]>([]);
+  const [selectedDesignEngineerId, setSelectedDesignEngineerId] = useState('');
+  const [isLoadingEngineers, setIsLoadingEngineers] = useState(false);
+  const [isSendingHelp, setIsSendingHelp] = useState(false);
+
   // Fetch detailed lead information when lead is selected
 
   useEffect(() => {
@@ -192,6 +199,68 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       alert('Failed to add comment. Please try again.');
     } finally {
       setIsAddingComment(false);
+    }
+  };
+
+  // Fetch design engineers
+  const fetchDesignEngineers = async () => {
+    setIsLoadingEngineers(true);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users`
+      );
+
+      if (response.data.success && response.data.data) {
+        const filtered = response.data.data.filter((user: any) => {
+          return user.role === 'design engineer' ||
+                 (user.roles && user.roles.includes('design engineer'));
+        });
+        setDesignEngineers(filtered);
+      }
+    } catch (error) {
+      console.error('Error fetching design engineers:', error);
+      alert('Failed to load design engineers. Please try again.');
+    } finally {
+      setIsLoadingEngineers(false);
+    }
+  };
+
+  // Handle design help modal open
+  const handleDesignHelpModalOpen = () => {
+    setShowDesignHelpModal(true);
+    setSelectedDesignEngineerId('');
+    fetchDesignEngineers();
+  };
+
+  // Send design help request
+  const handleSendDesignHelp = async () => {
+    if (!selectedDesignEngineerId || !displayLead?.id || !userData?.id) {
+      alert('Please select a design engineer.');
+      return;
+    }
+
+    setIsSendingHelp(true);
+    try {
+      const payload = {
+        lead_id: displayLead.id,
+        user_id: selectedDesignEngineerId,
+        role: 'design engineer',
+        created_by: userData.id
+      };
+
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/design-help`,
+        payload
+      );
+
+      alert('Design help request sent successfully!');
+      setShowDesignHelpModal(false);
+      setSelectedDesignEngineerId('');
+    } catch (error) {
+      console.error('Error sending design help request:', error);
+      alert('Failed to send design help request. Please try again.');
+    } finally {
+      setIsSendingHelp(false);
     }
   };
 
@@ -861,7 +930,16 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
               {/* Uploaded Files */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Supporting Documents</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Supporting Documents</h3>
+                  <button
+                    onClick={handleDesignHelpModalOpen}
+                    className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 transition"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Send for Design Help
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {(displayLead?.uploadedFiles ?? []).map((file) => {
@@ -1362,6 +1440,84 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <>
                     <FileBarChart className="h-4 w-4 mr-2" />
                     Generate
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Design Help Modal */}
+      {showDesignHelpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Send for Design Help
+              </h3>
+              <button
+                onClick={() => setShowDesignHelpModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Design Engineer
+                  </label>
+                  {isLoadingEngineers ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-sm text-gray-600">Loading engineers...</span>
+                    </div>
+                  ) : designEngineers.length > 0 ? (
+                    <select
+                      value={selectedDesignEngineerId}
+                      onChange={(e) => setSelectedDesignEngineerId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">-- Select Design Engineer --</option>
+                      {designEngineers.map((engineer) => (
+                        <option key={engineer.id} value={engineer.id}>
+                          {engineer.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-sm text-gray-500 py-4 text-center">
+                      No design engineers available
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowDesignHelpModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendDesignHelp}
+                disabled={!selectedDesignEngineerId || isSendingHelp}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {isSendingHelp ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4 mr-2" />
+                    Send
                   </>
                 )}
               </button>
