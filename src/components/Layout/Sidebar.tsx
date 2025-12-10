@@ -72,6 +72,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       href: '/audit',
       icon: FileClock ,
       accessKey: 'Audit Logs'
+    },
+    {
+      name: "Temp Lead",
+      href: "/temp-lead",
+      icon: UserPlus,
+      accessKey: "Temp Lead",
     }
     // { name: 'Settings', href: '/settings', icon: Settings, accessKey: 'Settings' },
   ];
