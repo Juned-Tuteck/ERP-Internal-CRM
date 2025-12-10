@@ -4,6 +4,7 @@ import Sidebar from "./components/Layout/Sidebar";
 import Header from "./components/Layout/Header";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Leads from "./pages/Leads/Leads";
+import TempLeads from "./pages/TempLead/Leads";
 import Customers from "./pages/Customers/Customers";
 import Vendors from "./pages/Vendors/Vendors";
 import Associates from "./pages/Associates/Associates";
@@ -133,6 +134,7 @@ const AppContent: React.FC = () => {
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/audit" element={<Audit />} />
+              <Route path="/temp-lead" element={<TempLeads />} />
             </Routes>
           </main>
         </div>
