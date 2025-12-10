@@ -153,7 +153,10 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
         const approved = actionType === "approved" ? "approved" : "rejected";
         const response = await axios.patch(
           `${import.meta.env.VITE_API_BASE_URL}/lead/decision/${selectedLead.id
-          }?status=${approved}`
+          }?status=${approved}`,
+          {'approved_by':userData?.id,
+            'reason':reason
+          }
         );
 
         console.log("Lead decision updated successfully:", response.data);
