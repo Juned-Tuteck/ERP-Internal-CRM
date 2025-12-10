@@ -66,6 +66,7 @@ interface Branch {
 // Unified State Structure
 interface VendorRegistrationState {
   vendor: {
+    id : string;
     vendorCategory: string;
     vendorType: string;
     businessName: string;
@@ -108,6 +109,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   // Unified State Structure
   const [registrationData, setRegistrationData] = useState<VendorRegistrationState>({
     vendor: {
+      id : "",
       vendorCategory: "",
       vendorType: "",
       businessName: "",
@@ -174,6 +176,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     "Furniture",
     "IT Services",
     "Office Supplies",
+    "Manufacturer"
   ];
   const vendorTypes = [
     "Manufacturer",
@@ -210,62 +213,131 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   };
 
   // Initialize form data from initialData (Edit Mode)
+  // useEffect(() => {
+  //   console.log("Initial Data:", typeof initialData);
+  //   if (initialData) {
+  //     setRegistrationData({
+  //       vendor: {
+  //         vendorCategory: initialData.category || "",
+  //         vendorType: initialData.type || "",
+  //         businessName: initialData.name || "",
+  //         contactNo: initialData.phone || "",
+  //         email: initialData.email || "",
+  //         country: initialData.country || "India",
+  //         currency: Array.isArray(initialData.currency) ? initialData.currency : [],
+  //         state: initialData.state || "",
+  //         district: initialData.district || "",
+  //         city: initialData.city || "",
+  //         pincode: initialData.pincode || "",
+  //         is_active: initialData.is_active !== false,
+  //         panNumber: initialData.panNumber || "",
+  //         tanNumber: initialData.tanNumber || "",
+  //         gstNumber: initialData.gstNumber || "",
+  //         bankName: initialData.bankName || "",
+  //         bankAccountNumber: initialData.bankAccountNumber || "",
+  //         branchName: initialData.branchName || "",
+  //         ifscCode: initialData.ifscCode || "",
+  //         contactPersons: Array.isArray(initialData.contactPersons)
+  //           ? initialData.contactPersons
+  //           : [],
+  //       },
+  //       branches: Array.isArray(initialData.branches)
+  //         ? initialData.branches.map((b: any) => ({
+  //             id: b.id || b.branch_id || Date.now().toString(),
+  //             branchName: b.branch_name || b.branchName || "",
+  //             contactNumber: b.contact_number || b.contactNumber || "",
+  //             email: b.email_id || b.email || "",
+  //             country: b.country || "India",
+  //             currency: b.currency || "",
+  //             state: b.state || "",
+  //             district: b.district || "",
+  //             city: b.city || "",
+  //             pincode: b.pincode || "",
+  //             contactPersons: Array.isArray(b.contacts)
+  //               ? b.contacts.map((c: any) => ({
+  //                   id: c.id || c.contact_id || Date.now().toString(),
+  //                   name: c.name || "",
+  //                   phone: c.phone || "",
+  //                   email: c.email || "",
+  //                   designation: c.designation || "",
+  //                   photo: c.photo || "",
+  //                 }))
+  //               : [],
+  //           }))
+  //         : [],
+  //       documents: [],
+  //     });
+  //     setInitialFiles(initialData.uploadedFiles || []);
+  //   }
+  // }, [initialData]);
+
   useEffect(() => {
-    if (initialData) {
-      setRegistrationData({
-        vendor: {
-          vendorCategory: initialData.category || "",
-          vendorType: initialData.type || "",
-          businessName: initialData.name || "",
-          contactNo: initialData.phone || "",
-          email: initialData.email || "",
-          country: initialData.country || "India",
-          currency: Array.isArray(initialData.currency) ? initialData.currency : [],
-          state: initialData.state || "",
-          district: initialData.district || "",
-          city: initialData.city || "",
-          pincode: initialData.pincode || "",
-          is_active: initialData.is_active !== false,
-          panNumber: initialData.panNumber || "",
-          tanNumber: initialData.tanNumber || "",
-          gstNumber: initialData.gstNumber || "",
-          bankName: initialData.bankName || "",
-          bankAccountNumber: initialData.bankAccountNumber || "",
-          branchName: initialData.branchName || "",
-          ifscCode: initialData.ifscCode || "",
-          contactPersons: Array.isArray(initialData.contactPersons)
-            ? initialData.contactPersons
+  if (!initialData) return;
+
+  console.log("Initial Data function received:", initialData);
+
+  const data = typeof initialData === "function" ? initialData() : initialData;
+
+  console.log("Resolved Initial Data:", data);
+
+  if (!data) return;
+
+  setRegistrationData({
+    vendor: {
+      id : data.id,
+      vendorCategory: data.vendorCategory || "",
+      vendorType: data.vendorType || "",
+      businessName: data.businessName || "",
+      contactNo: data.contactNo || "",
+      email: data.email || "",
+      country: data.country || "India",
+      currency: Array.isArray(data.currency) ? data.currency : [],
+      state: data.state || "",
+      district: data.district || "",
+      city: data.city || "",
+      pincode: data.pincode || "",
+      is_active: data.is_active !== false,
+      panNumber: data.panNumber || "",
+      tanNumber: data.tanNumber || "",
+      gstNumber: data.gstNumber || "",
+      bankName: data.bankName || "",
+      bankAccountNumber: data.bankAccountNumber || "",
+      branchName: data.branchName || "",
+      ifscCode: data.ifscCode || "",
+      contactPersons: Array.isArray(data.contactPersons)
+        ? data.contactPersons
+        : [],
+    },
+    branches: Array.isArray(data.branches)
+      ? data.branches.map((b: any) => ({
+          id: b.id || b.branch_id || Date.now().toString(),
+          branchName: b.branch_name || b.branchName || "",
+          contactNumber: b.contact_number || b.contactNumber || "",
+          email: b.email_id || b.email || "",
+          country: b.country || "India",
+          currency: b.currency || "",
+          state: b.state || "",
+          district: b.district || "",
+          city: b.city || "",
+          pincode: b.pincode || "",
+          contactPersons: Array.isArray(b.contacts)
+            ? b.contacts.map((c: any) => ({
+                id: c.id || c.contact_id || Date.now().toString(),
+                name: c.name || "",
+                phone: c.phone || "",
+                email: c.email || "",
+                designation: c.designation || "",
+                photo: c.photo || "",
+              }))
             : [],
-        },
-        branches: Array.isArray(initialData.branches)
-          ? initialData.branches.map((b: any) => ({
-              id: b.id || b.branch_id || Date.now().toString(),
-              branchName: b.branch_name || b.branchName || "",
-              contactNumber: b.contact_number || b.contactNumber || "",
-              email: b.email_id || b.email || "",
-              country: b.country || "India",
-              currency: b.currency || "",
-              state: b.state || "",
-              district: b.district || "",
-              city: b.city || "",
-              pincode: b.pincode || "",
-              contactPersons: Array.isArray(b.contacts)
-                ? b.contacts.map((c: any) => ({
-                    id: c.id || c.contact_id || Date.now().toString(),
-                    name: c.name || "",
-                    phone: c.phone || "",
-                    email: c.email || "",
-                    designation: c.designation || "",
-                    photo: c.photo || "",
-                  }))
-                : [],
-            }))
-          : [],
-        documents: [],
-      });
-      setInitialFiles(initialData.uploadedFiles || []);
-    }
-  }, [initialData]);
+        }))
+      : [],
+    documents: [],
+  });
+
+  setInitialFiles(data.uploadedFiles || []);
+}, [initialData]);
+
 
   const isEditMode = Boolean(initialData);
 
@@ -273,6 +345,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
   const clearModalState = () => {
     setRegistrationData({
       vendor: {
+        id:"",
         vendorCategory: "",
         vendorType: "",
         businessName: "",
@@ -960,12 +1033,13 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
   // EDIT MODE: Update vendor details
   const handleUpdateVendor = async () => {
-    if (!initialData?.id) return;
+    if (!registrationData.vendor.id) return;
 
     setIsLoading(true);
     try {
-      const vendorPayload = toSnakeCase(registrationData.vendor);
-      await updateVendor(initialData.id, vendorPayload);
+      const { id,vendorCategory,contactPersons,  ...vendorWithoutId } = registrationData.vendor;
+      const vendorPayload = toSnakeCase(vendorWithoutId);
+      await updateVendor(registrationData.vendor.id, vendorPayload);
 
       // Update branches if needed
       for (const branch of registrationData.branches) {
@@ -999,7 +1073,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
 
       // Upload new documents if any
       if (registrationData.documents.length > 0) {
-        await uploadFilesForVendor(initialData.id, registrationData.documents);
+        await uploadFilesForVendor(registrationData.vendor.id, registrationData.documents);
       }
 
       if (typeof onRefresh === "function") await onRefresh();
