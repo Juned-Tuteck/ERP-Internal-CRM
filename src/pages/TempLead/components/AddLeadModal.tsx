@@ -49,13 +49,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       contactNo: "",
       leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
       referencedBy: "",
+      allocateTo: "",
       projectName: "",
       projectValue: "",
       leadType: "",
       workType: "",
       leadCriticality: "",
       leadSource: "",
-      leadStage: "Information Stage",
+      leadStage: "InProgress",
       leadStagnation: "",
       approximateResponseTime: "",
       eta: "",
@@ -128,9 +129,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
   >([]);
+  const [vendors, setVendors] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [referencedByOptions, setReferencedByOptions] = useState<
+    Array<{ name: string; type: string }>
+  >([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
+  const [allocatedToId, setAllocatedToId] = useState("");
   const [showCustomLeadSource, setShowCustomLeadSource] = useState(false);
   const [customLeadSource, setCustomLeadSource] = useState("");
 
@@ -150,11 +158,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Others"
   ];
   const leadStages = [
-    "Information Stage",
-    "Enquiry",
-    "Quoted",
-    "Won",
-    "Lost",
+    "InProgress",
+    "Confirmed",
   ];
 
   const associateDesignations = [
@@ -417,6 +422,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           return "Must not exceed 100 characters";
         return "";
 
+      case "allocateTo":
+        const selectedUser = users.find(u => u.name === value);
+        if (selectedUser) {
+          setAllocatedToId(selectedUser.id);
+        }
+        return "";
+
       case "leadDetails":
         if (value && !validateStringLength(value.trim(), 0, 1000))
           return "Must not exceed 1000 characters";
@@ -668,6 +680,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       } else if (isOpen) {
         fetchCustomers();
         fetchUsers();
+        fetchVendors();
       }
     };
     fetchAllForEdit();
@@ -760,10 +773,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
-  // Fetch users for Referenced By dropdown
+  // Fetch users for Allocate To and Referenced By dropdowns
   const fetchUsers = async () => {
     try {
-      // TODO: Replace with actual API endpoint when provided
       const response = await axios.get(
         `${import.meta.env.VITE_AUTH_BASE_URL}/users/basic`,
         {
@@ -773,7 +785,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       );
       const userData = response.data.data;
-      
+
 
       setUsers(
         userData.map((user: any) => ({
@@ -786,6 +798,40 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setUsers([]);
     }
   };
+
+  // Fetch vendors for Referenced By dropdown
+  const fetchVendors = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/vendor`
+      );
+      const vendorData = response.data.data;
+
+      const approvedVendors = vendorData.filter(
+        (vendor: any) => vendor.approval_status === "APPROVED"
+      );
+
+      setVendors(
+        approvedVendors.map((vendor: any) => ({
+          id: vendor.vendor_id,
+          name: vendor.business_name,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+      setVendors([]);
+    }
+  };
+
+  // Merge users, vendors, and customers for Referenced By dropdown
+  useEffect(() => {
+    const merged = [
+      ...users.map(u => ({ name: u.name, type: 'user' })),
+      ...vendors.map(v => ({ name: v.name, type: 'vendor' })),
+      ...customers.map(c => ({ name: c.name, type: 'customer' }))
+    ];
+    setReferencedByOptions(merged);
+  }, [users, vendors, customers]);
 
   const fallbackCustomer = customers.find(c => c.id === selectedCustomerId);
 
@@ -1056,6 +1102,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       contact_no: formData.contactNo || "",
       lead_date_generated_on: formData.leadGeneratedDate || "",
       referenced_by: formData.referencedBy || null,
+      allocate_to: allocatedToId || null,
       project_name: formData.projectName || "",
       project_value: parseFloat(String(formData.projectValue || "0")) || 0,
       lead_type: formData.leadType || "",
@@ -1278,6 +1325,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             contact_no: formData.contactNo,
             lead_date_generated_on: formData.leadGeneratedDate,
             referenced_by: formData.referencedBy || null,
+            allocate_to: allocatedToId || null,
             project_name: formData.projectName,
             project_value: parseFloat(formData.projectValue) || 0,
             lead_type: formData.leadType,
@@ -1301,6 +1349,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           const leadId = leadData.lead_id;
 
           console.log(`Lead created for ${worktype}: ${leadId}`);
+
+          // Update lead to set is_temp_lead = true for temp leads
+          try {
+            await axios.put(
+              `${import.meta.env.VITE_API_BASE_URL}/lead/${leadId}`,
+              {
+                is_temp_lead: true,
+              }
+            );
+            console.log(`Lead ${leadId} marked as temp lead successfully`);
+          } catch (error) {
+            console.error(`Error marking lead ${leadId} as temp lead:`, error);
+          }
 
           // Store lead ID
           setMultiWorktypeState((prev) => ({
@@ -1449,6 +1510,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         contact_no: formData.contactNo,
         lead_date_generated_on: formData.leadGeneratedDate,
         referenced_by: formData.referencedBy || null,
+        allocate_to: allocatedToId || null,
         project_name: formData.projectName,
         project_value: parseFloat(formData.projectValue) || 0,
         lead_type: formData.leadType,
@@ -1472,6 +1534,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const leadId = leadData.lead_id;
 
       setCreatedLeadId(leadId);
+
+      // Update lead to set is_temp_lead = true for temp leads
+      try {
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/lead/${leadId}`,
+          {
+            is_temp_lead: true,
+          }
+        );
+        console.log("Lead marked as temp lead successfully");
+      } catch (error) {
+        console.error("Error marking lead as temp lead:", error);
+      }
 
       // If a customer was selected, mark is_lead_generated = true on the customer record
       if (selectedCustomerId) {
@@ -1947,6 +2022,29 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         : "border-gray-300"
                         }`}
                     >
+                      <option value="">Select Reference</option>
+                      {referencedByOptions.map((option, index) => (
+                        <option key={`${option.type}-${index}`} value={option.name}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ValidationError fieldName="referencedBy" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Allocate To
+                    </label>
+                    <select
+                      name="allocateTo"
+                      value={formData.allocateTo}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.allocateTo
+                        ? "border-red-500"
+                        : "border-gray-300"
+                        }`}
+                    >
                       <option value="">Select User</option>
                       {users.map((user) => (
                         <option key={user.id} value={user.name}>
@@ -1954,7 +2052,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </option>
                       ))}
                     </select>
-                    <ValidationError fieldName="referencedBy" />
+                    <ValidationError fieldName="allocateTo" />
                   </div>
 
                   <div>
@@ -2211,16 +2309,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lead Stage * (Auto-updated)
+                      Lead Stage *
                     </label>
                     <select
                       name="leadStage"
                       value={formData.leadStage}
                       onChange={handleInputChange}
                       required
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
-                      title="Lead stage is automatically updated based on file uploads and quotations"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       {leadStages.map((stage) => (
                         <option key={stage} value={stage}>
