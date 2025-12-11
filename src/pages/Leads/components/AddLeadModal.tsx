@@ -579,6 +579,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               id: customer.customer_id,
               name: customer.business_name,
               approval_status: customer.approval_status,
+              currency: convertCurrencyString(customer.currency),
               contacts: customer.contacts || [],
             }));
             
@@ -1775,7 +1776,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   if (!isOpen) return null;
 
   if (isLoading) {
-    return <CustomLoader message="Creating Lead..."/>
+    return <CustomLoader message={isEditMode?"Updating Lead...":"Creating Lead..."}/>
   }
   
   return (
