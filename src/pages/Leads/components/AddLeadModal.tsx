@@ -137,6 +137,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [usersWithLeadAccess, setUsersWithLeadAccess] = useState<
     Array<{ id: string; name: string }>
   >([]);
+
+  const { hasMenuAccess } = useCRM();
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
@@ -802,7 +804,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       );
       const userData = response.data.data;
 
-
       setUsers(
         userData.map((user: any) => ({
           id: user.id || user.user_id,
@@ -819,28 +820,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const fetchUsersWithLeadAccess = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_AUTH_BASE_URL}/users/access-details`,
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/by-access-path?module=CRM&menu=Lead`,
         {
           headers: {
             Authorization: `Bearer ${token}`
           }
         }
       );
-      const usersData = response.data.data;
-
-      // Filter users who have hasMenuAccess for "Lead"
-      const usersWithLeadMenu = usersData.filter((user: any) => {
-        if (!user.accesses || !Array.isArray(user.accesses)) {
-          return false;
-        }
-        // Check if user has MENU level access to "Lead" within CRM module
-        return user.accesses.some((access: any) =>
-          access.level_type === "MENU" &&
-          access.name.toLowerCase().includes("lead") &&
-          access.access_type === "READ" &&
-          (access.parent_name === "CRM" || access.grandparent_name === "CRM")
-        );
-      });
+      const usersWithLeadMenu = response.data.data;
 
       setUsersWithLeadAccess(
         usersWithLeadMenu.map((user: any) => ({
@@ -1363,8 +1350,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             lead_details: formData.leadDetails || null,
             currency: formData.currency || null,
             created_by: userData?.id || null,
-            assigned_to: multiWorktypeState.step3.assignedTo[worktype] || null,
-            next_follow_up_date: multiWorktypeState.step3.nextFollowUpDate[worktype] || null,
+            assigned_user_id: multiWorktypeState.step3.assignedTo[worktype] || null,
+            next_followup_date: multiWorktypeState.step3.nextFollowUpDate[worktype] || null,
           };
 
           // POST: Create lead
