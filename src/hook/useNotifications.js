@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useCRM } from '../context/CRMContext';
 
 // Use HTTP for regular API calls
 const API_BASE = import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:7326';
@@ -36,6 +37,8 @@ export default function useNotifications(userId, token) {
   const connectedRef = useRef(false);
   const dedupeRef = useRef(new Set()); // store notification ids to avoid duplicates
   const bcRef = useRef(null); // BroadcastChannel for multi-tab sync
+  const { userData } = useCRM();
+  const userIdFromContext = userData?.id;
 
   const [notifications, setNotifications] = useState([]); // newest at front
   const [unreadCount, setUnreadCount] = useState(0);
@@ -47,7 +50,7 @@ export default function useNotifications(userId, token) {
     if (!userId) return;
     try {
       const roleId = userId;
-      const response = await apiFetch(`/notifications/${encodeURIComponent(roleId)}`, token);
+      const response = await apiFetch(`/notifications/${encodeURIComponent(roleId)}?receiverUserId=${encodeURIComponent(userIdFromContext)}`, token);
       // Extract notifications from the nested response structure
       const rows = response?.data?.notifications || [];
       

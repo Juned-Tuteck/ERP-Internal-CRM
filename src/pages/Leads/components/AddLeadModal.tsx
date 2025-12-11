@@ -65,6 +65,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       uploadedFiles: [],
       // Step 3: Follow-up
       followUpComments: [],
+      assignedTo: "",
+      nextFollowUpDate: "",
     }
   );
 
@@ -89,7 +91,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [multiWorktypeState, setMultiWorktypeState] = useState<{
     step1: any;
     step2: { documents: { [worktype: string]: File[] } };
-    step3: { comments: { [worktype: string]: string } };
+    step3: {
+      comments: { [worktype: string]: string };
+      assignedTo: { [worktype: string]: string };
+      nextFollowUpDate: { [worktype: string]: string };
+    };
     leads: {
       [worktype: string]: {
         leadId: string | null;
@@ -100,7 +106,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   }>({
     step1: null,
     step2: { documents: {} },
-    step3: { comments: {} },
+    step3: { comments: {}, assignedTo: {}, nextFollowUpDate: {} },
     leads: {},
   });
 
@@ -128,6 +134,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
   >([]);
+  const [usersWithLeadAccess, setUsersWithLeadAccess] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+
+  const { hasMenuAccess } = useCRM();
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState("");
@@ -453,6 +464,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     involvedAssociates: [],
     uploadedFiles: [],
     followUpComments: [],
+    assignedTo: "",
+    nextFollowUpDate: "",
   };
 
   useEffect(() => {
@@ -485,6 +498,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           normalizedEta = "";
         }
 
+        // Normalize next_follow_up_date
+        let normalizedNextFollowUpDate = "";
+        if (initialData.next_follow_up_date || initialData.nextFollowUpDate) {
+          const nextFollowUpDateObj = new Date(initialData.next_follow_up_date || initialData.nextFollowUpDate);
+          if (!isNaN(nextFollowUpDateObj.getTime())) {
+            normalizedNextFollowUpDate = nextFollowUpDateObj.toISOString().split("T")[0];
+          } else {
+            normalizedNextFollowUpDate = "";
+          }
+        } else {
+          normalizedNextFollowUpDate = "";
+        }
+
         // Create a normalized form object (snapshot) to compare later
         const normalizedFormSnapshot = {
           businessName: initialData.businessName || initialData.business_name || "",
@@ -512,6 +538,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           involvedAssociates: initialData.involvedAssociates || initialData.lead_associates || [],
           uploadedFiles: initialData.uploadedFiles || [],
           followUpComments: initialData.followUpComments || [],
+          assignedTo: initialData.assignedTo || initialData.assigned_to || "",
+          nextFollowUpDate: normalizedNextFollowUpDate,
           // also snapshot backend ids if present
           customer_id: initialData.customer_id || initialData.customerId || null,
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
@@ -537,10 +565,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
         if (initialData.businessName && isOpen) {
           // Fetch customers and use the response directly
-          
+
           try {
             // Fetch users for Referenced By dropdown
             fetchUsers();
+            fetchUsersWithLeadAccess();
 
             const response = await axios.get(
               `${import.meta.env.VITE_API_BASE_URL}/customer`
@@ -668,6 +697,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       } else if (isOpen) {
         fetchCustomers();
         fetchUsers();
+        fetchUsersWithLeadAccess();
       }
     };
     fetchAllForEdit();
@@ -773,7 +803,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       );
       const userData = response.data.data;
-      
 
       setUsers(
         userData.map((user: any) => ({
@@ -784,6 +813,31 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     } catch (error) {
       console.error("Error fetching users:", error);
       setUsers([]);
+    }
+  };
+
+  // Fetch users with Lead menu access for Assign to dropdown
+  const fetchUsersWithLeadAccess = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/by-access-path?module=CRM&menu=Lead`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      const usersWithLeadMenu = response.data.data;
+
+      setUsersWithLeadAccess(
+        usersWithLeadMenu.map((user: any) => ({
+          id: user.id || user.user_id,
+          name: user.name || user.full_name || user.username,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching users with lead access:", error);
+      setUsersWithLeadAccess([]);
     }
   };
 
@@ -1067,6 +1121,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         parseInt(String(formData.approximateResponseTime || "0")) || 0,
       eta: formData.eta || null,
       lead_details: formData.leadDetails || null,
+      assigned_to: formData.assignedTo || null,
+      next_follow_up_date: formData.nextFollowUpDate || null,
     };
   };
 
@@ -1104,6 +1160,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
           eta: initialFormRef.current.eta || null,
           lead_details: initialFormRef.current.leadDetails || null,
+          assigned_to: initialFormRef.current.assignedTo || null,
+          next_follow_up_date: initialFormRef.current.nextFollowUpDate || null,
         }
         : {
           // best-effort fallback from initialData prop
@@ -1125,6 +1183,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             parseInt(String(initialData.approximate_response_time_day || initialData.approximateResponseTime || 0)) || 0,
           eta: initialData.eta || initialData.eta || null,
           lead_details: initialData.lead_details || initialData.leadDetails || null,
+          assigned_to: initialData.assigned_to || initialData.assignedTo || null,
+          next_follow_up_date: initialData.next_follow_up_date || initialData.nextFollowUpDate || null,
         };
 
       // Build diff: include only keys that changed (strict comparison)
@@ -1290,6 +1350,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             lead_details: formData.leadDetails || null,
             currency: formData.currency || null,
             created_by: userData?.id || null,
+            assigned_user_id: multiWorktypeState.step3.assignedTo[worktype] || null,
+            next_followup_date: multiWorktypeState.step3.nextFollowUpDate[worktype] || null,
           };
 
           // POST: Create lead
@@ -1644,6 +1706,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       involvedAssociates: [],
       uploadedFiles: [],
       followUpComments: [],
+      assignedTo: "",
+      nextFollowUpDate: "",
     });
     setUploadedFiles([]);
     setNewComment("");
@@ -2569,39 +2633,145 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             {currentStep === 3 && (
               <div className="space-y-6">
                 {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
-                  // Multi-worktype mode: show comment per worktype
+                  // Multi-worktype mode: show fields per worktype
                   formData.workType.map((worktype: string) => (
-                    <div key={worktype} className="border border-gray-200 rounded-lg p-4">
+                    <div key={worktype} className="border border-gray-200 rounded-lg p-4 space-y-4">
                       <h4 className="text-sm font-semibold text-gray-900 mb-3">
                         Follow-up for: {worktype}
                       </h4>
-                      <textarea
-                        value={multiWorktypeState.step3.comments[worktype] || ""}
-                        onChange={(e) => {
-                          setMultiWorktypeState((prev) => ({
-                            ...prev,
-                            step3: {
-                              comments: {
-                                ...prev.step3.comments,
-                                [worktype]: e.target.value,
+
+                      {/* Assign to Dropdown */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Assign to
+                        </label>
+                        <select
+                          value={multiWorktypeState.step3.assignedTo[worktype] || ""}
+                          onChange={(e) => {
+                            setMultiWorktypeState((prev) => ({
+                              ...prev,
+                              step3: {
+                                ...prev.step3,
+                                assignedTo: {
+                                  ...prev.step3.assignedTo,
+                                  [worktype]: e.target.value,
+                                },
                               },
-                            },
-                          }));
-                        }}
-                        rows={2}
-                        placeholder={`Enter follow-up notes for ${worktype}...`}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      />
-                      {multiWorktypeState.step3.comments[worktype] && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {multiWorktypeState.step3.comments[worktype].length}/500 characters
-                        </p>
-                      )}
+                            }));
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        >
+                          <option value="">Select User</option>
+                          {usersWithLeadAccess.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Next Follow Up Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Next Follow Up Date
+                        </label>
+                        <input
+                          type="date"
+                          value={multiWorktypeState.step3.nextFollowUpDate[worktype] || ""}
+                          onChange={(e) => {
+                            setMultiWorktypeState((prev) => ({
+                              ...prev,
+                              step3: {
+                                ...prev.step3,
+                                nextFollowUpDate: {
+                                  ...prev.step3.nextFollowUpDate,
+                                  [worktype]: e.target.value,
+                                },
+                              },
+                            }));
+                          }}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
+                      </div>
+
+                      {/* Follow-up Comments */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Follow-up Notes
+                        </label>
+                        <textarea
+                          value={multiWorktypeState.step3.comments[worktype] || ""}
+                          onChange={(e) => {
+                            setMultiWorktypeState((prev) => ({
+                              ...prev,
+                              step3: {
+                                ...prev.step3,
+                                comments: {
+                                  ...prev.step3.comments,
+                                  [worktype]: e.target.value,
+                                },
+                              },
+                            }));
+                          }}
+                          rows={2}
+                          placeholder={`Enter follow-up notes for ${worktype}...`}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
+                        {multiWorktypeState.step3.comments[worktype] && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {multiWorktypeState.step3.comments[worktype].length}/500 characters
+                          </p>
+                        )}
+                      </div>
                     </div>
                   ))
                 ) : (
                   // Edit mode or single worktype: original layout
-                  <div>
+                  <div className="space-y-4">
+                    {/* Assign to Dropdown */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Assign to
+                      </label>
+                      <select
+                        value={formData.assignedTo || ""}
+                        onChange={(e) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            assignedTo: e.target.value,
+                          }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select User</option>
+                        {usersWithLeadAccess.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Next Follow Up Date */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Next Follow Up Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.nextFollowUpDate || ""}
+                        onChange={(e) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            nextFollowUpDate: e.target.value,
+                          }));
+                        }}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Add Follow-up Comment
