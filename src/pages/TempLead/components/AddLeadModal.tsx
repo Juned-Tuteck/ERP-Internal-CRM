@@ -1117,7 +1117,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       contact_no: formData.contactNo || "",
       lead_date_generated_on: formData.leadGeneratedDate || "",
       referenced_by: formData.referencedBy || null,
-      allocate_to: allocatedToId || null,
       project_name: formData.projectName || "",
       project_value: parseFloat(String(formData.projectValue || "0")) || 0,
       lead_type: formData.leadType || "",
@@ -1340,7 +1339,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             contact_no: formData.contactNo,
             lead_date_generated_on: formData.leadGeneratedDate,
             referenced_by: formData.referencedBy || null,
-            allocate_to: allocatedToId || null,
             project_name: formData.projectName,
             project_value: parseFloat(formData.projectValue) || 0,
             lead_type: formData.leadType,
@@ -2047,7 +2045,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <ValidationError fieldName="referencedBy" />
                     </div>
 
-                  <div>
+                  {/* <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Allocate To
                     </label>
@@ -2068,7 +2066,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       ))}
                     </select>
                     <ValidationError fieldName="allocateTo" />
-                  </div>
+                  </div> */}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -21,6 +21,7 @@ interface Lead {
   branchNumber: string;
   branchName: string;
   currency: string;
+  is_temp_lead?: boolean;
   contactPerson: string;
   contactPersonName: string;
   contactNo: string;
@@ -74,7 +75,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     (userData?.roles && userData.roles.includes('design engineer'));
 
   // Filter leads based on role and search term
-  const filteredLeads = leads.filter((lead) => {
+  const filteredLeads = leads.filter((lead) => lead.is_temp_lead !== true).filter((lead) => {
     // Role-based filtering for design engineers
     if (isDesignEngineer) {
       if (!assignedLeadIds.includes(lead.id)) {
@@ -174,6 +175,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
           approximateResponseTime:
             apiLead.approximate_response_time_day?.toString() || "0",
           eta: apiLead.eta || "",
+          is_temp_lead: apiLead.is_temp_lead || false,
           leadDetails: apiLead.lead_details || "",
           involvedAssociates: [], // Will be populated when lead details are fetched
           uploadedFiles: [],
