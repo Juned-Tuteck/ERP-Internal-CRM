@@ -10,7 +10,7 @@ import {
   Currency,
   UserCheck
 } from "lucide-react";
-import axios from "axios";
+import axios, { all } from "axios";
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
@@ -158,7 +158,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Others"
   ];
   const leadStages = [
-    "InProgress",
+    "In Progress",
     "Confirmed",
   ];
 
@@ -524,12 +524,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           involvedAssociates: initialData.involvedAssociates || initialData.lead_associates || [],
           uploadedFiles: initialData.uploadedFiles || [],
           followUpComments: initialData.followUpComments || [],
-          // also snapshot backend ids if present
+          // snapshot backend ids if present
           customer_id: initialData.customer_id || initialData.customerId || null,
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
           contact_person_id: initialData.contact_person || initialData.contact_person_id || null,
+          allocate_to: users.find(u => u.id == (initialData.allocateTo || initialData.allocate_to))?.name || null,
         };
         console.log("Normalized Form Snapshot for Edit:", normalizedFormSnapshot);
+        console.log("formData before setting:", formData);
 
         // Set form data for editing
         setFormData({
@@ -890,6 +892,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       return;
     }
 
+    if (name === "allocateTo") {
+      const selectedUser = users.find(
+        (user) => user.id === value
+      );
+      console.log("Selected Allocate To User:", selectedUser,value);
+      if (selectedUser) {
+        setFormData((prev: any) => ({
+          ...prev,
+          allocateTo: value,
+        }));
+        setAllocatedToId(selectedUser.id);
+      }
+    }
     // Handle branch selection
     if (name === "customerBranch") {
       if (value) {
@@ -2009,7 +2024,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <ValidationError fieldName="leadGeneratedDate" />
                   </div>
 
-                  <div>
+                    <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Referenced By
                     </label>
@@ -2018,19 +2033,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       value={formData.referencedBy}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.referencedBy
-                        ? "border-red-500"
-                        : "border-gray-300"
-                        }`}
+                      ? "border-red-500"
+                      : "border-gray-300"
+                      }`}
                     >
                       <option value="">Select Reference</option>
                       {referencedByOptions.map((option, index) => (
-                        <option key={`${option.type}-${index}`} value={option.name}>
-                          {option.name}
-                        </option>
+                      <option key={`${option.type}-${index}`} value={option.name}>
+                      {option.type}-  {option.name}
+                      </option>
                       ))}
                     </select>
                     <ValidationError fieldName="referencedBy" />
-                  </div>
+                    </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2047,7 +2062,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     >
                       <option value="">Select User</option>
                       {users.map((user) => (
-                        <option key={user.id} value={user.name}>
+                        <option key={user.id} value={user.id}>
                           {user.name}
                         </option>
                       ))}

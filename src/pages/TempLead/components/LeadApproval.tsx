@@ -73,7 +73,8 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
       const pendingLeads = apiLeads.filter(
         (apiLead: any) =>
           apiLead.approval_status !== "APPROVED" &&
-          apiLead.approval_status !== "REJECTED"
+          apiLead.approval_status !== "REJECTED" &&
+          apiLead.is_temp_lead === true
       );
       console.log("Pending leads for approval:", pendingLeads);
 

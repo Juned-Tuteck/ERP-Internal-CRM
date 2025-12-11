@@ -143,7 +143,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           customerNumber: apiLead.customer_number || lead.customerNumber,
           created_by_name: apiLead.created_by_name || null,
           temp_quotation_number: apiLead.temp_quotation_number || lead.temp_quotation_number || null,
+          allocate_to: apiLead.allocate_to || lead.allocate_to || null,
         };
+
+        console.log("Mapped lead details:", mappedLead);
 
         setLeadDetails(mappedLead);
 

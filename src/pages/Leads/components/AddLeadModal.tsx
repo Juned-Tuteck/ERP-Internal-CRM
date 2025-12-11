@@ -893,6 +893,20 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       return;
     }
 
+    if (name === "allocateTo") {
+      const selectedUser = users.find(
+        (user) => user.id === value
+      );
+      console.log("Selected Allocate To User:", selectedUser,value);
+      if (selectedUser) {
+        setFormData((prev: any) => ({
+          ...prev,
+          allocateTo: value,
+        }));
+        setAllocatedToId(selectedUser.id);
+      }
+    }
+
     // Handle branch selection
     if (name === "customerBranch") {
       if (value) {
@@ -2002,7 +2016,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       <option value="">Select Reference</option>
                       {referencedByOptions.map((option, index) => (
                         <option key={`${option.type}-${index}`} value={option.name}>
-                          {option.name}
+                          {option.type}-  {option.name}
                         </option>
                       ))}
                     </select>
@@ -2024,7 +2038,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     >
                       <option value="">Select User</option>
                       {users.map((user) => (
-                        <option key={user.id} value={user.name}>
+                        <option key={user.id} value={user.id}>
                           {user.name}
                         </option>
                       ))}
