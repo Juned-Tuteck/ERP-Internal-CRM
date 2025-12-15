@@ -57,7 +57,7 @@ const CustomerList: React.FC<CustomerListProps> = ({
       .split(" ")
       .map((word: string) => word[0])
       .join(""),
-    dealCount: customer.lead_count ,
+    dealCount: customer.lead_count,
   }));
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,7 +96,7 @@ const CustomerList: React.FC<CustomerListProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">All Customers</h3>
         <p className="text-sm text-gray-500">
@@ -110,16 +110,15 @@ const CustomerList: React.FC<CustomerListProps> = ({
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+      <div className="divide-y divide-gray-200 overflow-y-auto flex-1 min-h-0">
         {filteredCustomers.map((customer) => (
           <div
             key={customer.id}
             onClick={() => onSelectCustomer(customer)}
-            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${
-              selectedCustomer?.id === customer.id
-                ? "bg-blue-50 border-r-2 border-blue-600"
-                : ""
-            }`}
+            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${selectedCustomer?.id === customer.id
+              ? "bg-blue-50 border-r-2 border-blue-600"
+              : ""
+              }`}
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">

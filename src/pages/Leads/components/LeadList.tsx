@@ -343,7 +343,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">Active Leads</h3>
         <p className="text-sm text-gray-500">
@@ -376,7 +376,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
         </div>
       </div>
 
-      <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+      <div className="divide-y divide-gray-200 overflow-y-auto flex-1 min-h-0">
         {loading ? (
           <div className="p-4 text-center text-gray-500">Loading leads...</div>
         ) : filteredLeads.length === 0 ? (
@@ -391,8 +391,8 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
               key={lead.id}
               onClick={() => fetchLeadDetails(lead)}
               className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${selectedLead?.id === lead.id
-                  ? "bg-blue-50 border-r-2 border-blue-600"
-                  : ""
+                ? "bg-blue-50 border-r-2 border-blue-600"
+                : ""
                 }`}
             >
               <div className="flex items-center space-x-3">

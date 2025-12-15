@@ -78,7 +78,7 @@ const VendorList: React.FC<VendorListProps> = ({
   });
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">All Vendors</h3>
         <p className="text-sm text-gray-500">{vendors.length} total vendors</p>
@@ -92,19 +92,17 @@ const VendorList: React.FC<VendorListProps> = ({
       </div>
 
       <div
-        className="divide-y divide-gray-200 overflow-y-auto"
-        style={{ height: 330 }}
+        className="divide-y divide-gray-200 overflow-y-auto flex-1 min-h-0"
       >
         {Array.isArray(filteredVendors) && filteredVendors.length > 0 ? (
           filteredVendors.map((vendor) => (
             <div
               key={vendor.id}
               onClick={() => onSelectVendor(vendor)}
-              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${
-                selectedVendor?.id === vendor.id
-                  ? "bg-blue-50 border-r-2 border-blue-600"
-                  : ""
-              }`}
+              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${selectedVendor?.id === vendor.id
+                ? "bg-blue-50 border-r-2 border-blue-600"
+                : ""
+                }`}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">

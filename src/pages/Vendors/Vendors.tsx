@@ -189,8 +189,8 @@ const Vendors: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === "vendors" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+          <div className="lg:col-span-1 h-full overflow-hidden">
             {loading ? (
               <div className="p-4 text-gray-500">Loading vendors...</div>
             ) : error ? (
@@ -203,7 +203,7 @@ const Vendors: React.FC = () => {
               />
             )}
           </div>
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 h-full overflow-y-auto">
             <VendorDetails
               data={{
                 vendor: detailedVendor,
