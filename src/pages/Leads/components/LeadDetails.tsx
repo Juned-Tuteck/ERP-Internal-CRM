@@ -145,7 +145,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           created_by_name: apiLead.created_by_name || null,
           temp_quotation_number: apiLead.temp_quotation_number || lead.temp_quotation_number || null,
           assignedTo:apiLead.assigned_user_id || null,
-          nextFollowUpDate: apiLead.next_followup_date || null
+          nextFollowUpDate: apiLead.next_followup_date || null,
+          assigned_user_name: apiLead.assigned_user_name || null,
         };
 
         setLeadDetails(mappedLead);
@@ -871,9 +872,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                           </p>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center space-x-3">
+                       <div className="flex items-center space-x-3">
                       <FileBarChart className="h-5 w-5 text-gray-400" />
                       <div>
                         <p className="text-sm text-gray-500">Quotation Number</p>
@@ -881,6 +881,17 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                           {displayLead.temp_quotation_number || "-"}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <User className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Assigned To</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {displayLead.assigned_user_name || "-"}
+                        </p>
+                      </div>
+                    </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

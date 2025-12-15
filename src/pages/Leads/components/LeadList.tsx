@@ -12,6 +12,7 @@ import { useCRM } from "../../../context/CRMContext";
 
 interface Lead {
   id: string;
+  assignedTo?: string | null;
   leadNumber?: string;
   customerNumber?: string;
   businessName: string;
@@ -67,6 +68,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [assignedLeadIds, setAssignedLeadIds] = useState<string[]>([]);
+  const [assignedOnly, setAssignedOnly] = useState(false);
   const { userData } = useCRM();
 
   // Check if user is a design engineer
@@ -75,6 +77,12 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
 
   // Filter leads based on role and search term
   const filteredLeads = leads.filter((lead) => {
+    // If user toggled "Assigned to me", only show leads assigned to current user
+    if (assignedOnly) {
+      if (!userData?.id) return false;
+      if (!lead.assignedTo) return false;
+      if (lead.assignedTo.toString() !== userData.id.toString()) return false;
+    }
     // Role-based filtering for design engineers
     if (isDesignEngineer) {
       if (!assignedLeadIds.includes(lead.id)) {
@@ -148,6 +156,12 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
         // Map API response to UI Lead interface
         const mappedLeads: Lead[] = apiLeads.map((apiLead: any) => ({
           id: apiLead.lead_id?.toString() || "",
+          assignedTo:
+            apiLead.assigned_user_id?.toString() ||
+            apiLead.assigned_to?.toString() ||
+            apiLead.assigned_user?.toString() ||
+            apiLead.assigned?.toString() ||
+            null,
           leadNumber: apiLead.lead_number,
           customerNumber: apiLead.customer_number,
           businessName: apiLead.business_name || "",
@@ -348,6 +362,17 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+        <div className="mt-2 flex items-center justify-end">
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+              checked={assignedOnly}
+              onChange={(e) => setAssignedOnly(e.target.checked)}
+            />
+            <span className="ml-2 text-sm text-gray-700">Assigned to me</span>
+          </label>
         </div>
       </div>
 
