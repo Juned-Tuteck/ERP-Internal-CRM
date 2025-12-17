@@ -25,6 +25,11 @@ interface AddLeadModalProps {
   initialData?: any;
 }
 
+interface FileWithNote {
+  file: File;
+  note: string;
+}
+
 const AddLeadModal: React.FC<AddLeadModalProps> = ({
   isOpen,
   onClose,
@@ -57,7 +62,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       leadSource: "",
       leadStage: "Information Stage",
       leadStagnation: "",
-      approximateResponseTime: "",
       eta: "",
       leadDetails: "",
       involvedAssociates: [],
@@ -76,7 +80,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   }>({});
   const [fileErrors, setFileErrors] = useState<string[]>([]);
 
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<FileWithNote[]>([]);
   const [newComment, setNewComment] = useState("");
   const [showAssociateForm, setShowAssociateForm] = useState(false);
   const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
@@ -90,7 +94,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   // Multi-worktype state for CREATE mode only
   const [multiWorktypeState, setMultiWorktypeState] = useState<{
     step1: any;
-    step2: { documents: { [worktype: string]: File[] } };
+    step2: { documents: { [worktype: string]: FileWithNote[] } };
     step3: {
       comments: { [worktype: string]: string };
       assignedTo: { [worktype: string]: string };
@@ -257,6 +261,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       ".jpeg",
       ".png",
       ".dwg",
+      ".xls",
+      ".xlsx",
     ];
     const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
     return allowedTypes.includes(fileExtension);
@@ -328,10 +334,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         errors.leadStage = "Lead Stage is required";
       }
 
-      if (!formData.approximateResponseTime) {
-        errors.approximateResponseTime = "Next Follow-Up Date is required";
+      if (!formData.nextFollowUpDate) {
+        errors.nextFollowUpDate = "Next Follow-Up Date is required";
       } else {
-        errors.approximateResponseTime = "Please enter a valid date";
+        if (!validateDate(formData.nextFollowUpDate)) {
+          errors.nextFollowUpDate = "Please enter a valid date";
+        }
       }
 
       // Optional field validations
@@ -406,7 +414,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       case "leadSource":
         return !value?.trim() ? "Lead Source is required" : "";
 
-      case "approximateResponseTime":
+      case "nextFollowUpDate":
         if (!value)
           return "Please enter a valid date";
         return "";
@@ -452,7 +460,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     leadSource: "",
     leadStage: "Information Stage",
     leadStagnation: "",
-    approximateResponseTime: "",
+
     eta: "",
     leadDetails: "",
     involvedAssociates: [],
@@ -526,14 +534,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           leadSource: initialData.leadSource || initialData.lead_source || "",
           leadStage: initialData.leadStage || initialData.lead_stage || "New Lead",
           leadStagnation: initialData.leadStagnation || initialData.lead_stagnation || "",
-          approximateResponseTime: initialData.approximateResponseTime || initialData.approximate_response_time_day || "",
+          // approximateResponseTime: initialData.approximateResponseTime || initialData.approximate_response_time_day || "",
           eta: normalizedEta,
           leadDetails: initialData.leadDetails || initialData.lead_details || "",
           involvedAssociates: initialData.involvedAssociates || initialData.lead_associates || [],
           uploadedFiles: initialData.uploadedFiles || [],
           followUpComments: initialData.followUpComments || [],
           assignedTo: initialData.assignedTo || initialData.assigned_to || "",
-          nextFollowUpDate: normalizedNextFollowUpDate,
+          nextFollowUpDate: normalizedNextFollowUpDate || (initialData?.approximateResponseTime ? initialData.approximateResponseTime : ""),
           // also snapshot backend ids if present
           customer_id: initialData.customer_id || initialData.customerId || null,
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
@@ -545,7 +553,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         setFormData({
           ...normalizedFormSnapshot,
         });
-        setUploadedFiles(initialData.uploadedFiles || []);
+        setUploadedFiles([]);
 
         // Check if lead source is a custom value (not in predefined list)
         const leadSourceValue = initialData.leadSource || initialData.lead_source || "";
@@ -986,7 +994,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     if (
       name === "contactNo" ||
       name === "projectValue" ||
-      name === "approximateResponseTime" ||
+      name === "contactNo" ||
+      name === "projectValue" ||
+      name === "nextFollowUpDate" ||
       name === "eta"
     ) {
       const errorMessage = validateField(name, value);
@@ -1012,7 +1022,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       // Validate file type
       if (!validateFileType(file)) {
         newFileErrors.push(
-          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG`
+          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX`
         );
         return;
       }
@@ -1028,6 +1038,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     setFileErrors(newFileErrors);
     if (validFiles.length > 0) {
+      const filesWithNotes: FileWithNote[] = validFiles.map(file => ({ file, note: "" }));
+
       if (!isEditMode && worktype) {
         // Multi-worktype mode: store files per worktype
         setMultiWorktypeState((prev) => ({
@@ -1035,26 +1047,59 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           step2: {
             documents: {
               ...prev.step2.documents,
-              [worktype]: [...(prev.step2.documents[worktype] || []), ...validFiles],
+              [worktype]: [...(prev.step2.documents[worktype] || []), ...filesWithNotes],
             },
           },
         }));
       } else {
         // Edit mode or single worktype: use existing state
-        setUploadedFiles((prev) => [...prev, ...validFiles]);
+        setUploadedFiles((prev) => [...prev, ...filesWithNotes]);
       }
+    }
+  };
+
+  const handleFileNoteChange = (index: number, note: string, worktype?: string) => {
+    if (!isEditMode && worktype) {
+      setMultiWorktypeState((prev) => {
+        const currentDocs = prev.step2.documents[worktype] || [];
+        const updatedDocs = [...currentDocs];
+        if (updatedDocs[index]) {
+          updatedDocs[index] = { ...updatedDocs[index], note };
+        }
+        return {
+          ...prev,
+          step2: {
+            ...prev.step2,
+            documents: {
+              ...prev.step2.documents,
+              [worktype]: updatedDocs
+            }
+          }
+        };
+      });
+    } else {
+      setUploadedFiles((prev) => {
+        const updated = [...prev];
+        if (updated[index]) {
+          updated[index] = { ...updated[index], note };
+        }
+        return updated;
+      });
     }
   };
 
   const uploadFilesForLead = async (
     leadId: string,
-    files: File[],
+    files: FileWithNote[],
     onProgress?: (percent: number) => void
   ) => {
     if (!leadId || files.length === 0) return;
 
     const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
+    files.forEach((item) => {
+      formData.append("files", item.file);
+      formData.append("fileNote", item.note || "");
+    });
     formData.append("upload_by", userData?.id || "");
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/lead-file/${leadId}/files`,
@@ -1112,8 +1157,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       lead_criticality: formData.leadCriticality || "",
       lead_source: formData.leadSource || "",
       lead_stage: formData.leadStage || "",
-      approximate_response_time_day:
-        parseInt(String(formData.approximateResponseTime || "0")) || 0,
+      approximate_response_time_day: 0,
+      // parseInt(String(formData.approximateResponseTime || "0")) || 0,
       eta: formData.eta || null,
       lead_details: formData.leadDetails || null,
       assigned_to: formData.assignedTo || null,
@@ -1151,8 +1196,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           lead_criticality: initialFormRef.current.leadCriticality || "",
           lead_source: initialFormRef.current.leadSource || "",
           lead_stage: initialFormRef.current.leadStage || "",
-          approximate_response_time_day:
-            parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
+          approximate_response_time_day: 0,
+          // parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
           eta: initialFormRef.current.eta || null,
           lead_details: initialFormRef.current.leadDetails || null,
           assigned_to: initialFormRef.current.assignedTo || null,
@@ -1340,13 +1385,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             lead_criticality: formData.leadCriticality,
             lead_source: formData.leadSource,
             lead_stage: formData.leadStage,
-            approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
+            approximate_response_time_day: 0,
+            //approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
             eta: formData.eta || null,
             lead_details: formData.leadDetails || null,
             currency: formData.currency || null,
             created_by: userData?.id || null,
             assigned_user_id: multiWorktypeState.step3.assignedTo[worktype] || null,
-            next_followup_date: multiWorktypeState.step3.nextFollowUpDate[worktype] || null,
+            next_followup_date: formData.nextFollowUpDate || null, // Use unified Step 1 date
           };
 
           // POST: Create lead
@@ -1513,12 +1559,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         lead_criticality: formData.leadCriticality,
         lead_source: formData.leadSource,
         lead_stage: formData.leadStage,
-        approximate_response_time_day:
-          parseInt(formData.approximateResponseTime) || 0,
+        approximate_response_time_day: 0,
+        //  parseInt(formData.approximateResponseTime) || 0,
         eta: formData.eta || null,
         lead_details: formData.leadDetails || null,
         currency: formData.currency || null,
         created_by: userData?.id || null,
+        next_follow_up_date: formData.nextFollowUpDate || null,
       };
 
       const leadResponse = await axios.post(
@@ -1695,7 +1742,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       leadSource: "",
       leadStage: "Information Stage",
       leadStagnation: "",
-      approximateResponseTime: "",
       eta: "",
       leadDetails: "",
       involvedAssociates: [],
@@ -2302,19 +2348,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     </label>
                     <input
                       type="date"
-                      name="approximateResponseTime"
-                      value={formData.approximateResponseTime}
+                      name="nextFollowUpDate"
+                      value={formData.nextFollowUpDate}
                       onChange={handleInputChange}
                       min={today}
                       max={maxDate}
                       required
-                      placeholder="Enter days"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.approximateResponseTime
+                      placeholder="Select date"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.nextFollowUpDate
                         ? "border-red-500"
                         : "border-gray-300"
                         }`}
                     />
-                    <ValidationError fieldName="approximateResponseTime" />
+                    <ValidationError fieldName="nextFollowUpDate" />
                   </div>
 
                   <div>
@@ -2499,7 +2545,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                           <input
                             type="file"
                             multiple
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
                             onChange={(e) => handleFileUpload(e, worktype)}
                             className="hidden"
                             id={`file-upload-${worktype}`}
@@ -2514,32 +2560,41 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                         {multiWorktypeState.step2.documents[worktype] &&
                           multiWorktypeState.step2.documents[worktype].length > 0 && (
-                            <div className="mt-3 space-y-1">
-                              {multiWorktypeState.step2.documents[worktype].map((file, idx) => (
+                            <div className="mt-3 space-y-2">
+                              {multiWorktypeState.step2.documents[worktype].map((item, idx) => (
                                 <div
                                   key={idx}
-                                  className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+                                  className="flex flex-col p-2 bg-gray-50 rounded text-xs"
                                 >
-                                  <span className="truncate">{file.name}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setMultiWorktypeState((prev) => ({
-                                        ...prev,
-                                        step2: {
-                                          documents: {
-                                            ...prev.step2.documents,
-                                            [worktype]: prev.step2.documents[worktype].filter(
-                                              (_, i) => i !== idx
-                                            ),
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="truncate font-medium">{item.file.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMultiWorktypeState((prev) => ({
+                                          ...prev,
+                                          step2: {
+                                            documents: {
+                                              ...prev.step2.documents,
+                                              [worktype]: prev.step2.documents[worktype].filter(
+                                                (_, i) => i !== idx
+                                              ),
+                                            },
                                           },
-                                        },
-                                      }));
-                                    }}
-                                    className="text-red-600 hover:text-red-800 ml-2"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
+                                        }));
+                                      }}
+                                      className="text-red-600 hover:text-red-800 ml-2"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="Add note for this file..."
+                                    value={item.note || ""}
+                                    onChange={(e) => handleFileNoteChange(idx, e.target.value, worktype)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  />
                                 </div>
                               ))}
                             </div>
@@ -2566,7 +2621,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       <input
                         type="file"
                         multiple
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
                         onChange={(e) => handleFileUpload(e)}
                         className="hidden"
                         id="file-upload"
@@ -2599,27 +2654,36 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         <h4 className="text-sm font-medium text-gray-700 mb-2">
                           Uploaded Files
                         </h4>
-                        <div className="space-y-2">
-                          {uploadedFiles.map((file, index) => (
+                        <div className="space-y-3">
+                          {uploadedFiles.map((item, index) => (
                             <div
                               key={index}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                              className="p-3 bg-gray-50 rounded-md"
                             >
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {file.name}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {item.file.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {(item.file.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFile(index)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => removeFile(index)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                              <input
+                                type="text"
+                                placeholder="Add note for this file..."
+                                value={item.note || ""}
+                                onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                                className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
                             </div>
                           ))}
                         </div>
@@ -2671,30 +2735,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </select>
                       </div>
 
-                      {/* Next Follow Up Date */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Next Follow Up Date
-                        </label>
-                        <input
-                          type="date"
-                          value={multiWorktypeState.step3.nextFollowUpDate[worktype] || ""}
-                          onChange={(e) => {
-                            setMultiWorktypeState((prev) => ({
-                              ...prev,
-                              step3: {
-                                ...prev.step3,
-                                nextFollowUpDate: {
-                                  ...prev.step3.nextFollowUpDate,
-                                  [worktype]: e.target.value,
-                                },
-                              },
-                            }));
-                          }}
-                          min={new Date().toISOString().split('T')[0]}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                        />
-                      </div>
+
 
                       {/* Follow-up Comments */}
                       <div>
@@ -2754,24 +2795,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </select>
                     </div>
 
-                    {/* Next Follow Up Date */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Next Follow Up Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.nextFollowUpDate || ""}
-                        onChange={(e) => {
-                          setFormData((prev: any) => ({
-                            ...prev,
-                            nextFollowUpDate: e.target.value,
-                          }));
-                        }}
-                        min={new Date().toISOString().split('T')[0]}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
+
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">

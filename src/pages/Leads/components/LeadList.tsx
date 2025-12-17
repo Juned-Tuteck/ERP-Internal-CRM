@@ -72,8 +72,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   const { userData } = useCRM();
 
   // Check if user is a design engineer
-  const isDesignEngineer = userData?.role === 'design engineer' ||
-    (userData?.roles && userData.roles.includes('design engineer'));
+  const isDesignEngineer = userData?.role === 'design engineer';
 
   // Filter leads based on role and search term
   const filteredLeads = leads.filter((lead) => {

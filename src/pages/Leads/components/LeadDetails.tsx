@@ -144,7 +144,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           customerNumber: apiLead.customer_number || lead.customerNumber,
           created_by_name: apiLead.created_by_name || null,
           temp_quotation_number: apiLead.temp_quotation_number || lead.temp_quotation_number || null,
-          assignedTo:apiLead.assigned_user_id || null,
+          assignedTo: apiLead.assigned_user_id || null,
           nextFollowUpDate: apiLead.next_followup_date || null,
           assigned_user_name: apiLead.assigned_user_name || null,
         };
@@ -873,25 +873,25 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                         </div>
                       </div>
 
-                       <div className="flex items-center space-x-3">
-                      <FileBarChart className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm text-gray-500">Quotation Number</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {displayLead.temp_quotation_number || "-"}
-                        </p>
+                      <div className="flex items-center space-x-3">
+                        <FileBarChart className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">Quotation Number</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.temp_quotation_number || "-"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center space-x-3">
-                      <User className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm text-gray-500">Assigned To</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {displayLead.assigned_user_name || "-"}
-                        </p>
+                      <div className="flex items-center space-x-3">
+                        <User className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="text-sm text-gray-500">Assigned To</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayLead.assigned_user_name || "-"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -985,8 +985,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                       onClick={handleDesignHelpModalOpen}
                       disabled={designHelpSent}
                       className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${designHelpSent
-                          ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
-                          : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                        ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
+                        : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
                         }`}
                       title={designHelpSent ? 'This lead has already been assigned for design help.' : ''}
                     >
@@ -997,7 +997,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {(displayLead?.uploadedFiles ?? []).map((file) => {
+                  {(displayLead?.uploadedFiles ?? []).map((file: any) => {
                     const Icon = getIconByMime(file.mime, file.original_name);
                     const sizeLabel = formatBytes(file.size);
 
@@ -1023,6 +1023,11 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                           <p className="text-xs text-gray-500 mt-3">
                             <User className="inline-block h-4 w-4 " /><b>{file.created_by_name || "-"}</b>
                           </p>
+                          {file.file_note && (
+                            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 italic">
+                              <span className="font-semibold not-italic">Note:</span> {file.file_note}
+                            </div>
+                          )}
                         </div>
 
                         <Download className="h-4 w-4 text-gray-400 ml-3" />
