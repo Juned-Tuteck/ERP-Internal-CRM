@@ -33,6 +33,10 @@ const PINCODE_REGEX = /^[1-9][0-9]{5}$/;
 // Bank account number validation regex (6-18 digits)
 const BANK_ACCOUNT_REGEX = /^[0-9]{6,18}$/;
 
+// Udyam Registration Number regex (Format: UDYAM-XX-00-0000000 or similar, but often just text is fine for now, user didn't specify strict format. We'll leave it as text but maybe min length)
+// const UDYAM_REGEX = /^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$/; 
+// Keeping it simple for now as requested "text".
+
 // TAN validation regex
 const TAN_REGEX = /^[A-Z]{4}[0-9]{5}[A-Z]{1}$/;
 
@@ -195,6 +199,36 @@ export const validationRules = {
     pattern: PINCODE_REGEX,
   },
 
+  // New Business Details Fields
+  customerGroup: {
+    required: false,
+  },
+  customerSubGroup: {
+    required: false,
+  },
+  alternateNumber: {
+    required: false,
+    pattern: PHONE_REGEX,
+    custom: (value: string) => {
+      if (!value) return null;
+      const cleaned = value.replace(/[\s\-\+\(\)]/g, "");
+      if (cleaned.length !== 10) {
+        return "Phone number must be exactly 10 digits";
+      }
+      return null;
+    },
+  },
+  customerClassification: {
+    required: false,
+  },
+  msmeRegistered: {
+    required: false,
+  },
+  udyamRegistrationNumber: {
+    required: false, // validated conditionally in component
+    minLength: 5,
+  },
+
   // Vendor-specific validations
   vendorCategory: {
     required: true,
@@ -303,6 +337,31 @@ export const validationRules = {
     required: true,
     pattern: PINCODE_REGEX,
   },
+  branchPanNumber: {
+    required: false,
+    pattern: PAN_REGEX,
+  },
+  branchTanNumber: {
+    required: false,
+    pattern: TAN_REGEX,
+  },
+  branchGstNumber: {
+    required: false,
+    pattern: GST_REGEX,
+  },
+  branchBankName: {
+    required: false,
+    minLength: 2,
+    maxLength: 100,
+  },
+  branchBankAccountNumber: {
+    required: false,
+    pattern: BANK_ACCOUNT_REGEX,
+  },
+  branchIfscCode: {
+    required: false,
+    pattern: IFSC_REGEX,
+  },
 };
 
 export const validateField = (
@@ -327,16 +386,14 @@ export const validateField = (
   if (typeof value === "string") {
     // Min length validation
     if (rule.minLength && value.length < rule.minLength) {
-      return `${getFieldDisplayName(fieldName)} must be at least ${
-        rule.minLength
-      } characters`;
+      return `${getFieldDisplayName(fieldName)} must be at least ${rule.minLength
+        } characters`;
     }
 
     // Max length validation
     if (rule.maxLength && value.length > rule.maxLength) {
-      return `${getFieldDisplayName(fieldName)} must not exceed ${
-        rule.maxLength
-      } characters`;
+      return `${getFieldDisplayName(fieldName)} must not exceed ${rule.maxLength
+        } characters`;
     }
 
     // Pattern validation
@@ -474,6 +531,50 @@ export const validateBranch = (branch: any): ValidationErrors => {
     validationRules.branchPincode
   );
   if (pincodeError) errors.pincode = pincodeError;
+
+  if (pincodeError) errors.pincode = pincodeError;
+
+  const panNumberError = validateField(
+    "branchPanNumber",
+    branch.panNumber,
+    validationRules.branchPanNumber
+  );
+  if (panNumberError) errors.panNumber = panNumberError;
+
+  const tanNumberError = validateField(
+    "branchTanNumber",
+    branch.tanNumber,
+    validationRules.branchTanNumber
+  );
+  if (tanNumberError) errors.tanNumber = tanNumberError;
+
+  const gstNumberError = validateField(
+    "branchGstNumber",
+    branch.gstNumber,
+    validationRules.branchGstNumber
+  );
+  if (gstNumberError) errors.gstNumber = gstNumberError;
+
+  const bankNameError = validateField(
+    "branchBankName",
+    branch.bankName,
+    validationRules.branchBankName
+  );
+  if (bankNameError) errors.bankName = bankNameError;
+
+  const bankAccountNumberError = validateField(
+    "branchBankAccountNumber",
+    branch.bankAccountNumber,
+    validationRules.branchBankAccountNumber
+  );
+  if (bankAccountNumberError) errors.bankAccountNumber = bankAccountNumberError;
+
+  const ifscCodeError = validateField(
+    "branchIfscCode",
+    branch.ifscCode,
+    validationRules.branchIfscCode
+  );
+  if (ifscCodeError) errors.ifscCode = ifscCodeError;
 
   return errors;
 };
@@ -648,6 +749,18 @@ const getFieldDisplayName = (fieldName: string): string => {
     branchDistrict: "District",
     branchCity: "City",
     branchPincode: "Pincode",
+    branchPanNumber: "PAN Number",
+    branchTanNumber: "TAN Number",
+    branchGstNumber: "GST Number",
+    branchBankName: "Bank Name",
+    branchBankAccountNumber: "Bank Account Number",
+    branchIfscCode: "IFSC Code",
+    customerGroup: "Customer Group",
+    customerSubGroup: "Customer Sub Group",
+    alternateNumber: "Alternate Number",
+    customerClassification: "Customer Classification",
+    msmeRegistered: "MSME Registered",
+    udyamRegistrationNumber: "Udyam Registration Number",
   };
 
   return fieldNames[fieldName] || fieldName;
@@ -669,6 +782,7 @@ const getPatternErrorMessage = (fieldName: string): string => {
     branchPincode:
       "Please enter a valid pincode (6 digits, not starting with 0)",
     bankAccountNumber: "Please enter a valid bank account number (6-18 digits)",
+    branchBankAccountNumber: "Please enter a valid bank account number (6-18 digits)",
   };
 
   return (

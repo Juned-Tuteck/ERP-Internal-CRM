@@ -137,7 +137,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             contactNo: apiData.contact_number || "",
             email: apiData.email || "",
             country: apiData.country || "",
-            currency: typeof apiData.currency === 'string' 
+            currency: typeof apiData.currency === 'string'
               ? apiData.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
               : [],
             state: apiData.state || "",
@@ -155,6 +155,12 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             branchName: apiData.branch_name || "",
             ifscCode: apiData.ifsc_code || "",
             status: apiData.approval_status || customer.status || "",
+            customerGroup: apiData.customer_group || "",
+            customerSubGroup: apiData.customer_sub_group || "",
+            alternateNumber: apiData.alternate_number || "",
+            customerClassification: apiData.customer_classification || "",
+            msmeRegistered: apiData.msme_registered || "",
+            udyamRegistrationNumber: apiData.udyam_registration_number || "",
             contactPersons:
               apiData.contactpersons?.map((person: any) => ({
                 id: person.contactId,
@@ -179,6 +185,11 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 pincode: branch.pincode || "",
                 address: `${branch.city}, ${branch.district}, ${branch.state} - ${branch.pincode}`,
                 gstNumber: branch.gstNumber || "",
+                panNumber: branch.panNumber || "",
+                tanNumber: branch.tanNumber || "",
+                bankName: branch.bankName || "",
+                bankAccountNumber: branch.bankAccountNumber || "",
+                ifscCode: branch.ifscCode || "",
                 contactPersons:
                   branch.contactPersons?.map((person: any) => ({
                     id: person.contactId,
@@ -371,7 +382,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              { hasActionAccess('edit', 'All customers', 'customers') && (
+              {hasActionAccess('edit', 'All customers', 'customers') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
@@ -473,7 +484,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">Phone</p>
                     <p className="text-sm font-medium text-gray-900">
-                     {mappedApiData.contactNo}
+                      {mappedApiData.contactNo}
                     </p>
                   </div>
                 </div>
@@ -772,7 +783,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               ))}
             </div> */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(mappedApiData?.uploadedFiles ?? []).map((file : any) => {
+              {(mappedApiData?.uploadedFiles ?? []).map((file: any) => {
                 const Icon = getIconByMime(file.mime, file.original_name);
                 const sizeLabel = formatBytes(file.size);
 

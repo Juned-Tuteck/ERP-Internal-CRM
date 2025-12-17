@@ -55,6 +55,11 @@ interface Branch {
   contactPersons: ContactPerson[];
   isEditing?: boolean;
   gstNumber?: string;
+  panNumber?: string;
+  tanNumber?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  ifscCode?: string;
 }
 
 const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
@@ -86,6 +91,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       customerPotential: "",
       pincode: "",
       active: true,
+      customerGroup: "",
+      customerSubGroup: "",
+      alternateNumber: "",
+      customerClassification: "",
+      msmeRegistered: "No",
+      udyamRegistrationNumber: "",
       // Bank Details
       panNumber: "",
       tanNumber: "",
@@ -132,7 +143,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
   // Customer autocomplete states
-  const [customerSuggestions, setCustomerSuggestions] = useState<Array<{id: string, name: string}>>([]);
+  const [customerSuggestions, setCustomerSuggestions] = useState<Array<{ id: string, name: string }>>([]);
   const [showCustomerPopup, setShowCustomerPopup] = useState(false);
   const customerInputRef = useRef<HTMLDivElement>(null);
 
@@ -210,6 +221,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     ifscCode: "ifsc_code",
     approvalStatus: "approval_status",
     approvedBy: "approved_by",
+    customerGroup: "customer_group",
+    customerSubGroup: "customer_sub_group",
+    alternateNumber: "alternate_number",
+    customerClassification: "customer_classification",
+    msmeRegistered: "msme_registered",
+    udyamRegistrationNumber: "udyam_registration_number",
   };
 
   const branchKeymap = {
@@ -224,6 +241,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     city: "city",
     pincode: "pincode",
     gstNumber: "gst_number",
+    panNumber: "pan_number",
+    tanNumber: "tan_number",
+    bankName: "bank_name",
+    bankAccountNumber: "bank_account_number",
+    ifscCode: "ifsc_code",
   };
 
   const branchContactKeymap = {
@@ -339,8 +361,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     Haldia: ["Haldia", "Mahishadal", "Nandigram"],
     Malda: ["Malda", "English Bazar", "Old Malda"],
   };
-  const customerTypes = ["Enterprise", "SME", "Startup", "Government", "NGO"];
+  const customerTypes = ["Industrial", "Hospital", "It", "Commercial", "Residential"];
   const customerPotentials = ["High", "Medium", "Low"];
+
+  // New dropdown values
+  const customerGroups = ["Individual", "Enduser", "Contractor", "Architect", "Interior", "Consultant", "Government", "Other"];
+  const customerSubGroups = ["Sub Group A", "Sub Group B", "Sub Group C"];
+  const customerClassifications = ["A – High Value", "B – Medium Value", "C – Low Value"];
+  // const msmeOptions = ["Yes", "No"];
 
   useEffect(() => {
     if (initialData) {
@@ -574,6 +602,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       bankAccountNumber: "Bank Account Number",
       branchName: "Branch Name",
       ifscCode: "IFSC Code",
+      customerGroup: "Customer Group",
+      customerSubGroup: "Customer Sub Group",
+      alternateNumber: "Alternate Number",
+      customerClassification: "Customer Classification",
+      msmeRegistered: "MSME Registered",
+      udyamRegistrationNumber: "Udyam Registration Number",
     };
 
     return fieldNames[fieldName] || fieldName;
@@ -755,7 +789,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           email: contactPerson.email,
           designation: contactPerson.designation || "",
           customer_id: formData.id,
-          created_by : currentUserId
+          created_by: currentUserId
         };
 
         const response = await axios.post(
@@ -792,7 +826,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             changedFields.designation = contactPerson.designation || "";
         }
 
-        if(currentUserId) changedFields.updated_by = currentUserId;
+        if (currentUserId) changedFields.updated_by = currentUserId;
 
         // Only make API call if there are changes
         if (Object.keys(changedFields).length > 0) {
@@ -952,7 +986,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   // Branch Management
   const addBranch = () => {
     const newBranch: Branch = {
-      id: "",
+      id: Date.now().toString(),
       branchName: "",
       contactNumber: "",
       email: "",
@@ -965,6 +999,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       contactPersons: [],
       isEditing: true,
       gstNumber: "",
+      panNumber: "",
+      tanNumber: "",
+      bankName: "",
+      bankAccountNumber: "",
+      ifscCode: "",
     };
     setFormData((prev: typeof formData) => ({
       ...prev,
@@ -995,6 +1034,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             pincode: prev.pincode,
             contactPersons: [...prev.contactPersons],
             gstNumber: prev.gstNumber || branch.gstNumber || "",
+            panNumber: prev.panNumber || branch.panNumber || "",
+            tanNumber: prev.tanNumber || branch.tanNumber || "",
+            bankName: prev.bankName || branch.bankName || "",
+            bankAccountNumber: prev.bankAccountNumber || branch.bankAccountNumber || "",
+            ifscCode: prev.ifscCode || branch.ifscCode || "",
           }
           : branch
       ),
@@ -1035,6 +1079,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       district: validationRules.branchDistrict,
       city: validationRules.branchCity,
       pincode: validationRules.branchPincode,
+      panNumber: validationRules.branchPanNumber,
+      tanNumber: validationRules.branchTanNumber,
+      gstNumber: validationRules.branchGstNumber,
+      bankName: validationRules.branchBankName,
+      bankAccountNumber: validationRules.branchBankAccountNumber,
+      ifscCode: validationRules.branchIfscCode,
     };
 
     const rule = fieldRules[field];
@@ -1428,7 +1478,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           });
         }
 
-        if(currentUserId) changedFields.updated_by = currentUserId;
+        if (currentUserId) changedFields.updated_by = currentUserId;
 
         // Only make API call if there are changes
         if (Object.keys(changedFields).length > 0) {
@@ -2307,6 +2357,914 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }
   };
 
+  // --- Reusable Section Renderers ---
+
+  const renderBasicDetails = () => (
+    <div>
+      <h4 className="text-lg font-medium text-gray-900 mb-4">Basic Details</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Business Name */}
+        <div ref={customerInputRef} className="relative">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer Name *
+          </label>
+          <input
+            type="text"
+            name="businessName"
+            value={formData.businessName}
+            onChange={handleInputChange}
+            required
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.businessName
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="Enter business name"
+          />
+          {validationErrors.businessName && (
+            <p className="text-red-500 text-xs mt-1">
+              {validationErrors.businessName}
+            </p>
+          )}
+          {showCustomerPopup && customerSuggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+              {loadingCustomerDetails && (
+                <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                  Loading customer details...
+                </div>
+              )}
+              {!loadingCustomerDetails &&
+                customerSuggestions.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      fetchCustomerDetails(customer.id);
+                    }}
+                  >
+                    {customer.name}
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        {/* Customer Group */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer Group
+          </label>
+          <select
+            name="customerGroup"
+            value={formData.customerGroup}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Group</option>
+            {customerGroups.map((group) => (
+              <option key={group} value={group}>
+                {group}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Customer Sub Group */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer Sub Group
+          </label>
+          <select
+            name="customerSubGroup"
+            value={formData.customerSubGroup}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Sub Group</option>
+            {customerSubGroups.map((subGroup) => (
+              <option key={subGroup} value={subGroup}>
+                {subGroup}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Industry Type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Industry Type *
+          </label>
+          <select
+            name="customerType"
+            value={formData.customerType}
+            onChange={handleInputChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Type</option>
+            {customerTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Contact No */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Contact Number *
+          </label>
+          <input
+            type="tel"
+            name="contactNo"
+            value={formData.contactNo}
+            onChange={handleInputChange}
+            required
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.contactNo
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="+91 98765 43210"
+          />
+          {validationErrors.contactNo && (
+            <p className="text-red-500 text-xs mt-1">
+              {validationErrors.contactNo}
+            </p>
+          )}
+        </div>
+
+        {/* Alternate Number */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Alternate Number
+          </label>
+          <input
+            type="tel"
+            name="alternateNumber"
+            value={formData.alternateNumber}
+            onChange={handleInputChange}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.alternateNumber
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="+91 98765 43210"
+          />
+          {validationErrors.alternateNumber && (
+            <p className="text-red-500 text-xs mt-1">
+              {validationErrors.alternateNumber}
+            </p>
+          )}
+        </div>
+
+        {/* Email */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email ID *
+          </label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            required
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.email
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="email@example.com"
+          />
+          {validationErrors.email && (
+            <p className="text-red-500 text-xs mt-1">
+              {validationErrors.email}
+            </p>
+          )}
+        </div>
+
+        {/* Currency */}
+        <div className="relative">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Currency *
+          </label>
+          <div className="relative">
+            <div
+              onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+              className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[42px] flex items-center ${validationErrors.currency ? "border-red-300" : "border-gray-300"
+                }`}
+            >
+              {formData.currency.length > 0 ? (
+                <span className="text-gray-900">
+                  {formData.currency.join(", ")}
+                </span>
+              ) : (
+                <span className="text-gray-400">Select currencies</span>
+              )}
+            </div>
+            {showCurrencyDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                {currencies.map((currency) => (
+                  <div
+                    key={currency}
+                    onClick={() => handleCurrencyToggle(currency)}
+                    className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center ${formData.currency.includes(currency) ? "bg-blue-100" : ""
+                      }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.currency.includes(currency)}
+                      onChange={() => { }}
+                      className="mr-2"
+                    />
+                    <span>{currency}</span>
+                  </div>
+                ))}
+                <div className="border-t border-gray-200 p-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrencyDropdown(false)}
+                    className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {validationErrors.currency && (
+            <p className="text-red-500 text-xs mt-1">
+              {validationErrors.currency}
+            </p>
+          )}
+        </div>
+
+        {/* Customer Classification */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer Classification
+          </label>
+          <select
+            name="customerClassification"
+            value={formData.customerClassification}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Classification</option>
+            {customerClassifications.map((cls) => (
+              <option key={cls} value={cls}>
+                {cls}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* MSME Registered */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            MSME Registered
+          </label>
+          <select
+            name="msmeRegistered"
+            value={formData.msmeRegistered}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+
+        {/* Udyam Registration Number */}
+        {formData.msmeRegistered === "Yes" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Udyam Registration Number *
+            </label>
+            <input
+              type="text"
+              name="udyamRegistrationNumber"
+              value={formData.udyamRegistrationNumber}
+              onChange={handleInputChange}
+              required
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.udyamRegistrationNumber
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                }`}
+              placeholder="UDYAM-XX-00-0000000"
+            />
+            {validationErrors.udyamRegistrationNumber && (
+              <p className="text-red-500 text-xs mt-1">
+                {validationErrors.udyamRegistrationNumber}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Active Status */}
+        <div className="flex items-center">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={formData.active}
+              onChange={() => handleToggle("active")}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="ml-2 text-sm text-gray-700">Active</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderBillingAddress = (
+    data: any,
+    onChange: (field: string, value: any) => void,
+    errors: any,
+    isBranch: boolean = false,
+    readOnly: boolean = false
+  ) => (
+    <div>
+      <h4 className="text-lg font-medium text-gray-900 mb-4">
+        Billing Address
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {isBranch && (
+          <>
+            {/* Branch Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Branch Name *
+              </label>
+              <input
+                type="text"
+                value={data.branchName}
+                onChange={(e) => onChange("branchName", e.target.value)}
+                disabled={readOnly}
+                required
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.branchName
+                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="Branch name"
+              />
+              {errors?.branchName && (
+                <p className="text-red-500 text-xs mt-1">{errors.branchName}</p>
+              )}
+            </div>
+            {/* Contact Number (Branch specific) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number *
+              </label>
+              <input
+                type="tel"
+                value={data.contactNumber}
+                onChange={(e) => onChange("contactNumber", e.target.value)}
+                disabled={readOnly}
+                required
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.contactNumber
+                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="+91 98765 43210"
+              />
+              {errors?.contactNumber && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.contactNumber}
+                </p>
+              )}
+            </div>
+            {/* Email (Branch specific) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email ID *
+              </label>
+              <input
+                type="email"
+                value={data.email}
+                onChange={(e) => onChange("email", e.target.value)}
+                disabled={readOnly}
+                required
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.email
+                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="branch@company.com"
+              />
+              {errors?.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
+            </div>
+            {/* Country (Branch specific) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Country *
+              </label>
+              <select
+                value={data.country}
+                onChange={(e) => onChange("country", e.target.value)}
+                disabled={readOnly}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {countries.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Currency (Branch specific) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Currency *
+              </label>
+              <select
+                value={data.currency}
+                onChange={(e) => onChange("currency", e.target.value)}
+                disabled={readOnly || formData.currency.length === 0}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select Currency</option>
+                {formData.currency.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
+        {!isBranch && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Country *
+            </label>
+            <select
+              name="country"
+              value={data.country}
+              onChange={(e) => onChange("country", e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {countries.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* State */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            State *
+          </label>
+          <select
+            name={!isBranch ? "state" : undefined}
+            value={data.state}
+            onChange={(e) => onChange("state", e.target.value)}
+            disabled={readOnly}
+            required
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.state
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+          >
+            <option value="">Select State</option>
+            {states.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          {errors?.state && (
+            <p className="text-red-500 text-xs mt-1">{errors.state}</p>
+          )}
+        </div>
+
+        {/* District */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            District *
+          </label>
+          <select
+            name={!isBranch ? "district" : undefined}
+            value={data.district}
+            onChange={(e) => onChange("district", e.target.value)}
+            disabled={readOnly || !data.state}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          >
+            <option value="">Select District</option>
+            {data.state &&
+              districts[data.state as keyof typeof districts]?.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {/* City */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            City *
+          </label>
+          <select
+            name={!isBranch ? "city" : undefined}
+            value={data.city}
+            onChange={(e) => onChange("city", e.target.value)}
+            disabled={readOnly || !data.district}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          >
+            <option value="">Select City</option>
+            {data.district &&
+              cities[data.district as keyof typeof cities]?.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {/* Pincode */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Pincode *
+          </label>
+          <input
+            type="text"
+            name={!isBranch ? "pincode" : undefined}
+            value={data.pincode}
+            onChange={(e) => onChange("pincode", e.target.value)}
+            disabled={readOnly}
+            required
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.pincode
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="400001"
+          />
+          {errors?.pincode && (
+            <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>
+          )}
+        </div>
+
+        {!isBranch && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer Potential *
+            </label>
+            <input
+              type="number"
+              name="customerPotential"
+              value={data.customerPotential}
+              onChange={(e) => onChange("customerPotential", e.target.value)}
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderCompliance = (
+    data: any,
+    onChange: (field: string, value: any) => void,
+    errors: any,
+    readOnly: boolean = false
+  ) => (
+    <div>
+      <h4 className="text-lg font-medium text-gray-900 mb-4">Compliance</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* GST */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            GST Number
+          </label>
+          <input
+            type="text"
+            name="gstNumber"
+            value={data.gstNumber || ""}
+            onChange={(e) => onChange("gstNumber", e.target.value)}
+            disabled={readOnly}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.gstNumber
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="GST Number"
+          />
+          {errors?.gstNumber && (
+            <p className="text-red-500 text-xs mt-1">{errors.gstNumber}</p>
+          )}
+        </div>
+        {/* PAN */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            PAN Number
+          </label>
+          <input
+            type="text"
+            name="panNumber"
+            value={data.panNumber || ""}
+            onChange={(e) => onChange("panNumber", e.target.value)}
+            disabled={readOnly}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.panNumber
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="Pan Number"
+          />
+          {errors?.panNumber && (
+            <p className="text-red-500 text-xs mt-1">{errors.panNumber}</p>
+          )}
+        </div>
+        {/* TAN */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            TAN Number
+          </label>
+          <input
+            type="text"
+            name="tanNumber"
+            value={data.tanNumber || ""}
+            onChange={(e) => onChange("tanNumber", e.target.value)}
+            disabled={readOnly}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.tanNumber
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="Tan Number"
+          />
+          {errors?.tanNumber && (
+            <p className="text-red-500 text-xs mt-1">{errors.tanNumber}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderBankDetails = (
+    data: any,
+    onChange: (field: string, value: any) => void,
+    errors: any,
+    isBranch: boolean = false,
+    readOnly: boolean = false
+  ) => (
+    <div>
+      <h4 className="text-lg font-medium text-gray-900 mb-4">Bank Details</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Bank Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Bank Name
+          </label>
+          <input
+            type="text"
+            name="bankName"
+            value={data.bankName || ""}
+            onChange={(e) => onChange("bankName", e.target.value)}
+            disabled={readOnly}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.bankName
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="Bank Name"
+          />
+          {errors?.bankName && (
+            <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>
+          )}
+        </div>
+        {/* Bank Account Number */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Bank Account Number
+          </label>
+          <input
+            type="text"
+            name="bankAccountNumber"
+            value={data.bankAccountNumber || ""}
+            onChange={(e) => onChange("bankAccountNumber", e.target.value)}
+            disabled={readOnly}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.bankAccountNumber
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="Account Number"
+          />
+          {errors?.bankAccountNumber && (
+            <p className="text-red-500 text-xs mt-1">
+              {errors.bankAccountNumber}
+            </p>
+          )}
+        </div>
+        {/* IFSC */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            IFSC Code
+          </label>
+          <input
+            type="text"
+            name="ifscCode"
+            value={data.ifscCode || ""}
+            onChange={(e) => onChange("ifscCode", e.target.value)}
+            disabled={readOnly}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.ifscCode
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+              }`}
+            placeholder="IFSC Code"
+          />
+          {errors?.ifscCode && (
+            <p className="text-red-500 text-xs mt-1">{errors.ifscCode}</p>
+          )}
+        </div>
+        {/* Branch Name (Bank Branch) - Customer Only */}
+        {!isBranch && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Branch Name (Bank)
+            </label>
+            <input
+              type="text"
+              name="branchName"
+              value={data.branchName}
+              onChange={(e) => onChange("branchName", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Bank Branch Name"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderContactPersons = (
+    persons: ContactPerson[],
+    onAdd: () => void,
+    onRemove: (id: string) => void,
+    onEdit: (id: string) => void,
+    onSave: (id: string) => void,
+    onUpdate: (id: string, field: string, value: string) => void,
+    getError: (id: string, field: string) => string | undefined,
+    readOnly: boolean = false,
+    title: string = "Contact Persons",
+    canAdd: boolean = true
+  ) => (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-lg font-medium text-gray-900">{title}</h4>
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={readOnly || !canAdd || persons.some((p) => p.isEditing)}
+          className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Contact Person
+        </button>
+      </div>
+
+      {persons.map((person, index) => (
+        <div
+          key={person.id}
+          className="border border-gray-200 rounded-lg p-4 mb-4"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h5 className="text-sm font-medium text-gray-900">
+              Contact Person {index + 1}
+            </h5>
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={() => onRemove(person.id)}
+                className="text-red-600 hover:text-red-800"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+              {person.isEditing ? (
+                <button
+                  type="button"
+                  onClick={() => onSave(person.id)}
+                  className="text-green-600 hover:text-green-800"
+                >
+                  <Save className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onEdit(person.id)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                value={person.name}
+                onChange={(e) => onUpdate(person.id, "name", e.target.value)}
+                disabled={!person.isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
+                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                  : getError(person.id, "name")
+                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="Contact person name"
+              />
+              {getError(person.id, "name") && (
+                <p className="text-red-500 text-xs mt-1">
+                  {getError(person.id, "name")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={person.phone}
+                onChange={(e) => onUpdate(person.id, "phone", e.target.value)}
+                disabled={!person.isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
+                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                  : getError(person.id, "phone")
+                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="+91 98765 43210"
+              />
+              {getError(person.id, "phone") && (
+                <p className="text-red-500 text-xs mt-1">
+                  {getError(person.id, "phone")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email ID
+              </label>
+              <input
+                type="email"
+                value={person.email}
+                onChange={(e) => onUpdate(person.id, "email", e.target.value)}
+                disabled={!person.isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
+                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                  : getError(person.id, "email")
+                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="contact@company.com"
+              />
+              {getError(person.id, "email") && (
+                <p className="text-red-500 text-xs mt-1">
+                  {getError(person.id, "email")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                value={person.designation}
+                onChange={(e) =>
+                  onUpdate(person.id, "designation", e.target.value)
+                }
+                disabled={!person.isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
+                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                  : getError(person.id, "designation")
+                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="Manager, CEO, etc."
+              />
+              {getError(person.id, "designation") && (
+                <p className="text-red-500 text-xs mt-1">
+                  {getError(person.id, "designation")}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -2380,626 +3338,45 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             {/* Step 1: General Information */}
             {currentStep === 1 && (
               <div className="space-y-8">
-                {/* Business Details */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    Business Details
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div ref={customerInputRef} className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Business Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="businessName"
-                        value={formData.businessName}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.businessName
-                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                          }`}
-                        placeholder="Enter business name"
-                      />
-                      {validationErrors.businessName && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {validationErrors.businessName}
-                        </p>
-                      )}
-                      {showCustomerPopup && customerSuggestions.length > 0 &&(
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                          {loadingCustomerDetails && (
-                            <div className="px-3 py-2 text-sm text-gray-500 text-center">
-                              Loading customer details...
-                            </div>
-                          )}
-                          {!loadingCustomerDetails && customerSuggestions.map((customer) => (
-                            <div
-                              key={customer.id}
-                              className="px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer transition-colors"
-                              onClick={() => {
-                                fetchCustomerDetails(customer.id);
-                              }}
-                            >
-                              {customer.name}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contact No *
-                      </label>
-                      <input
-                        type="tel"
-                        name="contactNo"
-                        value={formData.contactNo}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.contactNo
-                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                          }`}
-                        placeholder="+91 98765 43210"
-                      />
-                      {validationErrors.contactNo && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {validationErrors.contactNo}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.email
-                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                          }`}
-                        placeholder="business@company.com"
-                      />
-                      {validationErrors.email && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {validationErrors.email}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Country *
-                      </label>
-                      <select
-                        name="country"
-                        value={formData.country}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        {countries.map((country) => (
-                          <option key={country} value={country}>
-                            {country}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Currency *
-                      </label>
-                      <div className="relative">
-                        <div
-                          onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                          className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${
-                            validationErrors.currency ? "border-red-300" : "border-gray-300"
-                            }`}
-                        >
-                          {formData.currency.length > 0 ? (
-                            <span className="text-gray-900">{formData.currency.join(", ")}</span>
-                          ) : (
-                            <span className="text-gray-400">Select currencies</span>
-                          )}
-                        </div>
-                        {showCurrencyDropdown && (
-                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                            {currencies.map((currency) => (
-                              <div
-                                key={currency}
-                                onClick={() => handleCurrencyToggle(currency)}
-                                className={`px-3 py-2 cursor-pointer hover:bg-blue-50 flex items-center ${formData.currency.includes(currency) ? "bg-blue-100" : ""
-                                  }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={formData.currency.includes(currency)}
-                                  onChange={() => { }}
-                                  className="mr-2"
-                                />
-                                <span>{currency}</span>
-                              </div>
-                            ))}
-                            <div className="border-t border-gray-200 p-2">
-                              <button
-                                type="button"
-                                onClick={() => setShowCurrencyDropdown(false)}
-                                className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                              >
-                                Done
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      {validationErrors.currency && (
-                        <p className="text-red-500 text-xs mt-1">{validationErrors.currency}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        State *
-                      </label>
-                      <select
-                        name="state"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.state
-                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                          }`}
-                      >
-                        <option value="">Select State</option>
-                        {states.map((state) => (
-                          <option key={state} value={state}>
-                            {state}
-                          </option>
-                        ))}
-                      </select>
-                      {validationErrors.state && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {validationErrors.state}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        District *
-                      </label>
-                      <select
-                        name="district"
-                        value={formData.district}
-                        onChange={handleInputChange}
-                        required
-                        disabled={!formData.state}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                      >
-                        <option value="">Select District</option>
-                        {formData.state &&
-                          districts[
-                            formData.state as keyof typeof districts
-                          ]?.map((district) => (
-                            <option key={district} value={district}>
-                              {district}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        City *
-                      </label>
-                      <select
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        required
-                        disabled={!formData.district}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                      >
-                        <option value="">Select City</option>
-                        {formData.district &&
-                          cities[formData.district as keyof typeof cities]?.map(
-                            (city) => (
-                              <option key={city} value={city}>
-                                {city}
-                              </option>
-                            )
-                          )}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Customer Type *
-                      </label>
-                      <select
-                        name="customerType"
-                        value={formData.customerType}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select Type</option>
-                        {customerTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Customer Potential *
-                      </label>
-                      <input
-                        type="number"
-                        name="customerPotential"
-                        value={formData.customerPotential}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
-                      />
-                      {/* <select
-                        name="customerPotential"
-                        value={formData.customerPotential}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select Potential</option>
-                        {customerPotentials.map((potential) => (
-                          <option key={potential} value={potential}>
-                            {potential}
-                          </option>
-                        ))}
-                      </select> */}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Pincode *
-                      </label>
-                      <input
-                        type="text"
-                        name="pincode"
-                        value={formData.pincode}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.pincode
-                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                          }`}
-                        placeholder="400001"
-                      />
-                      {validationErrors.pincode && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {validationErrors.pincode}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.active}
-                          onChange={() => handleToggle("active")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">
-                          Active
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bank Details */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    Bank Details
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        PAN Number
-                      </label>
-                      <input
-                        type="text"
-                        name="panNumber"
-                        value={formData.panNumber}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${validationErrors.panNumber
-                          ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                          }`}
-                        placeholder="ABCDE1234F"
-                      />
-                      {validationErrors.panNumber && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {validationErrors.panNumber}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        TAN Number
-                      </label>
-                      <input
-                        type="text"
-                        name="tanNumber"
-                        value={formData.tanNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="ABCD12345E"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        GST Number
-                      </label>
-                      <input
-                        type="text"
-                        name="gstNumber"
-                        value={formData.gstNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="27ABCDE1234F1Z5"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Bank Name
-                      </label>
-                      <input
-                        type="text"
-                        name="bankName"
-                        value={formData.bankName}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="State Bank of India"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Bank Account Number
-                      </label>
-                      <input
-                        type="text"
-                        name="bankAccountNumber"
-                        value={formData.bankAccountNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="1234567890123456"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Branch Name
-                      </label>
-                      <input
-                        type="text"
-                        name="branchName"
-                        value={formData.branchName}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Mumbai Main Branch"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        IFSC Code
-                      </label>
-                      <input
-                        type="text"
-                        name="ifscCode"
-                        value={formData.ifscCode}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="SBIN0001234"
-                      />
-                    </div>
-                  </div>
-                </div>
+                {renderBasicDetails()}
+                {renderBillingAddress(
+                  formData,
+                  (field, value) =>
+                    handleInputChange({
+                      target: { name: field, value },
+                    } as any),
+                  validationErrors
+                )}
+                {renderCompliance(
+                  formData,
+                  (field, value) =>
+                    handleInputChange({
+                      target: { name: field, value },
+                    } as any),
+                  validationErrors
+                )}
+                {renderBankDetails(
+                  formData,
+                  (field, value) =>
+                    handleInputChange({
+                      target: { name: field, value },
+                    } as any),
+                  validationErrors
+                )}
 
                 {/* Contact Persons */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-medium text-gray-900">
-                      Contact Persons
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={addContactPerson}
-                      disabled={formData.contactPersons.some(
-                        (person: ContactPerson) => person.isEditing
-                      )}
-                      className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Contact Person
-                    </button>
-                  </div>
-
-                  {formData.contactPersons.map(
-                    (person: ContactPerson, index: number) => (
-                      <div
-                        key={person.id}
-                        className="border border-gray-200 rounded-lg p-4 mb-4"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h5 className="text-sm font-medium text-gray-900">
-                            Contact Person {index + 1}
-                          </h5>
-                          <div className="flex space-x-2">
-                            <button
-                              type="button"
-                              onClick={() => removeContactPerson(person.id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                            {person.isEditing ? (
-                              <button
-                                type="button"
-                                onClick={() => saveContactPerson(person.id)}
-                                className="text-green-600 hover:text-green-800"
-                              >
-                                <Save className="h-4 w-4" />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => editContactPerson(person.id)}
-                                className="text-blue-600 hover:text-blue-800"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Name
-                            </label>
-                            <input
-                              type="text"
-                              value={person.name}
-                              onChange={(e) =>
-                                updateContactPerson(
-                                  person.id,
-                                  "name",
-                                  e.target.value
-                                )
-                              }
-                              disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                : contactPersonErrors[person.id]?.name
-                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                }`}
-                              placeholder="Contact person name"
-                            />
-                            {contactPersonErrors[person.id]?.name && (
-                              <p className="text-red-500 text-xs mt-1">
-                                {contactPersonErrors[person.id].name}
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Phone Number
-                            </label>
-                            <input
-                              type="tel"
-                              value={person.phone}
-                              onChange={(e) =>
-                                updateContactPerson(
-                                  person.id,
-                                  "phone",
-                                  e.target.value
-                                )
-                              }
-                              disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                : contactPersonErrors[person.id]?.phone
-                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                }`}
-                              placeholder="+91 98765 43210"
-                            />
-                            {contactPersonErrors[person.id]?.phone && (
-                              <p className="text-red-500 text-xs mt-1">
-                                {contactPersonErrors[person.id].phone}
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Email ID
-                            </label>
-                            <input
-                              type="email"
-                              value={person.email}
-                              onChange={(e) =>
-                                updateContactPerson(
-                                  person.id,
-                                  "email",
-                                  e.target.value
-                                )
-                              }
-                              disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                : contactPersonErrors[person.id]?.email
-                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                }`}
-                              placeholder="contact@company.com"
-                            />
-                            {contactPersonErrors[person.id]?.email && (
-                              <p className="text-red-500 text-xs mt-1">
-                                {contactPersonErrors[person.id].email}
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Designation
-                            </label>
-                            <input
-                              type="text"
-                              value={person.designation}
-                              onChange={(e) =>
-                                updateContactPerson(
-                                  person.id,
-                                  "designation",
-                                  e.target.value
-                                )
-                              }
-                              disabled={!person.isEditing}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
-                                ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                : contactPersonErrors[person.id]?.designation
-                                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                }`}
-                              placeholder="Manager, CEO, etc."
-                            />
-                            {contactPersonErrors[person.id]?.designation && (
-                              <p className="text-red-500 text-xs mt-1">
-                                {contactPersonErrors[person.id].designation}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
+                {renderContactPersons(
+                  formData.contactPersons,
+                  addContactPerson,
+                  removeContactPerson,
+                  editContactPerson,
+                  saveContactPerson,
+                  updateContactPerson,
+                  (id, field) =>
+                    contactPersonErrors[id]?.[
+                    field as keyof (typeof contactPersonErrors)[string]
+                    ]
+                )}
               </div>
             )}
 
@@ -3071,482 +3448,60 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Branch Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={branch.branchName}
-                          onChange={(e) =>
-                            updateBranch(
-                              branch.id,
-                              "branchName",
-                              e.target.value
-                            )
-                          }
-                          disabled={!branch.isEditing}
-                          required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                            : branchErrors[branch.id]?.branchName
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                            }`}
-                          placeholder="Branch name"
-                        />
-                        {branchErrors[branch.id]?.branchName && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {branchErrors[branch.id].branchName}
-                          </p>
-                        )}
-                      </div>
+                    {renderBillingAddress(
+                      branch,
+                      (field, value) => updateBranch(branch.id, field, value),
+                      branchErrors[branch.id],
+                      true,
+                      !branch.isEditing
+                    )}
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Contact Number *
-                        </label>
-                        <input
-                          type="tel"
-                          value={branch.contactNumber}
-                          onChange={(e) =>
-                            updateBranch(
-                              branch.id,
-                              "contactNumber",
-                              e.target.value
-                            )
-                          }
-                          disabled={!branch.isEditing}
-                          required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                            : branchErrors[branch.id]?.contactNumber
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                            }`}
-                          placeholder="+91 98765 43210"
-                        />
-                        {branchErrors[branch.id]?.contactNumber && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {branchErrors[branch.id].contactNumber}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Email ID *
-                        </label>
-                        <input
-                          type="email"
-                          value={branch.email}
-                          onChange={(e) =>
-                            updateBranch(branch.id, "email", e.target.value)
-                          }
-                          disabled={!branch.isEditing}
-                          required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                            : branchErrors[branch.id]?.email
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                            }`}
-                          placeholder="branch@company.com"
-                        />
-                        {branchErrors[branch.id]?.email && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {branchErrors[branch.id].email}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Country *
-                        </label>
-                        <select
-                          value={branch.country}
-                          onChange={(e) =>
-                            updateBranch(branch.id, "country", e.target.value)
-                          }
-                          disabled={!branch.isEditing}
-                          required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing
-                            ? "bg-gray-50 cursor-not-allowed"
-                            : ""
-                            }`}
-                        >
-                          {countries.map((country) => (
-                            <option key={country} value={country}>
-                              {country}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Currency *
-                        </label>
-                        <select
-                          value={branch.currency}
-                          onChange={(e) =>
-                            updateBranch(branch.id, "currency", e.target.value)
-                          }
-                          disabled={!branch.isEditing || formData.currency.length === 0}
-                          required
-                          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!branch.isEditing || formData.currency.length === 0
-                            ? "bg-gray-50 cursor-not-allowed"
-                            : ""
-                            }`}
-                        >
-                          <option value="">Select Currency</option>
-                          {formData.currency.map((currency) => (
-                            <option key={currency} value={currency}>
-                              {currency}
-                            </option>
-                          ))}
-                        </select>
-                        {formData.currency.length === 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Please select currencies in Step 1 first
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          GST Number *
-                        </label>
-                        <input
-                          name="gstNumber"
-                          value={branch.gstNumber || ""}
-                          onChange={(e) => updateBranch(branch.id, "gstNumber", e.target.value)}
-                          disabled={!branch.isEditing}
-                          placeholder="GST Number"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          State *
-                        </label>
-                        <select
-                          value={branch.state}
-                          onChange={(e) =>
-                            updateBranch(branch.id, "state", e.target.value)
-                          }
-                          disabled={!branch.isEditing}
-                          required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                            : branchErrors[branch.id]?.state
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                            }`}
-                        >
-                          <option value="">Select State</option>
-                          {states.map((state) => (
-                            <option key={state} value={state}>
-                              {state}
-                            </option>
-                          ))}
-                        </select>
-                        {branchErrors[branch.id]?.state && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {branchErrors[branch.id].state}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          District *
-                        </label>
-                        <select
-                          value={branch.district}
-                          onChange={(e) =>
-                            updateBranch(branch.id, "district", e.target.value)
-                          }
-                          required
-                          disabled={!branch.state || !branch.isEditing}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.state || !branch.isEditing
-                            ? "bg-gray-100 cursor-not-allowed border-gray-300"
-                            : branchErrors[branch.id]?.district
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                            }`}
-                        >
-                          <option value="">Select District</option>
-                          {branch.state &&
-                            districts[
-                              branch.state as keyof typeof districts
-                            ]?.map((district) => (
-                              <option key={district} value={district}>
-                                {district}
-                              </option>
-                            ))}
-                        </select>
-                        {branchErrors[branch.id]?.district && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {branchErrors[branch.id].district}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          City *
-                        </label>
-                        <select
-                          value={branch.city}
-                          onChange={(e) =>
-                            updateBranch(branch.id, "city", e.target.value)
-                          }
-                          required
-                          disabled={!branch.district || !branch.isEditing}
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.district || !branch.isEditing
-                            ? "bg-gray-100 cursor-not-allowed border-gray-300"
-                            : branchErrors[branch.id]?.city
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                            }`}
-                        >
-                          <option value="">Select City</option>
-                          {branch.district &&
-                            cities[branch.district as keyof typeof cities]?.map(
-                              (city) => (
-                                <option key={city} value={city}>
-                                  {city}
-                                </option>
-                              )
-                            )}
-                        </select>
-                        {branchErrors[branch.id]?.city && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {branchErrors[branch.id].city}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Pincode *
-                        </label>
-                        <input
-                          type="text"
-                          value={branch.pincode}
-                          onChange={(e) =>
-                            updateBranch(branch.id, "pincode", e.target.value)
-                          }
-                          disabled={!branch.isEditing}
-                          required
-                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!branch.isEditing
-                            ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                            : branchErrors[branch.id]?.pincode
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                            }`}
-                          placeholder="400001"
-                        />
-                        {branchErrors[branch.id]?.pincode && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {branchErrors[branch.id].pincode}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    {/* Branch Bank Details Section */}
+                    {renderCompliance(
+                      branch,
+                      (field, value) => updateBranch(branch.id, field, value),
+                      branchErrors[branch.id],
+                      !branch.isEditing
+                    )}
+                    {renderBankDetails(
+                      branch,
+                      (field, value) => updateBranch(branch.id, field, value),
+                      branchErrors[branch.id],
+                      true,
+                      !branch.isEditing
+                    )}
 
                     {/* Branch Contact Persons */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h6 className="text-sm font-medium text-gray-900">
-                          Branch Contact Persons
-                        </h6>
-                        <button
-                          type="button"
-                          onClick={() => addBranchContactPerson(branch.id)}
-                          disabled={
-                            !branch.isEditing ||
-                            branch.contactPersons.some(
-                              (person: ContactPerson) => person.isEditing
-                            ) ||
-                            (isEditMode && !originalBranches.some(
-                              (originalBranch) => originalBranch.id === branch.id
-                            ))
-                          }
-                          className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add Contact
-                        </button>
-                      </div>
-
-                      {branch.contactPersons.map(
-                        (person: ContactPerson, personIndex: number) => (
-                          <div
-                            key={person.id}
-                            className="border border-gray-100 rounded p-3 mb-3"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-gray-700">
-                                Contact {personIndex + 1}
-                              </span>
-                              <div className="flex space-x-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeBranchContactPerson(
-                                      branch.id,
-                                      person.id
-                                    )
-                                  }
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                                {person.isEditing ? (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      saveBranchContactPerson(
-                                        branch.id,
-                                        person.id
-                                      )
-                                    }
-                                    className="text-green-600 hover:text-green-800"
-                                  >
-                                    <Save className="h-3 w-3" />
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      editBranchContactPerson(
-                                        branch.id,
-                                        person.id
-                                      )
-                                    }
-                                    className="text-blue-600 hover:text-blue-800"
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                              <div>
-                                <input
-                                  type="text"
-                                  value={person.name}
-                                  onChange={(e) =>
-                                    updateBranchContactPerson(
-                                      branch.id,
-                                      person.id,
-                                      "name",
-                                      e.target.value
-                                    )
-                                  }
-                                  disabled={!person.isEditing}
-                                  className={`w-full px-2 py-1 border rounded text-sm ${!person.isEditing
-                                    ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                    : branchErrors[branch.id]?.[
-                                      `contactPerson_${person.id}_name`
-                                    ]
-                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                    }`}
-                                  placeholder="Name"
-                                />
-                                {branchErrors[branch.id]?.[
-                                  `contactPerson_${person.id}_name`
-                                ] && (
-                                    <p className="text-red-500 text-xs mt-1">
-                                      {
-                                        branchErrors[branch.id][
-                                        `contactPerson_${person.id}_name`
-                                        ]
-                                      }
-                                    </p>
-                                  )}
-                              </div>
-                              <div>
-                                <input
-                                  type="tel"
-                                  value={person.phone}
-                                  onChange={(e) =>
-                                    updateBranchContactPerson(
-                                      branch.id,
-                                      person.id,
-                                      "phone",
-                                      e.target.value
-                                    )
-                                  }
-                                  disabled={!person.isEditing}
-                                  className={`w-full px-2 py-1 border rounded text-sm ${!person.isEditing
-                                    ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                    : branchErrors[branch.id]?.[
-                                      `contactPerson_${person.id}_phone`
-                                    ]
-                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                    }`}
-                                  placeholder="Phone"
-                                />
-                                {branchErrors[branch.id]?.[
-                                  `contactPerson_${person.id}_phone`
-                                ] && (
-                                    <p className="text-red-500 text-xs mt-1">
-                                      {
-                                        branchErrors[branch.id][
-                                        `contactPerson_${person.id}_phone`
-                                        ]
-                                      }
-                                    </p>
-                                  )}
-                              </div>
-                              <div>
-                                <input
-                                  type="email"
-                                  value={person.email}
-                                  onChange={(e) =>
-                                    updateBranchContactPerson(
-                                      branch.id,
-                                      person.id,
-                                      "email",
-                                      e.target.value
-                                    )
-                                  }
-                                  disabled={!person.isEditing}
-                                  className={`w-full px-2 py-1 border rounded text-sm ${!person.isEditing
-                                    ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                                    : branchErrors[branch.id]?.[
-                                      `contactPerson_${person.id}_email`
-                                    ]
-                                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                                    }`}
-                                  placeholder="Email"
-                                />
-                                {branchErrors[branch.id]?.[
-                                  `contactPerson_${person.id}_email`
-                                ] && (
-                                    <p className="text-red-500 text-xs mt-1">
-                                      {
-                                        branchErrors[branch.id][
-                                        `contactPerson_${person.id}_email`
-                                        ]
-                                      }
-                                    </p>
-                                  )}
-                              </div>
-                            </div>
-                          </div>
+                    {/* Branch Contact Persons */}
+                    {renderContactPersons(
+                      branch.contactPersons,
+                      () => addBranchContactPerson(branch.id),
+                      (personId) =>
+                        removeBranchContactPerson(branch.id, personId),
+                      (personId) =>
+                        editBranchContactPerson(branch.id, personId),
+                      (personId) =>
+                        saveBranchContactPerson(branch.id, personId),
+                      (personId, field, value) =>
+                        updateBranchContactPerson(
+                          branch.id,
+                          personId,
+                          field,
+                          value
+                        ),
+                      (personId, field) =>
+                        branchErrors[branch.id]?.[
+                        `contactPerson_${personId}_${field}`
+                        ],
+                      !branch.isEditing,
+                      "Branch Contact Persons",
+                      !(
+                        isEditMode &&
+                        !originalBranches.some(
+                          (originalBranch) => originalBranch.id === branch.id
                         )
-                      )}
-                    </div>
+                      )
+                    )}
                   </div>
                 ))}
               </div>
@@ -3837,11 +3792,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Approval Status</p>
-                    <p className={`text-sm font-medium ${
-                      selectedCustomerDetails.approval_status === 'APPROVED' ? 'text-green-600' :
+                    <p className={`text-sm font-medium ${selectedCustomerDetails.approval_status === 'APPROVED' ? 'text-green-600' :
                       selectedCustomerDetails.approval_status === 'REJECTED' ? 'text-red-600' :
-                      'text-yellow-600'
-                    }`}>
+                        'text-yellow-600'
+                      }`}>
                       {selectedCustomerDetails.approval_status || '-'}
                     </p>
                   </div>
@@ -4037,7 +3991,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  
+
                           <div>
                             <p className="text-xs text-gray-500 font-medium">File Size</p>
                             <p className="text-sm text-gray-900">{(file.size / 1024).toFixed(2)} KB</p>
