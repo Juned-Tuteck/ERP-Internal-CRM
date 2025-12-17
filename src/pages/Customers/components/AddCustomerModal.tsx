@@ -38,6 +38,10 @@ interface ContactPerson {
   phone: string;
   email: string;
   designation?: string;
+  alternativeNumber?: string;
+  dateOfBirth?: string;
+  anniversaryDate?: string;
+  communicationMode?: string[];
   isEditing?: boolean;
 }
 
@@ -52,6 +56,14 @@ interface Branch {
   district: string;
   city: string;
   pincode: string;
+  street?: string;
+  googleLocation?: string;
+  addressType?: string;
+  currentStatus?: string;
+  blacklistReason?: string;
+  customerCategory?: string;
+  riskLevel?: string;
+  creditDays?: string;
   contactPersons: ContactPerson[];
   isEditing?: boolean;
   gstNumber?: string;
@@ -90,6 +102,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       customerType: "",
       customerPotential: "",
       pincode: "",
+      street: "",
+      googleLocation: "",
+      addressType: "",
+      currentStatus: "Active",
+      blacklistReason: "",
+      customerCategory: "",
+      riskLevel: "",
+      creditDays: "",
+      tdsApplicability: "",
       active: true,
       customerGroup: "",
       customerSubGroup: "",
@@ -168,7 +189,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         customerType: "",
         customerPotential: "",
         pincode: "",
+        street: "",
+        googleLocation: "",
+        addressType: "",
+        currentStatus: "Active",
+        blacklistReason: "",
+        customerCategory: "",
+        riskLevel: "",
+        creditDays: "",
+        tdsApplicability: "",
         active: true,
+        customerGroup: "",
+        customerSubGroup: "",
+        alternateNumber: "",
+        customerClassification: "",
+        msmeRegistered: "No",
+        udyamRegistrationNumber: "",
         panNumber: "",
         tanNumber: "",
         gstNumber: "",
@@ -211,6 +247,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     customerType: "customer_type",
     customerPotential: "customer_potential",
     pincode: "pincode",
+    street: "street",
+    googleLocation: "google_location",
+    addressType: "address_type",
+    currentStatus: "current_status",
+    blacklistReason: "blacklist_reason",
+    customerCategory: "customer_category",
+    riskLevel: "risk_level",
+    creditDays: "credit_days",
+    tdsApplicability: "tds_applicability",
     active: "active",
     panNumber: "pan_number",
     tanNumber: "tan_number",
@@ -240,6 +285,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     district: "district",
     city: "city",
     pincode: "pincode",
+    street: "street",
+    googleLocation: "google_location",
+    addressType: "address_type",
+    currentStatus: "current_status",
+    blacklistReason: "blacklist_reason",
+    customerCategory: "customer_category",
+    riskLevel: "risk_level",
+    creditDays: "credit_days",
     gstNumber: "gst_number",
     panNumber: "pan_number",
     tanNumber: "tan_number",
@@ -253,6 +306,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     name: "name",
     phone: "phone",
     email: "email",
+    designation: "designation",
+    alternativeNumber: "alternative_number",
+    dateOfBirth: "date_of_birth",
+    anniversaryDate: "anniversary_date",
+    communicationMode: "communication_mode",
   };
 
   useEffect(() => {
@@ -368,6 +426,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const customerGroups = ["Individual", "Enduser", "Contractor", "Architect", "Interior", "Consultant", "Government", "Other"];
   const customerSubGroups = ["Sub Group A", "Sub Group B", "Sub Group C"];
   const customerClassifications = ["A – High Value", "B – Medium Value", "C – Low Value"];
+  const addressTypes = ["HO", "Branch", "Project", "Zone"];
+  const statusOptions = ["Active", "Inactive", "Blacklisted"];
+  const riskLevels = ["Low", "Mid", "High"];
+  const creditDaysOptions = ["0", "10", "20", "30", "45"];
+  const communicationModes = ["WhatsApp", "Email", "Call", "VC", "Physical"];
   // const msmeOptions = ["Yes", "No"];
 
   useEffect(() => {
@@ -788,6 +851,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           phone: contactPerson.phone,
           email: contactPerson.email,
           designation: contactPerson.designation || "",
+          alternative_number: contactPerson.alternativeNumber || "",
+          date_of_birth: contactPerson.dateOfBirth || "",
+          anniversary_date: contactPerson.anniversaryDate || "",
+          communication_mode: contactPerson.communicationMode || [],
           customer_id: formData.id,
           created_by: currentUserId
         };
@@ -824,6 +891,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             changedFields.email = contactPerson.email;
           if (contactPerson.designation !== originalContact.designation)
             changedFields.designation = contactPerson.designation || "";
+          if (contactPerson.alternativeNumber !== originalContact.alternativeNumber)
+            changedFields.alternative_number = contactPerson.alternativeNumber || "";
+          if (contactPerson.dateOfBirth !== originalContact.dateOfBirth)
+            changedFields.date_of_birth = contactPerson.dateOfBirth || "";
+          if (contactPerson.anniversaryDate !== originalContact.anniversaryDate)
+            changedFields.anniversary_date = contactPerson.anniversaryDate || "";
+          if (JSON.stringify(contactPerson.communicationMode) !== JSON.stringify(originalContact.communicationMode))
+            changedFields.communication_mode = contactPerson.communicationMode || [];
         }
 
         if (currentUserId) changedFields.updated_by = currentUserId;
@@ -869,6 +944,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       phone: "",
       email: "",
       designation: "",
+      alternativeNumber: "",
+      dateOfBirth: "",
+      anniversaryDate: "",
+      communicationMode: [] as string[],
       isEditing: true,
     };
     setFormData((prevFormData: typeof formData) => ({
@@ -996,6 +1075,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       district: "",
       city: "",
       pincode: "",
+      street: "",
+      googleLocation: "",
+      addressType: "",
+      currentStatus: "Active",
+      blacklistReason: "",
+      customerCategory: "",
+      riskLevel: "",
+      creditDays: "",
       contactPersons: [],
       isEditing: true,
       gstNumber: "",
@@ -1960,6 +2047,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               phone: contact.phone,
               email: contact.email,
               designation: contact.designation || "",
+              alternative_number: contact.alternativeNumber || "",
+              date_of_birth: contact.dateOfBirth || "",
+              anniversary_date: contact.anniversaryDate || "",
+              communication_mode: contact.communicationMode || [],
               customer_id: customerId,
               created_by: currentUserId
             })
@@ -2670,6 +2761,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             <span className="ml-2 text-sm text-gray-700">Active</span>
           </label>
         </div>
+
+        {/* TDS Applicability */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            TDS Applicability
+          </label>
+          <input
+            type="text"
+            name="tdsApplicability"
+            value={formData.tdsApplicability}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter TDS details"
+          />
+        </div>
       </div>
     </div>
   );
@@ -2913,6 +3019,60 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           )}
         </div>
 
+        {/* Street */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Street
+          </label>
+          <textarea
+            name={!isBranch ? "street" : undefined}
+            value={data.street || ""}
+            onChange={(e) => onChange("street", e.target.value)}
+            disabled={readOnly}
+            rows={2}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter full address"
+          />
+        </div>
+
+        {/* Google Location */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Google Location
+          </label>
+          <input
+            type="text"
+            name={!isBranch ? "googleLocation" : undefined}
+            value={data.googleLocation || ""}
+            onChange={(e) => onChange("googleLocation", e.target.value)}
+            disabled={readOnly}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Google Maps link or coordinates"
+          />
+        </div>
+
+        {/* Address Type */}
+        {isBranch && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Address Type
+            </label>
+            <select
+              value={data.addressType || ""}
+              onChange={(e) => onChange("addressType", e.target.value)}
+              disabled={readOnly}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select Type</option>
+              {addressTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {!isBranch && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2927,6 +3087,109 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             />
           </div>
         )}
+
+        {/* Customer Category */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer Category
+          </label>
+          <select
+            name={!isBranch ? "customerCategory" : undefined}
+            value={data.customerCategory || ""}
+            onChange={(e) => onChange("customerCategory", e.target.value)}
+            disabled={readOnly}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Category</option>
+            {customerPotentials.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Current Status */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Current Status *
+          </label>
+          <select
+            name={!isBranch ? "currentStatus" : undefined}
+            value={data.currentStatus || "Active"}
+            onChange={(e) => onChange("currentStatus", e.target.value)}
+            disabled={readOnly}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Blacklist Reason - Conditional */}
+        {data.currentStatus === "Blacklisted" && (
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Blacklist Reason *
+            </label>
+            <textarea
+              name={!isBranch ? "blacklistReason" : undefined}
+              value={data.blacklistReason || ""}
+              onChange={(e) => onChange("blacklistReason", e.target.value)}
+              disabled={readOnly}
+              required
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter reason for blacklisting"
+            />
+          </div>
+        )}
+
+        {/* Risk Level */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Risk Level
+          </label>
+          <select
+            name={!isBranch ? "riskLevel" : undefined}
+            value={data.riskLevel || ""}
+            onChange={(e) => onChange("riskLevel", e.target.value)}
+            disabled={readOnly}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Risk Level</option>
+            {riskLevels.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Credit Days */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Credit Days
+          </label>
+          <select
+            name={!isBranch ? "creditDays" : undefined}
+            value={data.creditDays || ""}
+            onChange={(e) => onChange("creditDays", e.target.value)}
+            disabled={readOnly}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Credit Days</option>
+            {creditDaysOptions.map((days) => (
+              <option key={days} value={days}>
+                {days} days
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   );
@@ -3190,7 +3453,32 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number
+                Designation
+              </label>
+              <input
+                type="text"
+                value={person.designation}
+                onChange={(e) =>
+                  onUpdate(person.id, "designation", e.target.value)
+                }
+                disabled={!person.isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
+                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                  : getError(person.id, "designation")
+                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="Manager, CEO, etc."
+              />
+              {getError(person.id, "designation") && (
+                <p className="text-red-500 text-xs mt-1">
+                  {getError(person.id, "designation")}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number
               </label>
               <input
                 type="tel"
@@ -3210,6 +3498,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   {getError(person.id, "phone")}
                 </p>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Alternative Number
+              </label>
+              <input
+                type="tel"
+                value={person.alternativeNumber || ""}
+                onChange={(e) => onUpdate(person.id, "alternativeNumber", e.target.value)}
+                disabled={!person.isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
+                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="+91 98765 43211"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3236,28 +3540,63 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Designation
+                Date of Birth
               </label>
               <input
-                type="text"
-                value={person.designation}
-                onChange={(e) =>
-                  onUpdate(person.id, "designation", e.target.value)
-                }
+                type="date"
+                value={person.dateOfBirth || ""}
+                onChange={(e) => onUpdate(person.id, "dateOfBirth", e.target.value)}
                 disabled={!person.isEditing}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
                   ? "bg-gray-50 cursor-not-allowed border-gray-300"
-                  : getError(person.id, "designation")
-                    ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                   }`}
-                placeholder="Manager, CEO, etc."
               />
-              {getError(person.id, "designation") && (
-                <p className="text-red-500 text-xs mt-1">
-                  {getError(person.id, "designation")}
-                </p>
-              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Anniversary Date
+              </label>
+              <input
+                type="date"
+                value={person.anniversaryDate || ""}
+                onChange={(e) => onUpdate(person.id, "anniversaryDate", e.target.value)}
+                disabled={!person.isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${!person.isEditing
+                  ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Communication Mode
+              </label>
+              <div className={`w-full px-3 py-2 border rounded-md ${!person.isEditing
+                ? "bg-gray-50 cursor-not-allowed border-gray-300"
+                : "border-gray-300"
+                }`}>
+                <div className="flex flex-wrap gap-2">
+                  {communicationModes.map((mode) => (
+                    <label key={mode} className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={person.communicationMode?.includes(mode) || false}
+                        onChange={(e) => {
+                          const currentModes = person.communicationMode || [];
+                          const newModes = e.target.checked
+                            ? [...currentModes, mode]
+                            : currentModes.filter(m => m !== mode);
+                          onUpdate(person.id, "communicationMode", newModes);
+                        }}
+                        disabled={!person.isEditing}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-1 text-sm text-gray-700">{mode}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

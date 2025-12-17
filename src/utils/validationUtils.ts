@@ -228,6 +228,33 @@ export const validationRules = {
     required: false, // validated conditionally in component
     minLength: 5,
   },
+  tdsApplicability: {
+    required: false,
+  },
+  street: {
+    required: false,
+  },
+  googleLocation: {
+    required: false,
+  },
+  addressType: {
+    required: false,
+  },
+  currentStatus: {
+    required: true,
+  },
+  blacklistReason: {
+    required: false,
+  },
+  customerCategory: {
+    required: false,
+  },
+  riskLevel: {
+    required: false,
+  },
+  creditDays: {
+    required: false,
+  },
 
   // Vendor-specific validations
   vendorCategory: {
