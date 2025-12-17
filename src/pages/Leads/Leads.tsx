@@ -130,14 +130,14 @@ const Leads: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'leads' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+          <div className="lg:col-span-1 h-full overflow-hidden">
             <LeadList
               selectedLead={selectedLead}
               onSelectLead={setSelectedLead}
             />
           </div>
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 h-full overflow-y-auto">
             <LeadDetails
               lead={selectedLead}
               onConvert={handleConvertLead}

@@ -15,7 +15,7 @@ import axios from "axios";
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
-import { CustomLoader} from '../../../components/CustomLoader';
+import { CustomLoader } from '../../../components/CustomLoader';
 import { create } from "domain";
 
 interface AddLeadModalProps {
@@ -223,7 +223,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     return date >= today;
   };
 
-    // Compute ETA as leadGeneratedDate + days
+  // Compute ETA as leadGeneratedDate + days
   // const computeEta = (leadDateStr: string, daysStr: string | number) => {
   //   if (!leadDateStr) return "";
   //   const days = parseInt(String(daysStr || "0"), 10);
@@ -328,14 +328,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         errors.leadStage = "Lead Stage is required";
       }
 
-      if (!formData.approximateResponseTime?.toString().trim()) {
-        errors.approximateResponseTime =
-          "Approximate Response Time is required";
-      } else if (
-        !validateResponseTime(formData.approximateResponseTime.toString())
-      ) {
-        errors.approximateResponseTime =
-          "Please enter a valid number of days (1-365)";
+      if (!formData.approximateResponseTime) {
+        errors.approximateResponseTime = "Next Follow-Up Date is required";
+      } else {
+        errors.approximateResponseTime = "Please enter a valid date";
       }
 
       // Optional field validations
@@ -411,10 +407,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         return !value?.trim() ? "Lead Source is required" : "";
 
       case "approximateResponseTime":
-        if (!value?.toString().trim())
-          return "Approximate Response Time is required";
-        if (!validateResponseTime(value.toString()))
-          return "Please enter a valid number of days (1-365)";
+        if (!value)
+          return "Please enter a valid date";
         return "";
 
       case "eta":
@@ -472,7 +466,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     const fetchAllForEdit = async () => {
       if (initialData) {
         // Debug log for initialData
-        
+
         // Normalize leadGeneratedDate to YYYY-MM-DD
         let normalizedDate = "";
         if (initialData.leadGeneratedDate) {
@@ -582,17 +576,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               currency: convertCurrencyString(customer.currency),
               contacts: customer.contacts || [],
             }));
-            
+
             const approvedCustomers = customerData.filter(
               (customer: any) => customer.approval_status === "APPROVED"
             );
-            
+
             setCustomers(approvedCustomers);
             const selectedCustomer = approvedCustomers.find(
               (customer: any) => customer.name === initialData.businessName
             );
 
-            
+
             if (selectedCustomer) {
               // use local ids to snapshot accurately
               const localCustomerId = selectedCustomer.id;
@@ -720,7 +714,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showWorkTypeDropdown]);
-  
+
   const convertCurrencyString = (str: string): string[] => {
     return str
       .replace(/[{}"]/g, "") // remove { } and "
@@ -736,11 +730,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       );
       const customerData = response.data.data;
 
-      
+
       const approvedCustomers = customerData.filter(
         (customer: any) => customer.approval_status === "APPROVED"
       );
-      
+
 
       setCustomers(
         approvedCustomers.map((customer: any) => ({
@@ -761,9 +755,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const response = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/customer-branch?customer_id=${customerId}`
       );
-      
+
       const branchData = response.data.data;
-      
+
       setCustomerBranches(branchData);
       // Reset dependent fields
       setSelectedBranchId("");
@@ -781,7 +775,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         `${import.meta.env.VITE_API_BASE_URL}/customer-branch-contact?customer_branch_id=${branchId}`
       );
       const contactData = response.data.data;
-      
+
       setContactPersons(contactData);
       // Reset contact selection
       setSelectedContactId("");
@@ -891,7 +885,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setFormData((prev: any) => ({
         ...prev,
         businessName: value,
-        projectName:  value,
+        projectName: value,
         customerBranch: "",
         contactPerson: "",
         contactNo: "",
@@ -955,7 +949,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         (contact) => contact.name === value
       );
       if (selectedContact) {
-        
+
         setSelectedContactId(selectedContact.id);
         setFormData((prev: any) => ({
           ...prev,
@@ -1314,7 +1308,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     setIsLoading(true);
 
     console.log("form data for lead :", formData);
-    
+
     try {
       const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
 
@@ -1776,9 +1770,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   if (!isOpen) return null;
 
   if (isLoading) {
-    return <CustomLoader message={isEditMode?"Updating Lead...":"Creating Lead..."}/>
+    return <CustomLoader message={isEditMode ? "Updating Lead..." : "Creating Lead..."} />
   }
-  
+
+  const today = new Date().toLocaleDateString("en-CA");
+  const maxDateObj = new Date();
+  maxDateObj.setDate(maxDateObj.getDate() + 30);
+  const maxDate = maxDateObj.toLocaleDateString("en-CA");
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
@@ -2043,7 +2042,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Project Value ( lakh )* 
+                      Project Value ( lakh )*
                     </label>
                     <input
                       type="number"
@@ -2094,8 +2093,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         value={formData.workType}
                         onChange={handleInputChange}
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.workType
-                        ? "border-red-500"
-                        : "border-gray-300"}`}
+                          ? "border-red-500"
+                          : "border-gray-300"}`}
                       >
                         <option value="">Select Work Type</option>
                         {workTypes.map((type) => (
@@ -2106,45 +2105,44 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </select>
                     ) : (
                       <div className="relative">
-                          <div
-                            onClick={() => setShowWorkTypeDropdown(!showWorkTypeDropdown)}
-                            className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${
-                              validationErrors.workType ? "border-red-500" : "border-gray-300"
+                        <div
+                          onClick={() => setShowWorkTypeDropdown(!showWorkTypeDropdown)}
+                          className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${validationErrors.workType ? "border-red-500" : "border-gray-300"
                             }`}
-                          >
-                            {formData.workType.length > 0 ? (
-                              <span className="text-gray-900">{formData.workType.join(", ")}</span>
-                            ) : (
-                              <span className="text-gray-400">Select Work types</span>
-                            )}
+                        >
+                          {formData.workType.length > 0 ? (
+                            <span className="text-gray-900">{formData.workType.join(", ")}</span>
+                          ) : (
+                            <span className="text-gray-400">Select Work types</span>
+                          )}
                         </div>
-                        {showWorkTypeDropdown &&(
-                        <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
-                          {workTypes.map((type) => (
-                            <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
-                              <input
-                                type="checkbox"
-                                checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
-                                onChange={(e) => {
-                                  const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
-                                  let newWorktypes;
-                                  if (e.target.checked) {
-                                    newWorktypes = [...currentWorktypes, type];
-                                  } else {
-                                    newWorktypes = currentWorktypes.filter((w) => w !== type);
-                                  }
-                                  setFormData((prev: any) => ({
-                                    ...prev,
-                                    workType: newWorktypes,
-                                  }));
-                                }}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                              />
-                              <span className="text-sm text-gray-700">{type}</span>
-                            </label>
-                          ))}
+                        {showWorkTypeDropdown && (
+                          <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+                            {workTypes.map((type) => (
+                              <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
+                                <input
+                                  type="checkbox"
+                                  checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
+                                  onChange={(e) => {
+                                    const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
+                                    let newWorktypes;
+                                    if (e.target.checked) {
+                                      newWorktypes = [...currentWorktypes, type];
+                                    } else {
+                                      newWorktypes = currentWorktypes.filter((w) => w !== type);
+                                    }
+                                    setFormData((prev: any) => ({
+                                      ...prev,
+                                      workType: newWorktypes,
+                                    }));
+                                  }}
+                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <span className="text-sm text-gray-700">{type}</span>
+                              </label>
+                            ))}
 
-                          <div className="border-t border-gray-200 p-2">
+                            <div className="border-t border-gray-200 p-2">
                               <button
                                 type="button"
                                 onClick={() => setShowWorkTypeDropdown(false)}
@@ -2152,8 +2150,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                               >
                                 Done
                               </button>
+                            </div>
                           </div>
-                        </div>
                         )}
                       </div>
                     )}
@@ -2300,13 +2298,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Approximate Response Time (Days) *
+                      Next Follow-Up Date *
                     </label>
                     <input
-                      type="number"
+                      type="date"
                       name="approximateResponseTime"
                       value={formData.approximateResponseTime}
                       onChange={handleInputChange}
+                      min={today}
+                      max={maxDate}
                       required
                       placeholder="Enter days"
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.approximateResponseTime
