@@ -6,9 +6,7 @@ import {
   ChevronRight,
   Upload,
   MessageSquare,
-  Trash2,
-  Currency,
-  UserCheck
+  Trash2
 } from "lucide-react";
 import axios from "axios";
 
@@ -16,7 +14,6 @@ import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
 import { CustomLoader } from '../../../components/CustomLoader';
-import { create } from "domain";
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -116,6 +113,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   const [showWorkTypeDropdown, setShowWorkTypeDropdown] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
+  const [creationMode, setCreationMode] = useState<'single' | 'multiple'>('multiple');
 
   // State for API data
   const [customers, setCustomers] = useState<
@@ -529,7 +527,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               ? String(initialData.projectValue).replace(/[^\d.]/g, "")
               : "",
           leadType: initialData.leadType || initialData.lead_type || "",
-          workType: initialData.workType || initialData.work_type || "",
+          workType: (() => {
+            const raw = initialData.workType || initialData.work_type;
+            if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+              try {
+                return JSON.parse(raw);
+              } catch (e) {
+                return raw;
+              }
+            }
+            return raw || "";
+          })(),
           leadCriticality: initialData.leadCriticality || initialData.lead_criticality || "",
           leadSource: initialData.leadSource || initialData.lead_source || "",
           leadStage: initialData.leadStage || initialData.lead_stage || "New Lead",
@@ -1381,7 +1389,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             project_name: formData.projectName,
             project_value: parseFloat(formData.projectValue) || 0,
             lead_type: formData.leadType,
-            work_type: worktype,
+            work_type: JSON.stringify([worktype]), // Changed to JSON string array
             lead_criticality: formData.leadCriticality,
             lead_source: formData.leadSource,
             lead_stage: formData.leadStage,
@@ -1538,6 +1546,138 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setIsLoading(false);
     }
   };
+
+  // Unified Lead Creation Handlers (Single Mode)
+  const handleUnifiedLeadCreation = async () => {
+    setIsLoading(true);
+    try {
+      const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
+
+      if (selectedWorktypes.length === 0) {
+        alert("No work types selected.");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("Creating unified lead with worktypes:", selectedWorktypes);
+
+      // 1. Create Lead
+      const leadPayload = {
+        business_name: formData.businessName,
+        customer_id: selectedCustomerId || null,
+        customer_branch_id: selectedBranchId || null,
+        contact_person: selectedContactId || null,
+        contact_no: formData.contactNo,
+        lead_date_generated_on: formData.leadGeneratedDate,
+        referenced_by: formData.referencedBy || null,
+        project_name: formData.projectName,
+        project_value: parseFloat(formData.projectValue) || 0,
+        lead_type: formData.leadType,
+        work_type: JSON.stringify(selectedWorktypes), // Unified Array String
+        lead_criticality: formData.leadCriticality,
+        lead_source: formData.leadSource,
+        lead_stage: formData.leadStage,
+        approximate_response_time_day: 0,
+        eta: formData.eta || null,
+        lead_details: formData.leadDetails || null,
+        currency: formData.currency || null,
+        created_by: userData?.id || null,
+        assigned_user_id: formData.assignedTo || null, // Single assignment
+        next_follow_up_date: formData.nextFollowUpDate || null,
+      };
+
+      const leadResponse = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/lead`,
+        leadPayload
+      );
+      const leadData = leadResponse.data.data;
+      const leadId = leadData.lead_id;
+
+      console.log(`Unified lead created: ${leadId}`);
+
+      // 2. Upload Files (Unified)
+      if (uploadedFiles.length > 0) {
+        try {
+          await uploadFilesForLead(leadId, uploadedFiles);
+          await updateLeadStageAfterFileUpload(leadId);
+        } catch (uploadError) {
+          console.error("Error uploading unified files:", uploadError);
+        }
+      }
+
+      // 3. Add Comment (Unified)
+      if (newComment && newComment.trim()) {
+        try {
+          const commentPayload = {
+            lead_id: leadId,
+            comment: newComment.trim(),
+            created_by: userData?.id || "unknown",
+          };
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-follow-up`,
+            commentPayload
+          );
+        } catch (commentError) {
+          console.error("Error adding unified comment:", commentError);
+        }
+      }
+
+      // 4. Add Associates (Unified)
+      if (formData.involvedAssociates && formData.involvedAssociates.length > 0) {
+        try {
+          const associatePayload = formData.involvedAssociates.map((associate: any) => ({
+            lead_id: leadId,
+            associate_type: associate.designation,
+            associate_name: associate.associateName,
+            other_information: associate.otherInfo || null,
+          }));
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-associate/bulk`,
+            associatePayload
+          );
+        } catch (associateError) {
+          console.error(`Error adding associates:`, associateError);
+        }
+      }
+
+      // 5. Update Customer Flag
+      if (selectedCustomerId) {
+        try {
+          await updateCustomer(selectedCustomerId, { is_lead_generated: true });
+        } catch (custErr) {
+          console.error("Failed to update customer is_lead_generated flag:", custErr);
+        }
+      }
+
+      // 6. Notification
+      try {
+        await sendNotification({
+          receiver_ids: ["admin"],
+          title: `New Unified Lead Created : ${formData.businessName || "Lead"}`,
+          message: `Unified Lead ${formData.businessName || "Lead"} created successfully by ${userData?.name || "a user"} with worktypes: ${selectedWorktypes.join(", ")}`,
+          service_type: "CRM",
+          link: "/leads",
+          sender_id: userRole || "user",
+          access: {
+            module: "CRM",
+            menu: "Lead",
+          },
+        });
+      } catch (notifError) {
+        console.error("Failed to send notification:", notifError);
+      }
+
+      alert("Lead Created Successfully!");
+      onSubmit({ success: true });
+      handleClose();
+
+    } catch (error) {
+      console.error("Error creating unified lead:", error);
+      alert("Failed to create lead. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   // Create lead API call
   const handleCreateLead = async () => {
@@ -2230,6 +2370,36 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </div>
                     )}
 
+                    {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                      <div className="mt-4 mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Completion Mode</label>
+                        <div className="flex space-x-4">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="creationMode"
+                              value="multiple"
+                              checked={creationMode === 'multiple'}
+                              onChange={() => setCreationMode('multiple')}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-sm text-gray-700">Multiple Leads (One per Work Type)</span>
+                          </label>
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="creationMode"
+                              value="single"
+                              checked={creationMode === 'single'}
+                              onChange={() => setCreationMode('single')}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-sm text-gray-700">Single Lead (Unified)</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
                     <ValidationError fieldName="workType" />
                   </div>
 
@@ -2529,7 +2699,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             {/* Step 2: Upload Files */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                {!isEditMode && creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                   // Multi-worktype mode: show upload per worktype
                   formData.workType.map((worktype: string) => (
                     <div key={worktype} className="border border-gray-200 rounded-lg p-4">
@@ -2697,7 +2867,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             {/* Step 3: Follow-up Leads */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                {!isEditMode && creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                   // Multi-worktype mode: show fields per worktype
                   formData.workType.map((worktype: string) => (
                     <div key={worktype} className="border border-gray-200 rounded-lg p-4 space-y-4">
@@ -2950,7 +3120,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   </button>
                 ) : (
                   <>
-                    {Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                    {creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                       <button
                         type="button"
                         onClick={handleCompleteRegistration}
@@ -2962,12 +3132,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </button>
                     ) : (
                       <button
-                        type="submit"
-                        onClick={handleSubmit}
+                        type="button"
+                        onClick={!isEditMode && creationMode === 'single' ? handleUnifiedLeadCreation : handleSubmit}
                         className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
                       >
                         <Save className="h-4 w-4 mr-2" />
-                        Complete
+                        {creationMode === 'single' && !isEditMode ? "Create Unified Lead" : "Complete"}
                       </button>
                     )}
                   </>
