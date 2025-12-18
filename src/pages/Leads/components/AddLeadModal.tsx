@@ -164,18 +164,56 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     { id: 3, name: "Follow-up Leads", description: "Communication log" },
   ];
 
-  const leadTypes = ["Government", "Private", "Semi-Government"];
+  const leadTypes = ["Industrial", "Hospital", "It", "Commercial", "Residential", "Govrment"];
   const workTypes = [
     "HVAC", "Ventilation", "Fire", "MGPS", "Electrical", "CCTV", "Plumbing MEP", "Interior", "Civil"
   ];
-  const leadCriticalities = ["Critical", "Normal"];
+  const leadCriticalities = [
+    "Urgent & Important",
+    "Urgent & Non-important",
+    "Non Urgent & Important",
+    "Non Urgent & Non Importaint"
+  ];
   const leadSources = [
-    "Lead source",
+    "Website",
+    "Google Search",
+    "Social Media",
+    "Facebook / Instagram  Campaign",
+    "LinkedIn",
+    "Email Campaign",
+    "WhatsApp  Campaign",
+    "SMS  Campaign",
+    "Referral",
+    "Existing Customer",
+    "Cold Call",
+    "Walk-in",
+    "Channel Partner",
+    "Dealer / Distributor",
+    "Vendor Referral",
+    "Consultant Referral",
+    "Contractor Referral",
+    "Tender Portal – GeM",
+    "Tender Portal – CPPP",
+    "Govt Tender",
+    "RFP / BOQ from Client",
+    "Architect Referral",
+    "Builder / Developer",
+    "Field Visit",
+    "IndiaMART",
+    "TradeIndia",
+    "JustDial",
+    "Sulekha",
+    "Exhibition / Event",
+    "Cross-sell",
+    "Up-sell",
+    "Internal Lead",
     "Others"
   ];
   const leadStages = [
     "Information Stage",
     "Enquiry",
+    "Design",
+    "Costing",
     "Quoted",
     "Won",
     "Lost",
@@ -1217,6 +1255,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       lead_details: formData.leadDetails || null,
       assigned_to: formData.assignedTo || null,
       next_follow_up_date: formData.nextFollowUpDate || null,
+      // New fields
+      lead_temperature: formData.leadTemperature || null,
+      own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
+      project_state: formData.projectState || null,
+      project_district: formData.projectDistrict || null,
+      project_city: formData.projectCity || null,
+      project_pincode: formData.projectPincode || null,
+      project_street: formData.projectStreet || null,
+      project_location: formData.projectLocation || null,
+      project_zone: formData.projectZone || null,
+      project_current_status: formData.projectCurrentStatus || null,
     };
   };
 
@@ -1256,6 +1305,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           lead_details: initialFormRef.current.leadDetails || null,
           assigned_to: initialFormRef.current.assignedTo || null,
           next_follow_up_date: initialFormRef.current.nextFollowUpDate || null,
+          // New fields
+          lead_temperature: initialFormRef.current.leadTemperature || null,
+          own_probability: initialFormRef.current.ownProbability ? parseFloat(initialFormRef.current.ownProbability) : null,
+          project_state: initialFormRef.current.projectState || null,
+          project_district: initialFormRef.current.projectDistrict || null,
+          project_city: initialFormRef.current.projectCity || null,
+          project_pincode: initialFormRef.current.projectPincode || null,
+          project_street: initialFormRef.current.projectStreet || null,
+          project_location: initialFormRef.current.projectLocation || null,
+          project_zone: initialFormRef.current.projectZone || null,
+          project_current_status: initialFormRef.current.projectCurrentStatus || null,
         }
         : {
           // best-effort fallback from initialData prop
@@ -1279,6 +1339,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           lead_details: initialData.lead_details || initialData.leadDetails || null,
           assigned_to: initialData.assigned_to || initialData.assignedTo || null,
           next_follow_up_date: initialData.next_follow_up_date || initialData.nextFollowUpDate || null,
+          // New fields
+          lead_temperature: initialData.lead_temperature || initialData.leadTemperature || null,
+          own_probability: initialData.own_probability || initialData.ownProbability || null,
+          project_state: initialData.project_state || initialData.projectState || null,
+          project_district: initialData.project_district || initialData.projectDistrict || null,
+          project_city: initialData.project_city || initialData.projectCity || null,
+          project_pincode: initialData.project_pincode || initialData.projectPincode || null,
+          project_street: initialData.project_street || initialData.projectStreet || null,
+          project_location: initialData.project_location || initialData.projectLocation || null,
+          project_zone: initialData.project_zone || initialData.projectZone || null,
+          project_current_status: initialData.project_current_status || initialData.projectCurrentStatus || null,
         };
 
       // Build diff: include only keys that changed (strict comparison)
