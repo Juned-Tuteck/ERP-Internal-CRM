@@ -106,7 +106,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       pincode: "",
       street: "",
       googleLocation: "",
-      addressType: "",
+      addressType: "HO",
       currentStatus: "Active",
       blacklistReason: "",
       customerCategory: "",
@@ -165,6 +165,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
+  // Location API states
+  const [zones, setZones] = useState<Array<{ id: string, name: string }>>([]);
+  const [states, setStates] = useState<Array<{ id: string, name: string, zone_id: string }>>([]);
+  const [districts, setDistricts] = useState<Array<{ id: string, name: string, state_id: string }>>([]);
+  const [allStates, setAllStates] = useState<Array<{ id: string, name: string, zone_id: string }>>([]);
+  const [allDistricts, setAllDistricts] = useState<Array<{ id: string, name: string, state_id: string }>>([]);
+
   // Customer autocomplete states
   const [customerSuggestions, setCustomerSuggestions] = useState<Array<{ id: string, name: string }>>([]);
   const [showCustomerPopup, setShowCustomerPopup] = useState(false);
@@ -185,6 +192,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         email: "",
         country: "India",
         currency: [],
+        zone: "",
         state: "",
         district: "",
         city: "",
@@ -193,7 +201,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         pincode: "",
         street: "",
         googleLocation: "",
-        addressType: "",
+        addressType: "HO",
         currentStatus: "Active",
         blacklistReason: "",
         customerCategory: "",
@@ -243,6 +251,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     email: "email",
     country: "country",
     currency: "currency",
+    zone: "zone",
     state: "state",
     district: "district",
     city: "city",
@@ -320,6 +329,52 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     console.log("changed fields", fieldChanges);
   });
 
+  // Fetch zones, states, and districts on mount
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      try {
+        const authToken = localStorage.getItem('auth_token');
+        const headers = {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        };
+
+        // Fetch zones
+        const zonesResponse = await axios.get(
+          `${import.meta.env.VITE_AUTH_BASE_URL}/zones`,
+          { headers }
+        );
+        if (zonesResponse.data && Array.isArray(zonesResponse.data)) {
+          setZones(zonesResponse.data);
+        }
+
+        // Fetch all states
+        const statesResponse = await axios.get(
+          `${import.meta.env.VITE_AUTH_BASE_URL}/states`,
+          { headers }
+        );
+        if (statesResponse.data && Array.isArray(statesResponse.data)) {
+          setAllStates(statesResponse.data);
+          setStates(statesResponse.data);
+        }
+
+        // Fetch all districts
+        const districtsResponse = await axios.get(
+          `${import.meta.env.VITE_AUTH_BASE_URL}/districts`,
+          { headers }
+        );
+        if (districtsResponse.data && Array.isArray(districtsResponse.data)) {
+          setAllDistricts(districtsResponse.data);
+          setDistricts(districtsResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching location data:', error);
+      }
+    };
+
+    fetchLocationData();
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -354,75 +409,15 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   // Mock data for dropdowns
   const countries = ["India", "USA", "UK", "Canada", "Australia"];
   const currencies = ["INR", "USD", "EUR", "GBP", "AUD"];
-  const states = [
-    "Maharashtra",
-    "Delhi",
-    "Karnataka",
-    "Tamil Nadu",
-    "Gujarat",
-    "Rajasthan",
-    "Uttar Pradesh",
-    "West Bengal",
+
+  // City data - static/dummy data for dropdown (simplified for display)
+  const cities = [
+    "Mumbai", "Navi Mumbai", "Thane", "Pune", "Bangalore", "Electronic City",
+    "Whitefield", "Kolkata", "Salt Lake", "New Town", "Delhi", "Gurgaon",
+    "Noida", "Chennai", "Coimbatore", "Hyderabad", "Ahmedabad", "Surat",
+    "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Bhopal", "Visakhapatnam",
+    "Other"
   ];
-  const districts = {
-    Maharashtra: ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"],
-    Delhi: [
-      "Central Delhi",
-      "North Delhi",
-      "South Delhi",
-      "East Delhi",
-      "West Delhi",
-    ],
-    Karnataka: [
-      "Bangalore Urban",
-      "Mysore",
-      "Hubli-Dharwad",
-      "Mangalore",
-      "Belgaum",
-    ],
-    "Tamil Nadu": [
-      "Chennai",
-      "Coimbatore",
-      "Madurai",
-      "Tiruchirappalli",
-      "Salem",
-    ],
-    Gujarat: ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar"],
-    "West Bengal": [
-      "Kolkata",
-      "Howrah",
-      "Darjeeling",
-      "Siliguri",
-      "Durgapur",
-      "Asansol",
-      "Bardhaman",
-      "Kharagpur",
-      "Haldia",
-      "Malda",
-    ],
-  };
-  const zones = ["North", "South", "East", "West", "Central"];
-  const cities = {
-    Mumbai: ["Mumbai", "Navi Mumbai", "Thane", "Kalyan", "Vasai-Virar"],
-    Pune: ["Pune", "Pimpri-Chinchwad", "Wakad", "Hinjewadi", "Kharadi"],
-    "Bangalore Urban": [
-      "Bangalore",
-      "Electronic City",
-      "Whitefield",
-      "Koramangala",
-      "Indiranagar",
-    ],
-    Kolkata: ["Kolkata", "Salt Lake", "New Town", "Behala", "Dumdum"],
-    Howrah: ["Howrah", "Bally", "Uluberia"],
-    Darjeeling: ["Darjeeling", "Kurseong", "Mirik"],
-    Siliguri: ["Siliguri", "Matigara", "Bagdogra"],
-    Durgapur: ["Durgapur", "Bidhannagar", "Muchipara"],
-    Asansol: ["Asansol", "Burnpur", "Kulti"],
-    Bardhaman: ["Bardhaman", "Kalna", "Katwa"],
-    Kharagpur: ["Kharagpur", "Hijli", "Midnapore"],
-    Haldia: ["Haldia", "Mahishadal", "Nandigram"],
-    Malda: ["Malda", "English Bazar", "Old Malda"],
-  };
   const customerTypes = ["Industrial", "Hospital", "It", "Commercial", "Residential"];
   const customerPotentials = ["High", "Medium", "Low"];
 
@@ -430,7 +425,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const customerGroups = ["Individual", "Enduser", "Contractor", "Architect", "Interior", "Consultant", "Government", "Other"];
   const customerSubGroups = ["Sub Group A", "Sub Group B", "Sub Group C"];
   const customerClassifications = ["A – High Value", "B – Medium Value", "C – Low Value"];
-  const addressTypes = ["HO", "Branch", "Project"];
+  const addressTypes = ["HO", "Branch", "Project", "Zone"];
   const statusOptions = ["Active", "Inactive", "Blacklisted"];
   const riskLevels = ["Low", "Mid", "High"];
   const creditDaysOptions = ["0", "10", "20", "30", "45"];
@@ -546,10 +541,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       };
 
       // Handle cascade updates for location fields
-      if (name === "state") {
+      if (name === "zone") {
+        // When zone changes, reset state, district and city
+        updatedFormData.state = "";
+        updatedFormData.district = "";
+        updatedFormData.city = "";
+        // Filter states based on selected zone
+        const filteredStates = allStates.filter(s => s.zone_id === newValue);
+        setStates(filteredStates);
+        setDistricts([]); // Reset districts
+      } else if (name === "state") {
         // When state changes, reset district and city
         updatedFormData.district = "";
         updatedFormData.city = "";
+        // Filter districts based on selected state
+        const filteredDistricts = allDistricts.filter(d => d.state_id === newValue);
+        setDistricts(filteredDistricts);
       } else if (name === "district") {
         // When district changes, reset city
         updatedFormData.city = "";
@@ -1146,7 +1153,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           const updatedBranch = { ...branch, [field]: value };
 
           // Handle cascade updates
-          if (field === "state") {
+          if (field === "zone") {
+            // When zone changes, reset state, district and city
+            updatedBranch.state = "";
+            updatedBranch.district = "";
+            updatedBranch.city = "";
+          } else if (field === "state") {
             // When state changes, reset district and city
             updatedBranch.district = "";
             updatedBranch.city = "";
@@ -2964,8 +2976,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           >
             <option value="">Select Zone</option>
             {zones.map((z) => (
-              <option key={z} value={z}>
-                {z}
+              <option key={z.id} value={z.id}>
+                {z.name}
               </option>
             ))}
           </select>
@@ -2988,9 +3000,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               }`}
           >
             <option value="">Select State</option>
-            {states.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {(data.zone ? allStates.filter(s => s.zone_id === data.zone) : allStates).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
           </select>
@@ -3013,12 +3025,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           >
             <option value="">Select District</option>
-            {data.state &&
-              districts[data.state as keyof typeof districts]?.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
+            {(data.state ? allDistricts.filter(d => d.state_id === data.state) : allDistricts).map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -3031,17 +3042,16 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             name={!isBranch ? "city" : undefined}
             value={data.city}
             onChange={(e) => onChange("city", e.target.value)}
-            disabled={readOnly || !data.district}
+            disabled={readOnly}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           >
             <option value="">Select City</option>
-            {data.district &&
-              cities[data.district as keyof typeof cities]?.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
+            {cities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         </div>
 
