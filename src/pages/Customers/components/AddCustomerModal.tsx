@@ -54,6 +54,7 @@ interface Branch {
   currency: string;
   state: string;
   district: string;
+  zone?: string;
   city: string;
   pincode: string;
   street?: string;
@@ -97,6 +98,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       country: "India",
       currency: [] as string[],
       state: "",
+      zone: "",
       district: "",
       city: "",
       customerType: "",
@@ -299,6 +301,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     bankName: "bank_name",
     bankAccountNumber: "bank_account_number",
     ifscCode: "ifsc_code",
+    zone: "zone", // keymap for branch
   };
 
   const branchContactKeymap = {
@@ -398,6 +401,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       "Malda",
     ],
   };
+  const zones = ["North", "South", "East", "West", "Central"];
   const cities = {
     Mumbai: ["Mumbai", "Navi Mumbai", "Thane", "Kalyan", "Vasai-Virar"],
     Pune: ["Pune", "Pimpri-Chinchwad", "Wakad", "Hinjewadi", "Kharadi"],
@@ -426,7 +430,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const customerGroups = ["Individual", "Enduser", "Contractor", "Architect", "Interior", "Consultant", "Government", "Other"];
   const customerSubGroups = ["Sub Group A", "Sub Group B", "Sub Group C"];
   const customerClassifications = ["A – High Value", "B – Medium Value", "C – Low Value"];
-  const addressTypes = ["HO", "Branch", "Project", "Zone"];
+  const addressTypes = ["HO", "Branch", "Project"];
   const statusOptions = ["Active", "Inactive", "Blacklisted"];
   const riskLevels = ["Low", "Mid", "High"];
   const creditDaysOptions = ["0", "10", "20", "30", "45"];
@@ -1072,6 +1076,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       country: "India",
       currency: "",
       state: "",
+      zone: "",
       district: "",
       city: "",
       pincode: "",
@@ -1116,6 +1121,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             country: prev.country,
             currency: prev.currency.length > 0 ? prev.currency[0] : "",
             state: prev.state,
+            zone: prev.zone,
             district: prev.district,
             city: prev.city,
             pincode: prev.pincode,
@@ -1163,6 +1169,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       country: validationRules.branchCountry,
       currency: validationRules.branchCurrency,
       state: validationRules.branchState,
+      zone: validationRules.branchZone,
       district: validationRules.branchDistrict,
       city: validationRules.branchCity,
       pincode: validationRules.branchPincode,
@@ -2749,19 +2756,6 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </div>
         )}
 
-        {/* Active Status */}
-        <div className="flex items-center">
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={formData.active}
-              onChange={() => handleToggle("active")}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="ml-2 text-sm text-gray-700">Active</span>
-          </label>
-        </div>
-
         {/* TDS Applicability */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2775,6 +2769,19 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter TDS details"
           />
+        </div>
+
+        {/* Active Status */}
+        <div className="flex items-center">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={formData.active}
+              onChange={() => handleToggle("active")}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="ml-2 text-sm text-gray-700">Active</span>
+          </label>
         </div>
       </div>
     </div>
@@ -2901,6 +2908,27 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </>
         )}
 
+        {/* Address Type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Address Type
+          </label>
+          <select
+            name={!isBranch ? "addressType" : undefined}
+            value={data.addressType || ""}
+            onChange={(e) => onChange("addressType", e.target.value)}
+            disabled={readOnly}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Type</option>
+            {addressTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {!isBranch && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2921,6 +2949,27 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             </select>
           </div>
         )}
+
+        {/* Zone */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Zone
+          </label>
+          <select
+            name={!isBranch ? "zone" : undefined}
+            value={data.zone || ""}
+            onChange={(e) => onChange("zone", e.target.value)}
+            disabled={readOnly}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Zone</option>
+            {zones.map((z) => (
+              <option key={z} value={z}>
+                {z}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* State */}
         <div>
@@ -3030,7 +3079,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             onChange={(e) => onChange("street", e.target.value)}
             disabled={readOnly}
             rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-1/2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Enter full address"
           />
         </div>
@@ -3051,27 +3100,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           />
         </div>
 
-        {/* Address Type */}
-        {isBranch && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address Type
-            </label>
-            <select
-              value={data.addressType || ""}
-              onChange={(e) => onChange("addressType", e.target.value)}
-              disabled={readOnly}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Select Type</option>
-              {addressTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+
 
         {!isBranch && (
           <div>

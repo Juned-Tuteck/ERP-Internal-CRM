@@ -351,6 +351,9 @@ export const validationRules = {
   branchCurrency: {
     required: true,
   },
+  branchZone: {
+    required: false,
+  },
   branchState: {
     required: true,
   },
@@ -750,6 +753,7 @@ const getFieldDisplayName = (fieldName: string): string => {
     currency: "Currency",
     state: "State",
     district: "District",
+    zone: "Zone",
     city: "City",
     customerType: "Customer Type",
     customerPotential: "Customer Potential",
@@ -774,6 +778,7 @@ const getFieldDisplayName = (fieldName: string): string => {
     branchCurrency: "Currency",
     branchState: "State",
     branchDistrict: "District",
+    branchZone: "Zone",
     branchCity: "City",
     branchPincode: "Pincode",
     branchPanNumber: "PAN Number",
