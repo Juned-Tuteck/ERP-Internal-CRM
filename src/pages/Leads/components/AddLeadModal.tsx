@@ -47,8 +47,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       avatar: "",
       customerBranch: "",
       currency: "",
-      contactPerson: "",
-      contactNo: "",
       leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
       referencedBy: "",
       projectName: "",
@@ -79,6 +77,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       projectLocation: "",
       projectZone: "",
       projectCurrentStatus: "",
+      // Lead Contact Persons
+      leadContacts: [],
     }
   );
 
@@ -142,8 +142,20 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     Array<{ id: string; branch_name: string, currency: string }>
   >([]);
   const [contactPersons, setContactPersons] = useState<
-    Array<{ id: string; name: string, phone: number }>
+    Array<{
+      id: string;
+      name: string;
+      phone: string;
+      email?: string;
+      designation?: string;
+      alternative_number?: string;
+      date_of_birth?: string;
+      anniversary_date?: string;
+      communication_mode?: string;
+    }>
   >([]);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [selectedContactForAdd, setSelectedContactForAdd] = useState("");
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -345,17 +357,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       //   errors.customerBranch = "Customer Branch is required";
       // }
 
-      // if (!formData.contactPerson?.trim()) {
-      //   errors.contactPerson = "Contact Person is required";
-      // }
-
-      if (!formData.contactNo?.trim()) {
-        errors.contactNo = "Contact Number is required";
-      } else if (!validatePhoneNumber(formData.contactNo)) {
-        errors.contactNo =
-          "Please enter a valid phone number (e.g., +91 9876543210)";
-      }
-
       if (!formData.leadGeneratedDate) {
         errors.leadGeneratedDate = "Lead Generated Date is required";
       } else if (!validateDate(formData.leadGeneratedDate)) {
@@ -446,14 +447,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       case "customerBranch":
       // return !value?.trim() ? "Customer Branch is required" : "";
 
-      case "contactPerson":
-      // return !value?.trim() ? "Contact Person is required" : "";
-
-      case "contactNo":
-        if (!value?.trim()) return "Contact Number is required";
-        if (!validatePhoneNumber(value))
-          return "Please enter a valid phone number";
-        return "";
 
       case "projectName":
         if (!value?.trim()) return "Project Name is required";
@@ -510,8 +503,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     avatar: "",
     customerBranch: "",
     currency: "",
-    contactPerson: "",
-    contactNo: "",
     leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
     referencedBy: "",
     projectName: "",
@@ -539,6 +530,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     projectLocation: "",
     projectZone: "",
     projectCurrentStatus: "",
+    leadContacts: [],
   };
 
   useEffect(() => {
@@ -590,8 +582,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           avatar: initialData.avatar || "",
           customerBranch: initialData.branch_name || initialData.customerBranch || "",
           currency: initialData.currency || "INR",
-          contactPerson: initialData.contactPerson || initialData.contact_person || "",
-          contactNo: initialData.contactNo || initialData.contact_no || "",
           leadGeneratedDate: normalizedDate,
           referencedBy: initialData.referencedBy || initialData.referenced_by || "",
           projectName: initialData.projectName || initialData.project_name || "",
@@ -783,6 +773,33 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     }
                   }
                 }
+              }
+            }
+
+            // Fetch existing lead contacts for edit mode
+            if (initialData.id) {
+              try {
+                const contactsResponse = await axios.get(
+                  `${import.meta.env.VITE_API_BASE_URL}/lead-contact?lead_id=${initialData.id}`
+                );
+                const existingContacts = contactsResponse.data.data || [];
+                setFormData((prev: any) => ({
+                  ...prev,
+                  leadContacts: existingContacts.map((contact: any) => ({
+                    id: contact.id,
+                    contact_id: contact.contact_id,
+                    name: contact.name,
+                    designation: contact.designation || "",
+                    email: contact.email || "",
+                    phone: contact.phone || "",
+                    alternative_number: contact.alternative_number || "",
+                    date_of_birth: contact.date_of_birth || "",
+                    anniversary_date: contact.anniversary_date || "",
+                    communication_mode: contact.communication_mode || "",
+                  }))
+                }));
+              } catch (contactError) {
+                console.error("Error fetching lead contacts:", contactError);
               }
             }
           } catch (error) {
@@ -1043,20 +1060,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       return;
     }
 
-    // Handle contact person selection
-    if (name === "contactPerson") {
-      const selectedContact = contactPersons.find(
-        (contact) => contact.name === value
-      );
-      if (selectedContact) {
-
-        setSelectedContactId(selectedContact.id);
-        setFormData((prev: any) => ({
-          ...prev,
-          contactNo: selectedContact.phone,
-        }));
-      }
-    }
 
     // Handle lead source selection
     if (name === "leadSource") {
@@ -1084,9 +1087,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     // Perform real-time validation for critical fields
     if (
-      name === "contactNo" ||
-      name === "projectValue" ||
-      name === "contactNo" ||
       name === "projectValue" ||
       name === "nextFollowUpDate" ||
       name === "eta"
@@ -1238,8 +1238,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       business_name: formData.businessName || "",
       customer_id: selectedCustomerId || null,
       customer_branch_id: selectedBranchId || null,
-      contact_person: selectedContactId || null,
-      contact_no: formData.contactNo || "",
       lead_date_generated_on: formData.leadGeneratedDate || "",
       referenced_by: formData.referencedBy || null,
       project_name: formData.projectName || "",
@@ -1288,8 +1286,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           business_name: initialFormRef.current.businessName || "",
           customer_id: initialFormRef.current.customer_id || null,
           customer_branch_id: initialFormRef.current.customer_branch_id || null,
-          contact_person: initialFormRef.current.contact_person_id || null,
-          contact_no: initialFormRef.current.contactNo || "",
           lead_date_generated_on: initialFormRef.current.leadGeneratedDate || "",
           referenced_by: initialFormRef.current.referencedBy || null,
           project_name: initialFormRef.current.projectName || "",
@@ -1322,8 +1318,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           business_name: initialData.business_name || initialData.businessName || "",
           customer_id: initialData.customer_id || null,
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
-          contact_person: initialData.contact_person || null,
-          contact_no: initialData.contact_no || "",
           lead_date_generated_on: initialData.lead_date_generated_on || initialData.leadGeneratedDate || "",
           referenced_by: initialData.referenced_by || null,
           project_name: initialData.project_name || initialData.projectName || "",
@@ -1499,8 +1493,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             business_name: formData.businessName,
             customer_id: selectedCustomerId || null,
             customer_branch_id: selectedBranchId || null,
-            contact_person: selectedContactId || null,
-            contact_no: formData.contactNo,
             lead_date_generated_on: formData.leadGeneratedDate,
             referenced_by: formData.referencedBy || null,
             project_name: formData.projectName,
@@ -1604,6 +1596,30 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               console.error(`Error adding associates for ${worktype}:`, associateError);
             }
           }
+
+          // POST: Lead Contacts (shared across all worktypes)
+          if (formData.leadContacts && formData.leadContacts.length > 0) {
+            try {
+              const contactsPayload = formData.leadContacts.map((contact: any) => ({
+                lead_id: leadId,
+                name: contact.name,
+                designation: contact.designation || null,
+                email: contact.email || null,
+                phone: contact.phone,
+                alternative_number: contact.alternative_number || null,
+                date_of_birth: contact.date_of_birth || null,
+                anniversary_date: contact.anniversary_date || null,
+                communication_mode: contact.communication_mode || null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
+                contactsPayload
+              );
+              console.log(`Contacts added for ${worktype}`);
+            } catch (contactError) {
+              console.error(`Error adding contacts for ${worktype}:`, contactError);
+            }
+          }
         } catch (error: any) {
           console.error(`Error creating lead for ${worktype}:`, error);
           const errorMessage = error.response?.data?.message || error.message || "Unknown error";
@@ -1694,8 +1710,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         business_name: formData.businessName,
         customer_id: selectedCustomerId || null,
         customer_branch_id: selectedBranchId || null,
-        contact_person: selectedContactId || null,
-        contact_no: formData.contactNo,
         lead_date_generated_on: formData.leadGeneratedDate,
         referenced_by: formData.referencedBy || null,
         project_name: formData.projectName,
@@ -1779,6 +1793,30 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       }
 
+      // 4.5. Add Lead Contacts (Unified)
+      if (formData.leadContacts && formData.leadContacts.length > 0) {
+        try {
+          const contactsPayload = formData.leadContacts.map((contact: any) => ({
+            lead_id: leadId,
+            name: contact.name,
+            designation: contact.designation || null,
+            email: contact.email || null,
+            phone: contact.phone,
+            alternative_number: contact.alternative_number || null,
+            date_of_birth: contact.date_of_birth || null,
+            anniversary_date: contact.anniversary_date || null,
+            communication_mode: contact.communication_mode || null,
+          }));
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
+            contactsPayload
+          );
+          console.log(`Contacts added for unified lead`);
+        } catch (contactError) {
+          console.error(`Error adding contacts:`, contactError);
+        }
+      }
+
       // 5. Update Customer Flag
       if (selectedCustomerId) {
         try {
@@ -1827,8 +1865,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         business_name: formData.businessName,
         customer_id: selectedCustomerId || null,
         customer_branch_id: selectedBranchId || null,
-        contact_person: selectedContactId || null,
-        contact_no: formData.contactNo,
         lead_date_generated_on: formData.leadGeneratedDate,
         referenced_by: formData.referencedBy || null,
         project_name: formData.projectName,
@@ -2908,55 +2944,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         ))}
                       </select>
                     </div>
-                    {/* Contact Person */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contact Person {selectedBranchId ? "(Branch)" : "(Customer)"}
-                      </label>
-                      <select
-                        name="contactPerson"
-                        value={formData.contactPerson}
-                        onChange={handleInputChange}
-                        required
-                        disabled={!formData.businessName}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.contactPerson
-                          ? "border-red-500"
-                          : "border-gray-300"
-                          }`}
-                      >
-                        <option value="">Select Contact Person</option>
-                        {contactPersons.map((person) => (
-                          <option key={person.id} value={person.name}>
-                            {person.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ValidationError fieldName="contactPerson" />
-                      {contactPersons.length === 0 && formData.businessName && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          No contacts available for this {selectedBranchId ? "branch" : "customer"}
-                        </p>
-                      )}
-                    </div>
-                    {/* Contact No */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contact No *
-                      </label>
-                      <input
-                        type="tel"
-                        name="contactNo"
-                        value={formData.contactNo}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="+91 98765 43210"
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.contactNo
-                          ? "border-red-500"
-                          : "border-gray-300"
-                          }`}
-                      />
-                      <ValidationError fieldName="contactNo" />
-                    </div>
                     {/* Lead Generated Date */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3319,6 +3306,188 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* ===== SECTION: Contact Persons ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 className="text-md font-semibold text-gray-800">Contact Persons</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddContact(true)}
+                      disabled={!formData.businessName}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      + Add Contact Person
+                    </button>
+                  </div>
+
+                  {/* Display added contacts */}
+                  {formData.leadContacts && formData.leadContacts.length > 0 ? (
+                    <div className="space-y-3">
+                      {formData.leadContacts.map((contact: any, index: number) => (
+                        <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium text-gray-900">{contact.name}</h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev: any) => ({
+                                  ...prev,
+                                  leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
+                                }));
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            {contact.designation && (
+                              <div>
+                                <span className="font-medium text-gray-600">Designation:</span>
+                                <span className="ml-1 text-gray-800">{contact.designation}</span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-medium text-gray-600">Phone:</span>
+                              <span className="ml-1 text-gray-800">{contact.phone}</span>
+                            </div>
+                            {contact.alternative_number && (
+                              <div>
+                                <span className="font-medium text-gray-600">Alt Phone:</span>
+                                <span className="ml-1 text-gray-800">{contact.alternative_number}</span>
+                              </div>
+                            )}
+                            {contact.email && (
+                              <div>
+                                <span className="font-medium text-gray-600">Email:</span>
+                                <span className="ml-1 text-gray-800">{contact.email}</span>
+                              </div>
+                            )}
+                            {contact.date_of_birth && (
+                              <div>
+                                <span className="font-medium text-gray-600">DOB:</span>
+                                <span className="ml-1 text-gray-800">{contact.date_of_birth}</span>
+                              </div>
+                            )}
+                            {contact.anniversary_date && (
+                              <div>
+                                <span className="font-medium text-gray-600">Anniversary:</span>
+                                <span className="ml-1 text-gray-800">{contact.anniversary_date}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No contact persons added yet. Click "Add Contact Person" to add one.
+                    </p>
+                  )}
+
+                  {/* Add Contact Modal */}
+                  {showAddContact && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+                      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Add Contact Person</h3>
+                          <button
+                            onClick={() => {
+                              setShowAddContact(false);
+                              setSelectedContactForAdd("");
+                            }}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Select Contact Person {selectedBranchId ? "(Branch)" : "(Customer)"}
+                            </label>
+                            <select
+                              value={selectedContactForAdd}
+                              onChange={(e) => setSelectedContactForAdd(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">Select Contact Person</option>
+                              {contactPersons.map((person) => (
+                                <option key={person.id} value={person.id}>
+                                  {person.name}
+                                </option>
+                              ))}
+                            </select>
+                            {contactPersons.length === 0 && (
+                              <p className="text-xs text-amber-600 mt-1">
+                                No contacts available for this {selectedBranchId ? "branch" : "customer"}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex justify-end space-x-3 pt-4 border-t">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddContact(false);
+                                setSelectedContactForAdd("");
+                              }}
+                              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (selectedContactForAdd) {
+                                  const selectedContact = contactPersons.find(
+                                    (p) => p.id === selectedContactForAdd
+                                  );
+                                  if (selectedContact) {
+                                    const alreadyAdded = formData.leadContacts.some(
+                                      (c: any) => c.id === selectedContact.id
+                                    );
+                                    if (alreadyAdded) {
+                                      alert("This contact person has already been added.");
+                                      return;
+                                    }
+                                    setFormData((prev: any) => ({
+                                      ...prev,
+                                      leadContacts: [
+                                        ...prev.leadContacts,
+                                        {
+                                          id: selectedContact.id,
+                                          contact_id: selectedContact.id,
+                                          name: selectedContact.name,
+                                          designation: selectedContact.designation || "",
+                                          email: selectedContact.email || "",
+                                          phone: selectedContact.phone || "",
+                                          alternative_number: selectedContact.alternative_number || "",
+                                          date_of_birth: selectedContact.date_of_birth || "",
+                                          anniversary_date: selectedContact.anniversary_date || "",
+                                          communication_mode: selectedContact.communication_mode || "",
+                                        }
+                                      ]
+                                    }));
+                                    setShowAddContact(false);
+                                    setSelectedContactForAdd("");
+                                  }
+                                }
+                              }}
+                              disabled={!selectedContactForAdd}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                              Add Contact
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* ===== SECTION 2: Project Details ===== */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Project Details</h3>
