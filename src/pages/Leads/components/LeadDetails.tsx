@@ -147,6 +147,17 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           assignedTo: apiLead.assigned_user_id || null,
           nextFollowUpDate: apiLead.next_followup_date || null,
           assigned_user_name: apiLead.assigned_user_name || null,
+          // New fields for edit mode
+          leadTemperature: apiLead.lead_temperature || null,
+          ownProbability: apiLead.own_probability || null,
+          projectState: apiLead.project_state || null,
+          projectDistrict: apiLead.project_district || null,
+          projectCity: apiLead.project_city || null,
+          projectPincode: apiLead.project_pincode || null,
+          projectStreet: apiLead.project_street || null,
+          projectLocation: apiLead.project_location || null,
+          projectZone: apiLead.project_zone || null,
+          projectCurrentStatus: apiLead.project_current_status || null,
         };
 
         setLeadDetails(mappedLead);

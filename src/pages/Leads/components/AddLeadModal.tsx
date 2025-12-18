@@ -68,6 +68,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       followUpComments: [],
       assignedTo: "",
       nextFollowUpDate: "",
+      // New fields
+      leadTemperature: "",
+      ownProbability: "",
+      projectState: "",
+      projectDistrict: "",
+      projectCity: "",
+      projectPincode: "",
+      projectStreet: "",
+      projectLocation: "",
+      projectZone: "",
+      projectCurrentStatus: "",
     }
   );
 
@@ -177,6 +188,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Designer",
     "Contractor",
     "Other",
+  ];
+
+  const leadTemperatures = ["Hot", "Warm", "Cold"];
+
+  const projectStates = ["WB", "JG", "KG", "DH", "MB"];
+  const projectDistricts = ["WB", "JG", "KG", "DH", "MB"];
+  const projectCities = ["WB", "JG", "KG", "DH", "MB"];
+  const projectZones = ["WB", "JG", "KG", "DH", "MB"];
+
+  const projectCurrentStatuses = [
+    "Hold",
+    "Stalled",
+    "Cancelled",
+    "Active",
+    "Purchase",
   ];
 
   // Replace this with your actual registered associates source
@@ -458,7 +484,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     leadSource: "",
     leadStage: "Information Stage",
     leadStagnation: "",
-
     eta: "",
     leadDetails: "",
     involvedAssociates: [],
@@ -466,6 +491,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     followUpComments: [],
     assignedTo: "",
     nextFollowUpDate: "",
+    leadTemperature: "",
+    ownProbability: "",
+    projectState: "",
+    projectDistrict: "",
+    projectCity: "",
+    projectPincode: "",
+    projectStreet: "",
+    projectLocation: "",
+    projectZone: "",
+    projectCurrentStatus: "",
   };
 
   useEffect(() => {
@@ -550,6 +585,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           followUpComments: initialData.followUpComments || [],
           assignedTo: initialData.assignedTo || initialData.assigned_to || "",
           nextFollowUpDate: normalizedNextFollowUpDate || (initialData?.approximateResponseTime ? initialData.approximateResponseTime : ""),
+          // New fields
+          leadTemperature: initialData.leadTemperature || initialData.lead_temperature || "",
+          ownProbability: initialData.ownProbability || initialData.own_probability || "",
+          projectState: initialData.projectState || initialData.project_state || "",
+          projectDistrict: initialData.projectDistrict || initialData.project_district || "",
+          projectCity: initialData.projectCity || initialData.project_city || "",
+          projectPincode: initialData.projectPincode || initialData.project_pincode || "",
+          projectStreet: initialData.projectStreet || initialData.project_street || "",
+          projectLocation: initialData.projectLocation || initialData.project_location || "",
+          projectZone: initialData.projectZone || initialData.project_zone || "",
+          projectCurrentStatus: initialData.projectCurrentStatus || initialData.project_current_status || "",
           // also snapshot backend ids if present
           customer_id: initialData.customer_id || initialData.customerId || null,
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
@@ -1401,6 +1447,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             created_by: userData?.id || null,
             assigned_user_id: multiWorktypeState.step3.assignedTo[worktype] || null,
             next_followup_date: formData.nextFollowUpDate || null, // Use unified Step 1 date
+            // New fields
+            lead_temperature: formData.leadTemperature || null,
+            own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
+            project_state: formData.projectState || null,
+            project_district: formData.projectDistrict || null,
+            project_city: formData.projectCity || null,
+            project_pincode: formData.projectPincode || null,
+            project_street: formData.projectStreet || null,
+            project_location: formData.projectLocation || null,
+            project_zone: formData.projectZone || null,
+            project_current_status: formData.projectCurrentStatus || null,
           };
 
           // POST: Create lead
@@ -1584,6 +1641,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         created_by: userData?.id || null,
         assigned_user_id: formData.assignedTo || null, // Single assignment
         next_follow_up_date: formData.nextFollowUpDate || null,
+        // New fields
+        lead_temperature: formData.leadTemperature || null,
+        own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
+        project_state: formData.projectState || null,
+        project_district: formData.projectDistrict || null,
+        project_city: formData.projectCity || null,
+        project_pincode: formData.projectPincode || null,
+        project_street: formData.projectStreet || null,
+        project_location: formData.projectLocation || null,
+        project_zone: formData.projectZone || null,
+        project_current_status: formData.projectCurrentStatus || null,
       };
 
       const leadResponse = await axios.post(
@@ -2048,7 +2116,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
           <form onSubmit={handleSubmit}>
             {/* Step 1: General Information */}
-            {currentStep === 1 && (
+            {/* {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -2692,6 +2760,840 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+            )} */}
+
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                {/* ===== SECTION 1: Basic Information ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Customer */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Customer *
+                      </label>
+                      <select
+                        name="businessName"
+                        value={formData.businessName}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.businessName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Business</option>
+                        {customers.map((customer) => (
+                          <option key={customer.id} value={customer.name}>
+                            {customer.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="businessName" />
+                    </div>
+                    {/* Customer Branch */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Customer Branch
+                      </label>
+                      <select
+                        name="customerBranch"
+                        value={formData.customerBranch}
+                        onChange={handleInputChange}
+                        disabled={!formData.businessName}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.customerBranch
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Branch</option>
+                        {customerBranches.map((branch) => (
+                          <option key={branch.id} value={branch.branch_name}>
+                            {branch.branch_name}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="customerBranch" />
+                    </div>
+                    {/* Currency */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Currency *
+                      </label>
+                      <select
+                        name="currency"
+                        value={formData.currency}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {currenciesToShow.map((currency, index) => (
+                          <option key={index} value={currency}>
+                            {currency}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Contact Person */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Contact Person {selectedBranchId ? "(Branch)" : "(Customer)"}
+                      </label>
+                      <select
+                        name="contactPerson"
+                        value={formData.contactPerson}
+                        onChange={handleInputChange}
+                        required
+                        disabled={!formData.businessName}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.contactPerson
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Contact Person</option>
+                        {contactPersons.map((person) => (
+                          <option key={person.id} value={person.name}>
+                            {person.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="contactPerson" />
+                      {contactPersons.length === 0 && formData.businessName && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          No contacts available for this {selectedBranchId ? "branch" : "customer"}
+                        </p>
+                      )}
+                    </div>
+                    {/* Contact No */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Contact No *
+                      </label>
+                      <input
+                        type="tel"
+                        name="contactNo"
+                        value={formData.contactNo}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="+91 98765 43210"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.contactNo
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="contactNo" />
+                    </div>
+                    {/* Lead Generated Date */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Generated Date *
+                      </label>
+                      <input
+                        type="date"
+                        name="leadGeneratedDate"
+                        value={formData.leadGeneratedDate}
+                        onChange={handleInputChange}
+                        required
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
+                      />
+                      <ValidationError fieldName="leadGeneratedDate" />
+                    </div>
+                    {/* Referenced By */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Referenced By
+                      </label>
+                      <select
+                        name="referencedBy"
+                        value={formData.referencedBy}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.referencedBy
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select User</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.name}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="referencedBy" />
+                    </div>
+                    {/* Lead Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Type *
+                      </label>
+                      <select
+                        name="leadType"
+                        value={formData.leadType}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadType
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Lead Type</option>
+                        {leadTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="leadType" />
+                    </div>
+                    {/* Work Type - KEEP EXISTING COMPLEX LOGIC AS IS */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Work Type {!isEditMode && <span className="text-blue-600">(Select multiple)</span>}
+                      </label>
+                      {isEditMode ? (
+                        <select
+                          name="workType"
+                          value={formData.workType}
+                          onChange={handleInputChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.workType
+                            ? "border-red-500"
+                            : "border-gray-300"}`}
+                        >
+                          <option value="">Select Work Type</option>
+                          {workTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="relative">
+                          <div
+                            onClick={() => setShowWorkTypeDropdown(!showWorkTypeDropdown)}
+                            className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${validationErrors.workType ? "border-red-500" : "border-gray-300"
+                              }`}
+                          >
+                            {formData.workType.length > 0 ? (
+                              <span className="text-gray-900">{formData.workType.join(", ")}</span>
+                            ) : (
+                              <span className="text-gray-400">Select Work types</span>
+                            )}
+                          </div>
+                          {showWorkTypeDropdown && (
+                            <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+                              {workTypes.map((type) => (
+                                <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
+                                    onChange={(e) => {
+                                      const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
+                                      let newWorktypes;
+                                      if (e.target.checked) {
+                                        newWorktypes = [...currentWorktypes, type];
+                                      } else {
+                                        newWorktypes = currentWorktypes.filter((w) => w !== type);
+                                      }
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        workType: newWorktypes,
+                                      }));
+                                    }}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                  />
+                                  <span className="text-sm text-gray-700">{type}</span>
+                                </label>
+                              ))}
+                              <div className="border-t border-gray-200 p-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowWorkTypeDropdown(false)}
+                                  className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!isEditMode && (
+                        <div className="mt-2">
+                          {Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {formData.workType.map((type: string) => (
+                                <span
+                                  key={type}
+                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {type}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        workType: prev.workType.filter((w: string) => w !== type),
+                                      }));
+                                    }}
+                                    className="ml-1 hover:text-blue-900"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                        <div className="mt-4 mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Completion Mode</label>
+                          <div className="flex space-x-4">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="creationMode"
+                                value="multiple"
+                                checked={creationMode === 'multiple'}
+                                onChange={() => setCreationMode('multiple')}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                              />
+                              <span className="text-sm text-gray-700">Multiple Leads (One per Work Type)</span>
+                            </label>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="creationMode"
+                                value="single"
+                                checked={creationMode === 'single'}
+                                onChange={() => setCreationMode('single')}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                              />
+                              <span className="text-sm text-gray-700">Single Lead (Unified)</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                      <ValidationError fieldName="workType" />
+                    </div>
+                    {/* Lead Criticality */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Criticality *
+                      </label>
+                      <select
+                        name="leadCriticality"
+                        value={formData.leadCriticality}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadCriticality
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Criticality</option>
+                        {leadCriticalities.map((criticality) => (
+                          <option key={criticality} value={criticality}>
+                            {criticality}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="leadCriticality" />
+                    </div>
+                    {/* Lead Source - KEEP EXISTING CUSTOM SOURCE LOGIC */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Source *
+                      </label>
+                      {!showCustomLeadSource ? (
+                        <select
+                          name="leadSource"
+                          value={formData.leadSource}
+                          onChange={handleInputChange}
+                          required
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                            ? "border-red-500"
+                            : "border-gray-300"
+                            }`}
+                        >
+                          <option value="">Select Source</option>
+                          {leadSources.map((source) => (
+                            <option key={source} value={source}>
+                              {source}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            name="customLeadSource"
+                            value={customLeadSource}
+                            onChange={(e) => {
+                              setCustomLeadSource(e.target.value);
+                              setFormData((prev) => ({
+                                ...prev,
+                                leadSource: e.target.value,
+                              }));
+                            }}
+                            placeholder="Enter custom lead source"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                              ? "border-red-500"
+                              : "border-gray-300"
+                              }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCustomLeadSource(false);
+                              setCustomLeadSource("");
+                              setFormData((prev) => ({
+                                ...prev,
+                                leadSource: "",
+                              }));
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            Back to dropdown
+                          </button>
+                        </div>
+                      )}
+                      <ValidationError fieldName="leadSource" />
+                    </div>
+                    {/* Lead Stage */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Stage * (Auto-updated)
+                      </label>
+                      <select
+                        name="leadStage"
+                        value={formData.leadStage}
+                        onChange={handleInputChange}
+                        required
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
+                        title="Lead stage is automatically updated based on file uploads and quotations"
+                      >
+                        {leadStages.map((stage) => (
+                          <option key={stage} value={stage}>
+                            {stage}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Stage changes to "Enquiry" when files are uploaded
+                      </p>
+                    </div>
+                    {/* Next Follow-Up Date */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Next Follow-Up Date *
+                      </label>
+                      <input
+                        type="date"
+                        name="nextFollowUpDate"
+                        value={formData.nextFollowUpDate}
+                        onChange={handleInputChange}
+                        min={today}
+                        max={maxDate}
+                        required
+                        placeholder="Select date"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.nextFollowUpDate
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="nextFollowUpDate" />
+                    </div>
+                    {/* Deal Closure */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Deal Closure
+                      </label>
+                      <input
+                        type="date"
+                        name="eta"
+                        value={formData.eta}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.eta
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="eta" />
+                    </div>
+                    {/* NEW FIELD: Lead Temperature */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Temperature
+                      </label>
+                      <select
+                        name="leadTemperature"
+                        value={formData.leadTemperature}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Temperature</option>
+                        {leadTemperatures.map((temp) => (
+                          <option key={temp} value={temp}>
+                            {temp}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                {/* ===== SECTION 2: Project Details ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Project Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Project Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="projectName"
+                        value={formData.projectName}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Enter project name"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.projectName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="projectName" />
+                    </div>
+                    {/* Project Value */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Value ( lakh )*
+                      </label>
+                      <input
+                        type="number"
+                        name="projectValue"
+                        value={String(formData.projectValue ?? "")}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Enter value in selected currency"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.projectValue
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="projectValue" />
+                    </div>
+                    {/* NEW FIELD: Project State */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project State
+                      </label>
+                      <select
+                        name="projectState"
+                        value={formData.projectState}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select State</option>
+                        {projectStates.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project District */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project District
+                      </label>
+                      <select
+                        name="projectDistrict"
+                        value={formData.projectDistrict}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select District</option>
+                        {projectDistricts.map((district) => (
+                          <option key={district} value={district}>
+                            {district}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project City */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project City
+                      </label>
+                      <select
+                        name="projectCity"
+                        value={formData.projectCity}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select City</option>
+                        {projectCities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project Pincode */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Pincode
+                      </label>
+                      <input
+                        type="text"
+                        name="projectPincode"
+                        value={formData.projectPincode}
+                        onChange={handleInputChange}
+                        placeholder="Enter pincode"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {/* NEW FIELD: Project Street */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Street
+                      </label>
+                      <input
+                        type="text"
+                        name="projectStreet"
+                        value={formData.projectStreet}
+                        onChange={handleInputChange}
+                        placeholder="Enter street address"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {/* NEW FIELD: Project Location */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Location
+                      </label>
+                      <input
+                        type="text"
+                        name="projectLocation"
+                        value={formData.projectLocation}
+                        onChange={handleInputChange}
+                        placeholder="Enter location details"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {/* NEW FIELD: Project Zone */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Zone
+                      </label>
+                      <select
+                        name="projectZone"
+                        value={formData.projectZone}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Zone</option>
+                        {projectZones.map((zone) => (
+                          <option key={zone} value={zone}>
+                            {zone}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project Current Status */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Current Status
+                      </label>
+                      <select
+                        name="projectCurrentStatus"
+                        value={formData.projectCurrentStatus}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Status</option>
+                        {projectCurrentStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                {/* ===== SECTION 3: Other Details ==` */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Other Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* NEW FIELD: Probability % */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Probability %
+                      </label>
+                      <input
+                        type="number"
+                        name="ownProbability"
+                        value={formData.ownProbability}
+                        onChange={handleInputChange}
+                        placeholder="Enter probability (0-100)"
+                        min="0"
+                        max="100"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {/* Lead Details */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Details
+                      </label>
+                      <textarea
+                        name="leadDetails"
+                        value={formData.leadDetails}
+                        onChange={handleInputChange}
+                        rows={4}
+                        placeholder="Enter detailed description of the lead..."
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadDetails
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="leadDetails" />
+                      {formData.leadDetails && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formData.leadDetails.length}/1000 characters
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* ===== SECTION 4: Involved Associates - KEEP EXISTING AS IS ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Involved Associates</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Involved Associates
+                    </label>
+                    {formData.involvedAssociates.length === 0 &&
+                      !showAssociateForm && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAssociateForm(true)}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
+                        >
+                          + Tag Associate
+                        </button>
+                      )}
+                    {showAssociateForm && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                        <div>
+                          <select
+                            name="designation"
+                            value={associateForm.designation}
+                            onChange={handleAssociateFormChange}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                          >
+                            <option value="">Select Designation</option>
+                            {associateDesignations.map((des) => (
+                              <option key={des} value={des}>
+                                {des}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <select
+                            name="associateId"
+                            value={associateForm.associateId}
+                            onChange={handleAssociateFormChange}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                          >
+                            <option value="">Select Associate</option>
+                            {registeredAssociates.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            name="otherInfo"
+                            value={associateForm.otherInfo}
+                            onChange={handleAssociateFormChange}
+                            placeholder="Other Information"
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-3 flex gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={addAssociate}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                            disabled={
+                              !associateForm.designation ||
+                              !associateForm.associateId
+                            }
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAssociateForm(false)}
+                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {formData.involvedAssociates.length > 0 && (
+                      <div className="space-y-2">
+                        {formData.involvedAssociates.map((a: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                          >
+                            <div>
+                              <span className="font-thin text-sm">
+                                {a.designation}
+                              </span>{" "}
+                              <span className="text-gray-700 text-sm">
+                                {a.associateName}
+                              </span>
+                              {a.otherInfo && (
+                                <span className="text-gray-500 ml-2 text-xs">
+                                  ({a.otherInfo})
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeAssociate(idx)}
+                              className="text-red-600 hover:text-red-800 text-xs"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setShowAssociateForm(true)}
+                          className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs mt-1"
+                        >
+                          + Tag Another Associate
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
