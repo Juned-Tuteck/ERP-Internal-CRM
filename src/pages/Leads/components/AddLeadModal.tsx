@@ -156,6 +156,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   >([]);
   const [showAddContact, setShowAddContact] = useState(false);
   const [selectedContactForAdd, setSelectedContactForAdd] = useState("");
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
+  const [editingContactData, setEditingContactData] = useState<any>(null);
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -3326,57 +3328,223 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     <div className="space-y-3">
                       {formData.leadContacts.map((contact: any, index: number) => (
                         <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-medium text-gray-900">{contact.name}</h4>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFormData((prev: any) => ({
-                                  ...prev,
-                                  leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
-                                }));
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            {contact.designation && (
-                              <div>
-                                <span className="font-medium text-gray-600">Designation:</span>
-                                <span className="ml-1 text-gray-800">{contact.designation}</span>
-                              </div>
-                            )}
-                            <div>
-                              <span className="font-medium text-gray-600">Phone:</span>
-                              <span className="ml-1 text-gray-800">{contact.phone}</span>
+                          <div className="flex justify-between items-start mb-3">
+                            <h4 className="font-medium text-gray-900">
+                              {editingContactIndex === index ? "Edit Contact Person" : contact.name}
+                            </h4>
+                            <div className="flex space-x-2">
+                              {editingContactIndex === index ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      // Save changes
+                                      if (contact.id && isEditMode) {
+                                        // Update existing contact via PUT API
+                                        try {
+                                          await axios.put(
+                                            `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`,
+                                            {
+                                              ...editingContactData,
+                                              updated_by: userData?.id || null
+                                            }
+                                          );
+                                          // Update local state
+                                          setFormData((prev: any) => ({
+                                            ...prev,
+                                            leadContacts: prev.leadContacts.map((c: any, i: number) =>
+                                              i === index ? { ...c, ...editingContactData } : c
+                                            )
+                                          }));
+                                          setEditingContactIndex(null);
+                                          setEditingContactData(null);
+                                          alert("Contact updated successfully!");
+                                        } catch (error) {
+                                          console.error("Error updating contact:", error);
+                                          alert("Failed to update contact. Please try again.");
+                                        }
+                                      } else {
+                                        // Just update local state for new contacts
+                                        setFormData((prev: any) => ({
+                                          ...prev,
+                                          leadContacts: prev.leadContacts.map((c: any, i: number) =>
+                                            i === index ? { ...c, ...editingContactData } : c
+                                          )
+                                        }));
+                                        setEditingContactIndex(null);
+                                        setEditingContactData(null);
+                                      }
+                                    }}
+                                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingContactIndex(null);
+                                      setEditingContactData(null);
+                                    }}
+                                    className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingContactIndex(index);
+                                      setEditingContactData({ ...contact });
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (contact.id && isEditMode) {
+                                        // Delete via API
+                                        if (window.confirm("Are you sure you want to delete this contact?")) {
+                                          try {
+                                            await axios.delete(
+                                              `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`
+                                            );
+                                            setFormData((prev: any) => ({
+                                              ...prev,
+                                              leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
+                                            }));
+                                            alert("Contact deleted successfully!");
+                                          } catch (error) {
+                                            console.error("Error deleting contact:", error);
+                                            alert("Failed to delete contact. Please try again.");
+                                          }
+                                        }
+                                      } else {
+                                        // Just remove from local state
+                                        if (window.confirm("Are you sure you want to remove this contact?")) {
+                                          setFormData((prev: any) => ({
+                                            ...prev,
+                                            leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
+                                          }));
+                                        }
+                                      }
+                                    }}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
-                            {contact.alternative_number && (
-                              <div>
-                                <span className="font-medium text-gray-600">Alt Phone:</span>
-                                <span className="ml-1 text-gray-800">{contact.alternative_number}</span>
-                              </div>
-                            )}
-                            {contact.email && (
-                              <div>
-                                <span className="font-medium text-gray-600">Email:</span>
-                                <span className="ml-1 text-gray-800">{contact.email}</span>
-                              </div>
-                            )}
-                            {contact.date_of_birth && (
-                              <div>
-                                <span className="font-medium text-gray-600">DOB:</span>
-                                <span className="ml-1 text-gray-800">{contact.date_of_birth}</span>
-                              </div>
-                            )}
-                            {contact.anniversary_date && (
-                              <div>
-                                <span className="font-medium text-gray-600">Anniversary:</span>
-                                <span className="ml-1 text-gray-800">{contact.anniversary_date}</span>
-                              </div>
-                            )}
                           </div>
+
+                          {editingContactIndex === index ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                                <input
+                                  type="text"
+                                  value={editingContactData.name}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, name: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Designation</label>
+                                <input
+                                  type="text"
+                                  value={editingContactData.designation || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, designation: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Contact Number *</label>
+                                <input
+                                  type="tel"
+                                  value={editingContactData.phone}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, phone: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Alternative Number</label>
+                                <input
+                                  type="tel"
+                                  value={editingContactData.alternative_number || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, alternative_number: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Email ID</label>
+                                <input
+                                  type="email"
+                                  value={editingContactData.email || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, email: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Date Of Birth</label>
+                                <input
+                                  type="date"
+                                  value={editingContactData.date_of_birth || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, date_of_birth: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Anniversary Date</label>
+                                <input
+                                  type="date"
+                                  value={editingContactData.anniversary_date || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, anniversary_date: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              {contact.designation && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Designation:</span>
+                                  <span className="ml-1 text-gray-800">{contact.designation}</span>
+                                </div>
+                              )}
+                              <div>
+                                <span className="font-medium text-gray-600">Phone:</span>
+                                <span className="ml-1 text-gray-800">{contact.phone}</span>
+                              </div>
+                              {contact.alternative_number && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Alt Phone:</span>
+                                  <span className="ml-1 text-gray-800">{contact.alternative_number}</span>
+                                </div>
+                              )}
+                              {contact.email && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Email:</span>
+                                  <span className="ml-1 text-gray-800">{contact.email}</span>
+                                </div>
+                              )}
+                              {contact.date_of_birth && (
+                                <div>
+                                  <span className="font-medium text-gray-600">DOB:</span>
+                                  <span className="ml-1 text-gray-800">{contact.date_of_birth}</span>
+                                </div>
+                              )}
+                              {contact.anniversary_date && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Anniversary:</span>
+                                  <span className="ml-1 text-gray-800">{contact.anniversary_date}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
