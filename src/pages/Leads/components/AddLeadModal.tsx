@@ -571,10 +571,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           normalizedEta = "";
         }
 
-        // Normalize next_follow_up_date
+        // Normalize next_followup_date
         let normalizedNextFollowUpDate = "";
-        if (initialData.next_follow_up_date || initialData.nextFollowUpDate) {
-          const nextFollowUpDateObj = new Date(initialData.next_follow_up_date || initialData.nextFollowUpDate);
+        if (initialData.next_followup_date || initialData.nextFollowUpDate) {
+          const nextFollowUpDateObj = new Date(initialData.next_followup_date || initialData.nextFollowUpDate);
           if (!isNaN(nextFollowUpDateObj.getTime())) {
             normalizedNextFollowUpDate = nextFollowUpDateObj.toISOString().split("T")[0];
           } else {
@@ -1254,7 +1254,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       eta: formData.eta || null,
       lead_details: formData.leadDetails || null,
       assigned_to: formData.assignedTo || null,
-      next_follow_up_date: formData.nextFollowUpDate || null,
+      next_followup_date: formData.nextFollowUpDate || null,
       // New fields
       lead_temperature: formData.leadTemperature || null,
       own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
@@ -1304,7 +1304,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           eta: initialFormRef.current.eta || null,
           lead_details: initialFormRef.current.leadDetails || null,
           assigned_to: initialFormRef.current.assignedTo || null,
-          next_follow_up_date: initialFormRef.current.nextFollowUpDate || null,
+          next_followup_date: initialFormRef.current.nextFollowUpDate || null,
           // New fields
           lead_temperature: initialFormRef.current.leadTemperature || null,
           own_probability: initialFormRef.current.ownProbability ? parseFloat(initialFormRef.current.ownProbability) : null,
@@ -1338,7 +1338,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           eta: initialData.eta || initialData.eta || null,
           lead_details: initialData.lead_details || initialData.leadDetails || null,
           assigned_to: initialData.assigned_to || initialData.assignedTo || null,
-          next_follow_up_date: initialData.next_follow_up_date || initialData.nextFollowUpDate || null,
+          next_followup_date: initialData.next_followup_date || initialData.nextFollowUpDate || null,
           // New fields
           lead_temperature: initialData.lead_temperature || initialData.leadTemperature || null,
           own_probability: initialData.own_probability || initialData.ownProbability || null,
@@ -1711,7 +1711,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         currency: formData.currency || null,
         created_by: userData?.id || null,
         assigned_user_id: formData.assignedTo || null, // Single assignment
-        next_follow_up_date: formData.nextFollowUpDate || null,
+        next_followup_date: formData.nextFollowUpDate || null,
         // New fields
         lead_temperature: formData.leadTemperature || null,
         own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
@@ -1844,7 +1844,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         lead_details: formData.leadDetails || null,
         currency: formData.currency || null,
         created_by: userData?.id || null,
-        next_follow_up_date: formData.nextFollowUpDate || null,
+        next_followup_date: formData.nextFollowUpDate || null,
       };
 
       const leadResponse = await axios.post(
@@ -2105,7 +2105,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[100vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
