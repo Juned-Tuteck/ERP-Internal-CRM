@@ -6,7 +6,8 @@ import {
   ChevronRight,
   Upload,
   MessageSquare,
-  Trash2
+  Trash2,
+  Edit
 } from "lucide-react";
 import axios from "axios";
 
@@ -14,6 +15,7 @@ import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
 import { CustomLoader } from '../../../components/CustomLoader';
+import { useToast } from '../../../components/Toast';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const { userData } = useCRM();
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
+  const { showToast } = useToast(); // Modern toast notifications
   //------------------------------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(
@@ -79,6 +82,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       projectCurrentStatus: "",
       // Lead Contact Persons
       leadContacts: [],
+      // Lead Competitors
+      leadCompetitors: [],
     }
   );
 
@@ -151,13 +156,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       alternative_number?: string;
       date_of_birth?: string;
       anniversary_date?: string;
-      communication_mode?: string;
+      communication_mode?: string | string[]; // Can be string or array
     }>
   >([]);
   const [showAddContact, setShowAddContact] = useState(false);
   const [selectedContactForAdd, setSelectedContactForAdd] = useState("");
   const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
   const [editingContactData, setEditingContactData] = useState<any>(null);
+
+  // Competitor management states
+  const [showAddCompetitor, setShowAddCompetitor] = useState(false);
+  const [editingCompetitorIndex, setEditingCompetitorIndex] = useState<number | null>(null);
+  const [editingCompetitorData, setEditingCompetitorData] = useState<any>(null);
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -533,6 +543,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     projectZone: "",
     projectCurrentStatus: "",
     leadContacts: [],
+    leadCompetitors: [],
   };
 
   useEffect(() => {
@@ -802,6 +813,26 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 }));
               } catch (contactError) {
                 console.error("Error fetching lead contacts:", contactError);
+              }
+            }
+
+            // Fetch existing lead competitors for edit mode
+            if (initialData.id) {
+              try {
+                const competitorsResponse = await axios.get(
+                  `${import.meta.env.VITE_API_BASE_URL}/lead-competitor?lead_id=${initialData.id}`
+                );
+                const existingCompetitors = competitorsResponse.data.data || [];
+                setFormData((prev: any) => ({
+                  ...prev,
+                  leadCompetitors: existingCompetitors.map((comp: any) => ({
+                    id: comp.id,
+                    competitor_name: comp.competitor_name,
+                    win_probability: comp.win_probability
+                  }))
+                }));
+              } catch (competitorError) {
+                console.error("Error fetching lead competitors:", competitorError);
               }
             }
           } catch (error) {
@@ -1274,7 +1305,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     setIsLoading(true);
     try {
       if (!initialData || !initialData.id) {
-        alert("No lead ID found for update.");
+        showToast("No lead ID found for update.", "error");
         setIsLoading(false);
         return;
       }
@@ -1370,7 +1401,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       });
 
       if (Object.keys(diffPayload).length === 0) {
-        alert("No changes detected to update.");
+        showToast("No changes detected to update.");
         setIsLoading(false);
         return;
       }
@@ -1408,7 +1439,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       }
     } catch (error) {
       console.error("Error updating lead:", error);
-      alert("Failed to update lead. Please try again.");
+      showToast("Failed to update lead. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -1425,9 +1456,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         // EDIT mode: Update lead and move to step 2
         handleUpdateLead();
       } else {
+        console.log("Form Data contect:", formData.leadContacts);
         // CREATE mode: Just validate and move to step 2 (save to state only)
         if (!Array.isArray(formData.workType) || formData.workType.length === 0) {
-          alert("Please select at least one work type.");
+          showToast("Please select at least one work type.");
           return;
         }
         // Store Step 1 data in multi-worktype state
@@ -1461,6 +1493,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           console.error("Upload failed", err);
         }
       } else {
+        console.log("form date in step 2 ", formData.leadContacts);
+
         // CREATE mode: Just move to step 3 (documents already in state)
         setCurrentStep(3);
       }
@@ -1479,7 +1513,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
 
       if (selectedWorktypes.length === 0) {
-        alert("No work types selected.");
+        showToast("No work types selected.");
         setIsLoading(false);
         return;
       }
@@ -1680,14 +1714,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         });
       }
 
-      alert(message);
+      showToast(message);
 
       // Close modal and refresh
       onSubmit({ success: true });
       handleClose();
     } catch (error) {
       console.error("Error in complete registration:", error);
-      alert("An unexpected error occurred during registration.");
+      showToast("An unexpected error occurred during registration.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -1700,7 +1734,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
 
       if (selectedWorktypes.length === 0) {
-        alert("No work types selected.");
+        showToast("No work types selected.");
         setIsLoading(false);
         return;
       }
@@ -1846,13 +1880,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         console.error("Failed to send notification:", notifError);
       }
 
-      alert("Lead Created Successfully!");
+      showToast("Lead Created Successfully!");
       onSubmit({ success: true });
       handleClose();
 
     } catch (error) {
       console.error("Error creating unified lead:", error);
-      alert("Failed to create lead. Please try again.");
+      showToast("Failed to create lead. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -1946,7 +1980,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setCurrentStep(2);
     } catch (error) {
       console.error("Error creating lead:", error);
-      alert("Failed to create lead. Please try again.");
+      showToast("Failed to create lead. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -1985,7 +2019,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setNewComment("");
     } catch (error) {
       console.error("Error adding comment:", error);
-      alert("Failed to add comment. Please try again.");
+      showToast("Failed to add comment. Please try again.");
     }
   };
 
@@ -3309,353 +3343,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   </div>
                 </div>
 
-                {/* ===== SECTION: Contact Persons ===== */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 className="text-md font-semibold text-gray-800">Contact Persons</h3>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddContact(true)}
-                      disabled={!formData.businessName}
-                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                      + Add Contact Person
-                    </button>
-                  </div>
-
-                  {/* Display added contacts */}
-                  {formData.leadContacts && formData.leadContacts.length > 0 ? (
-                    <div className="space-y-3">
-                      {formData.leadContacts.map((contact: any, index: number) => (
-                        <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                          <div className="flex justify-between items-start mb-3">
-                            <h4 className="font-medium text-gray-900">
-                              {editingContactIndex === index ? "Edit Contact Person" : contact.name}
-                            </h4>
-                            <div className="flex space-x-2">
-                              {editingContactIndex === index ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      // Save changes
-                                      if (contact.id && isEditMode) {
-                                        // Update existing contact via PUT API
-                                        try {
-                                          await axios.put(
-                                            `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`,
-                                            {
-                                              ...editingContactData,
-                                              updated_by: userData?.id || null
-                                            }
-                                          );
-                                          // Update local state
-                                          setFormData((prev: any) => ({
-                                            ...prev,
-                                            leadContacts: prev.leadContacts.map((c: any, i: number) =>
-                                              i === index ? { ...c, ...editingContactData } : c
-                                            )
-                                          }));
-                                          setEditingContactIndex(null);
-                                          setEditingContactData(null);
-                                          alert("Contact updated successfully!");
-                                        } catch (error) {
-                                          console.error("Error updating contact:", error);
-                                          alert("Failed to update contact. Please try again.");
-                                        }
-                                      } else {
-                                        // Just update local state for new contacts
-                                        setFormData((prev: any) => ({
-                                          ...prev,
-                                          leadContacts: prev.leadContacts.map((c: any, i: number) =>
-                                            i === index ? { ...c, ...editingContactData } : c
-                                          )
-                                        }));
-                                        setEditingContactIndex(null);
-                                        setEditingContactData(null);
-                                      }
-                                    }}
-                                    className="text-green-600 hover:text-green-800 text-sm font-medium"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingContactIndex(null);
-                                      setEditingContactData(null);
-                                    }}
-                                    className="text-gray-600 hover:text-gray-800 text-sm font-medium"
-                                  >
-                                    Cancel
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingContactIndex(index);
-                                      setEditingContactData({ ...contact });
-                                    }}
-                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      if (contact.id && isEditMode) {
-                                        // Delete via API
-                                        if (window.confirm("Are you sure you want to delete this contact?")) {
-                                          try {
-                                            await axios.delete(
-                                              `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`
-                                            );
-                                            setFormData((prev: any) => ({
-                                              ...prev,
-                                              leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
-                                            }));
-                                            alert("Contact deleted successfully!");
-                                          } catch (error) {
-                                            console.error("Error deleting contact:", error);
-                                            alert("Failed to delete contact. Please try again.");
-                                          }
-                                        }
-                                      } else {
-                                        // Just remove from local state
-                                        if (window.confirm("Are you sure you want to remove this contact?")) {
-                                          setFormData((prev: any) => ({
-                                            ...prev,
-                                            leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
-                                          }));
-                                        }
-                                      }
-                                    }}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {editingContactIndex === index ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
-                                <input
-                                  type="text"
-                                  value={editingContactData.name}
-                                  onChange={(e) => setEditingContactData({ ...editingContactData, name: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Designation</label>
-                                <input
-                                  type="text"
-                                  value={editingContactData.designation || ""}
-                                  onChange={(e) => setEditingContactData({ ...editingContactData, designation: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Contact Number *</label>
-                                <input
-                                  type="tel"
-                                  value={editingContactData.phone}
-                                  onChange={(e) => setEditingContactData({ ...editingContactData, phone: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Alternative Number</label>
-                                <input
-                                  type="tel"
-                                  value={editingContactData.alternative_number || ""}
-                                  onChange={(e) => setEditingContactData({ ...editingContactData, alternative_number: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Email ID</label>
-                                <input
-                                  type="email"
-                                  value={editingContactData.email || ""}
-                                  onChange={(e) => setEditingContactData({ ...editingContactData, email: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Date Of Birth</label>
-                                <input
-                                  type="date"
-                                  value={editingContactData.date_of_birth || ""}
-                                  onChange={(e) => setEditingContactData({ ...editingContactData, date_of_birth: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Anniversary Date</label>
-                                <input
-                                  type="date"
-                                  value={editingContactData.anniversary_date || ""}
-                                  onChange={(e) => setEditingContactData({ ...editingContactData, anniversary_date: e.target.value })}
-                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              {contact.designation && (
-                                <div>
-                                  <span className="font-medium text-gray-600">Designation:</span>
-                                  <span className="ml-1 text-gray-800">{contact.designation}</span>
-                                </div>
-                              )}
-                              <div>
-                                <span className="font-medium text-gray-600">Phone:</span>
-                                <span className="ml-1 text-gray-800">{contact.phone}</span>
-                              </div>
-                              {contact.alternative_number && (
-                                <div>
-                                  <span className="font-medium text-gray-600">Alt Phone:</span>
-                                  <span className="ml-1 text-gray-800">{contact.alternative_number}</span>
-                                </div>
-                              )}
-                              {contact.email && (
-                                <div>
-                                  <span className="font-medium text-gray-600">Email:</span>
-                                  <span className="ml-1 text-gray-800">{contact.email}</span>
-                                </div>
-                              )}
-                              {contact.date_of_birth && (
-                                <div>
-                                  <span className="font-medium text-gray-600">DOB:</span>
-                                  <span className="ml-1 text-gray-800">{contact.date_of_birth}</span>
-                                </div>
-                              )}
-                              {contact.anniversary_date && (
-                                <div>
-                                  <span className="font-medium text-gray-600">Anniversary:</span>
-                                  <span className="ml-1 text-gray-800">{contact.anniversary_date}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      No contact persons added yet. Click "Add Contact Person" to add one.
-                    </p>
-                  )}
-
-                  {/* Add Contact Modal */}
-                  {showAddContact && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-                      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                          <h3 className="text-lg font-semibold text-gray-900">Add Contact Person</h3>
-                          <button
-                            onClick={() => {
-                              setShowAddContact(false);
-                              setSelectedContactForAdd("");
-                            }}
-                            className="text-gray-400 hover:text-gray-600"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Select Contact Person {selectedBranchId ? "(Branch)" : "(Customer)"}
-                            </label>
-                            <select
-                              value={selectedContactForAdd}
-                              onChange={(e) => setSelectedContactForAdd(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                              <option value="">Select Contact Person</option>
-                              {contactPersons.map((person) => (
-                                <option key={person.id} value={person.id}>
-                                  {person.name}
-                                </option>
-                              ))}
-                            </select>
-                            {contactPersons.length === 0 && (
-                              <p className="text-xs text-amber-600 mt-1">
-                                No contacts available for this {selectedBranchId ? "branch" : "customer"}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex justify-end space-x-3 pt-4 border-t">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowAddContact(false);
-                                setSelectedContactForAdd("");
-                              }}
-                              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (selectedContactForAdd) {
-                                  const selectedContact = contactPersons.find(
-                                    (p) => p.id === selectedContactForAdd
-                                  );
-                                  if (selectedContact) {
-                                    const alreadyAdded = formData.leadContacts.some(
-                                      (c: any) => c.id === selectedContact.id
-                                    );
-                                    if (alreadyAdded) {
-                                      alert("This contact person has already been added.");
-                                      return;
-                                    }
-                                    setFormData((prev: any) => ({
-                                      ...prev,
-                                      leadContacts: [
-                                        ...prev.leadContacts,
-                                        {
-                                          id: selectedContact.id,
-                                          contact_id: selectedContact.id,
-                                          name: selectedContact.name,
-                                          designation: selectedContact.designation || "",
-                                          email: selectedContact.email || "",
-                                          phone: selectedContact.phone || "",
-                                          alternative_number: selectedContact.alternative_number || "",
-                                          date_of_birth: selectedContact.date_of_birth || "",
-                                          anniversary_date: selectedContact.anniversary_date || "",
-                                          communication_mode: selectedContact.communication_mode || "",
-                                        }
-                                      ]
-                                    }));
-                                    setShowAddContact(false);
-                                    setSelectedContactForAdd("");
-                                  }
-                                }
-                              }}
-                              disabled={!selectedContactForAdd}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                            >
-                              Add Contact
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* ===== SECTION 2: Project Details ===== */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Project Details</h3>
@@ -3837,6 +3524,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     </div>
                   </div>
                 </div>
+
                 {/* ===== SECTION 3: Other Details ==` */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Other Details</h3>
@@ -3857,6 +3545,332 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
+                    <div className="md:col-span-2">
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-4 border-b pb-2">
+                          <h3 className="text-md font-semibold text-gray-800">Competitors</h3>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddCompetitor(true)}
+                            className="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700"
+                          >
+                            + Add Competitor
+                          </button>
+                        </div>
+
+                        {/* Display added competitors */}
+                        {formData.leadCompetitors && formData.leadCompetitors.length > 0 ? (
+                          <div className="space-y-3">
+                            {formData.leadCompetitors.map((competitor: any, index: number) => (
+                              <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                                <div className="flex justify-between items-start mb-3">
+                                  <h4 className="font-medium text-gray-900">
+                                    {editingCompetitorIndex === index ? "Edit Competitor" : competitor.competitor_name}
+                                  </h4>
+                                  <div className="flex space-x-2">
+                                    {editingCompetitorIndex === index ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            // Save changes
+                                            if (competitor.id && isEditMode) {
+                                              // Update existing competitor via PUT API
+                                              try {
+                                                // Build payload with only modified non-empty fields
+                                                const modifiedFields: any = {};
+
+                                                // Compare each field with original competitor data
+                                                Object.keys(editingCompetitorData).forEach((key) => {
+                                                  const originalValue = competitor[key];
+                                                  const newValue = editingCompetitorData[key];
+
+                                                  // Skip if values are the same
+                                                  if (JSON.stringify(originalValue) === JSON.stringify(newValue)) {
+                                                    return;
+                                                  }
+
+                                                  // Skip if new value is empty/null/undefined
+                                                  if (newValue === null || newValue === undefined || newValue === '') {
+                                                    return;
+                                                  }
+
+                                                  modifiedFields[key] = newValue;
+                                                });
+
+                                                // Send PUT request if there are modified fields
+                                                if (Object.keys(modifiedFields).length > 0) {
+                                                  const response = await axios.put(
+                                                    `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/${competitor.id}`,
+                                                    {
+                                                      ...modifiedFields,
+                                                      updated_by: userData?.id || ''
+                                                    }
+                                                  );
+
+                                                  if (response.data.success) {
+                                                    showToast('Competitor updated successfully', 'success');
+
+                                                    // Update local state
+                                                    setFormData((prev: any) => ({
+                                                      ...prev,
+                                                      leadCompetitors: prev.leadCompetitors.map((c: any, i: number) =>
+                                                        i === index ? { ...c, ...editingCompetitorData } : c
+                                                      )
+                                                    }));
+                                                  }
+                                                }
+                                              } catch (error: any) {
+                                                console.error('Error updating competitor:', error);
+                                                showToast(error.response?.data?.clientMessage || 'Failed to update competitor', 'error');
+                                              }
+                                            } else {
+                                              // Just update local state for new competitors
+                                              setFormData((prev: any) => ({
+                                                ...prev,
+                                                leadCompetitors: prev.leadCompetitors.map((c: any, i: number) =>
+                                                  i === index ? { ...editingCompetitorData } : c
+                                                )
+                                              }));
+                                            }
+                                            setEditingCompetitorIndex(null);
+                                            setEditingCompetitorData(null);
+                                          }}
+                                          className="text-green-500 hover:text-green-700"
+                                        >
+                                          <Save className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingCompetitorIndex(null);
+                                            setEditingCompetitorData(null);
+                                          }}
+                                          className="text-gray-500 hover:text-gray-700"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingCompetitorIndex(index);
+                                            setEditingCompetitorData({ ...competitor });
+                                          }}
+                                          className="text-blue-500 hover:text-blue-700"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (competitor.id && isEditMode) {
+                                              // Delete via API for existing competitors
+                                              try {
+                                                const response = await axios.delete(
+                                                  `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/${competitor.id}`
+                                                );
+                                                if (response.data.success) {
+                                                  showToast('Competitor deleted successfully', 'success');
+                                                  setFormData((prev: any) => ({
+                                                    ...prev,
+                                                    leadCompetitors: prev.leadCompetitors.filter((_: any, i: number) => i !== index)
+                                                  }));
+                                                }
+                                              } catch (error: any) {
+                                                console.error('Error deleting competitor:', error);
+                                                showToast(error.response?.data?.clientMessage || 'Failed to delete competitor', 'error');
+                                              }
+                                            } else {
+                                              // Just remove from array for new competitors
+                                              setFormData((prev: any) => ({
+                                                ...prev,
+                                                leadCompetitors: prev.leadCompetitors.filter((_: any, i: number) => i !== index)
+                                              }));
+                                            }
+                                          }}
+                                          className="text-red-500 hover:text-red-700"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {editingCompetitorIndex === index ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">Competitor Name *</label>
+                                      <input
+                                        type="text"
+                                        value={editingCompetitorData.competitor_name}
+                                        onChange={(e) => setEditingCompetitorData({ ...editingCompetitorData, competitor_name: e.target.value })}
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">Win Probability % *</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={editingCompetitorData.win_probability}
+                                        onChange={(e) => setEditingCompetitorData({ ...editingCompetitorData, win_probability: e.target.value })}
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                      <span className="font-medium text-gray-600">Win Probability:</span>
+                                      <span className="ml-1 text-orange-600 font-semibold">{competitor.win_probability}%</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            No competitors added yet. Click "Add Competitor" to add one.
+                          </p>
+                        )}
+
+                        {/* Add Competitor Modal */}
+                        {showAddCompetitor && (
+                          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+                            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                              <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">Add Competitor</h3>
+                                <button
+                                  onClick={() => {
+                                    setShowAddCompetitor(false);
+                                  }}
+                                  className="text-gray-400 hover:text-gray-600"
+                                >
+                                  <X className="h-5 w-5" />
+                                </button>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Competitor Name *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    id="new-competitor-name"
+                                    placeholder="Enter competitor name"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Win Probability % *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    id="new-competitor-probability"
+                                    min="0"
+                                    max="100"
+                                    placeholder="0-100"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                  onClick={() => {
+                                    setShowAddCompetitor(false);
+                                  }}
+                                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const nameInput = document.getElementById('new-competitor-name') as HTMLInputElement;
+                                    const probabilityInput = document.getElementById('new-competitor-probability') as HTMLInputElement;
+
+                                    const competitorName = nameInput?.value?.trim();
+                                    const winProbability = probabilityInput?.value?.trim();
+
+                                    // Validation
+                                    if (!competitorName) {
+                                      showToast('Please enter competitor name', 'error');
+                                      return;
+                                    }
+
+                                    if (!winProbability || parseFloat(winProbability) < 0 || parseFloat(winProbability) > 100) {
+                                      showToast('Please enter a valid win probability between 0-100', 'error');
+                                      return;
+                                    }
+
+                                    const newCompetitor = {
+                                      competitor_name: competitorName,
+                                      win_probability: parseFloat(winProbability)
+                                    };
+
+                                    // If in edit mode, immediately save to backend
+                                    if (isEditMode && initialData?.id) {
+                                      try {
+                                        const response = await axios.post(
+                                          `${import.meta.env.VITE_API_BASE_URL}/lead-competitor`,
+                                          {
+                                            lead_id: initialData.id,
+                                            competitor_name: competitorName,
+                                            win_probability: parseFloat(winProbability),
+                                            created_by: userData?.id || ''
+                                          }
+                                        );
+
+                                        if (response.data.success) {
+                                          showToast('Competitor added successfully', 'success');
+                                          // Add to local state with the returned ID
+                                          setFormData((prev: any) => ({
+                                            ...prev,
+                                            leadCompetitors: [...(prev.leadCompetitors || []), {
+                                              id: response.data.data.id,
+                                              ...newCompetitor
+                                            }]
+                                          }));
+                                        }
+                                      } catch (error: any) {
+                                        console.error('Error adding competitor:', error);
+                                        showToast(error.response?.data?.clientMessage || 'Failed to add competitor', 'error');
+                                        return;
+                                      }
+                                    } else {
+                                      // In create mode, just add to array
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        leadCompetitors: [...(prev.leadCompetitors || []), newCompetitor]
+                                      }));
+                                      showToast('Competitor added', 'success');
+                                    }
+
+                                    // Clear inputs and close modal
+                                    if (nameInput) nameInput.value = '';
+                                    if (probabilityInput) probabilityInput.value = '';
+                                    setShowAddCompetitor(false);
+                                  }}
+                                  className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700"
+                                >
+                                  Add Competitor
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+
                     {/* Lead Details */}
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3882,7 +3896,473 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     </div>
                   </div>
                 </div>
-                {/* ===== SECTION 4: Involved Associates - KEEP EXISTING AS IS ===== */}
+
+                {/* ===== SECTION 4: Competitors ===== */}
+
+                {/* ===== SECTION 5: Contact Persons ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 className="text-md font-semibold text-gray-800">Contact Persons</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddContact(true)}
+                      disabled={!formData.businessName}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      + Add Contact Person
+                    </button>
+                  </div>
+
+                  {/* Display added contacts */}
+                  {formData.leadContacts && formData.leadContacts.length > 0 ? (
+                    <div className="space-y-3">
+                      {formData.leadContacts.map((contact: any, index: number) => (
+                        <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                          <div className="flex justify-between items-start mb-3">
+                            <h4 className="font-medium text-gray-900">
+                              {editingContactIndex === index ? "Edit Contact Person" : contact.name}
+                            </h4>
+                            <div className="flex space-x-2">
+                              {editingContactIndex === index ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      // Save changes
+                                      if (contact.id && isEditMode) {
+                                        // Update existing contact via PUT API
+                                        try {
+                                          // Build payload with only modified non-empty fields
+                                          const modifiedFields: any = {};
+
+                                          // Compare each field with original contact data
+                                          Object.keys(editingContactData).forEach((key) => {
+                                            const originalValue = contact[key];
+                                            const newValue = editingContactData[key];
+
+                                            // Skip if values are the same
+                                            if (JSON.stringify(originalValue) === JSON.stringify(newValue)) {
+                                              return;
+                                            }
+
+                                            // Skip if new value is empty/null/undefined
+                                            if (newValue === null || newValue === undefined || newValue === '') {
+                                              return;
+                                            }
+
+                                            // Skip if new value is an empty array
+                                            if (Array.isArray(newValue) && newValue.length === 0) {
+                                              return;
+                                            }
+
+                                            // Include the modified non-empty field
+                                            modifiedFields[key] = newValue;
+                                          });
+
+                                          // Always include updated_by
+                                          modifiedFields.updated_by = userData?.id || null;
+
+                                          // Only make API call if there are fields to update
+                                          if (Object.keys(modifiedFields).length > 1) { // > 1 because updated_by is always included
+                                            await axios.put(
+                                              `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`,
+                                              modifiedFields
+                                            );
+
+                                            // Update local state
+                                            setFormData((prev: any) => ({
+                                              ...prev,
+                                              leadContacts: prev.leadContacts.map((c: any, i: number) =>
+                                                i === index ? { ...c, ...editingContactData } : c
+                                              )
+                                            }));
+                                            setEditingContactIndex(null);
+                                            setEditingContactData(null);
+                                            showToast("Contact updated successfully!");
+                                          } else {
+                                            // No changes detected
+                                            setEditingContactIndex(null);
+                                            setEditingContactData(null);
+                                            showToast("No changes detected.");
+                                          }
+                                        } catch (error) {
+                                          console.error("Error updating contact:", error);
+                                          showToast("Failed to update contact. Please try again.");
+                                        }
+                                      } else {
+                                        // Just update local state for new contacts
+                                        setFormData((prev: any) => ({
+                                          ...prev,
+                                          leadContacts: prev.leadContacts.map((c: any, i: number) =>
+                                            i === index ? { ...c, ...editingContactData } : c
+                                          )
+                                        }));
+                                        setEditingContactIndex(null);
+                                        setEditingContactData(null);
+                                      }
+                                    }}
+                                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingContactIndex(null);
+                                      setEditingContactData(null);
+                                    }}
+                                    className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingContactIndex(index);
+                                      setEditingContactData({ ...contact });
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (contact.id && isEditMode) {
+                                        // Delete via API
+                                        if (window.confirm("Are you sure you want to delete this contact?")) {
+                                          try {
+                                            await axios.delete(
+                                              `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`
+                                            );
+                                            setFormData((prev: any) => ({
+                                              ...prev,
+                                              leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
+                                            }));
+                                            showToast("Contact deleted successfully!", "success");
+                                          } catch (error) {
+                                            console.error("Error deleting contact:", error);
+                                            showToast("Failed to delete contact. Please try again.", "error");
+                                          }
+                                        }
+                                      } else {
+                                        // Just remove from local state
+                                        if (window.confirm("Are you sure you want to remove this contact?")) {
+                                          setFormData((prev: any) => ({
+                                            ...prev,
+                                            leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
+                                          }));
+                                        }
+                                      }
+                                    }}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {editingContactIndex === index ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                                <input
+                                  type="text"
+                                  value={editingContactData.name}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, name: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Designation</label>
+                                <input
+                                  type="text"
+                                  value={editingContactData.designation || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, designation: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Contact Number *</label>
+                                <input
+                                  type="tel"
+                                  value={editingContactData.phone}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, phone: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Alternative Number</label>
+                                <input
+                                  type="tel"
+                                  value={editingContactData.alternative_number || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, alternative_number: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Email ID</label>
+                                <input
+                                  type="email"
+                                  value={editingContactData.email || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, email: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Date Of Birth</label>
+                                <input
+                                  type="date"
+                                  value={editingContactData.date_of_birth || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, date_of_birth: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Anniversary Date</label>
+                                <input
+                                  type="date"
+                                  value={editingContactData.anniversary_date || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, anniversary_date: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Communication Mode *</label>
+                                <div className="flex flex-wrap gap-3 mt-2">
+                                  {['WhatsApp', 'Email', 'Call', 'VC', 'Physical'].map((mode) => {
+                                    const communicationModes = Array.isArray(editingContactData.communication_mode)
+                                      ? editingContactData.communication_mode
+                                      : (editingContactData.communication_mode ? editingContactData.communication_mode.split(',').map((m: string) => m.trim()) : []);
+
+                                    return (
+                                      <label key={mode} className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={communicationModes.includes(mode)}
+                                          onChange={(e) => {
+                                            let updatedModes = [...communicationModes];
+                                            if (e.target.checked) {
+                                              updatedModes.push(mode);
+                                            } else {
+                                              updatedModes = updatedModes.filter(m => m !== mode);
+                                            }
+                                            setEditingContactData({
+                                              ...editingContactData,
+                                              communication_mode: updatedModes
+                                            });
+                                          }}
+                                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <span className="text-sm text-gray-700">{mode}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+
+                              <div>
+                                <span className="font-medium text-gray-600">Designation:</span>
+                                <span className="ml-1 text-gray-800">{contact.designation}</span>
+                              </div>
+
+                              <div>
+                                <span className="font-medium text-gray-600">Phone:</span>
+                                <span className="ml-1 text-gray-800">{contact.phone}</span>
+                              </div>
+
+                              <div>
+                                <span className="font-medium text-gray-600">Alt Phone:</span>
+                                <span className="ml-1 text-gray-800">{contact.alternative_number}</span>
+                              </div>
+
+
+                              <div>
+                                <span className="font-medium text-gray-600">Email:</span>
+                                <span className="ml-1 text-gray-800">{contact.email}</span>
+                              </div>
+
+
+                              <div>
+                                <span className="font-medium text-gray-600">DOB:</span>
+                                <span className="ml-1 text-gray-800">{contact.date_of_birth}</span>
+                              </div>
+
+
+                              <div>
+                                <span className="font-medium text-gray-600">Anniversary:</span>
+                                <span className="ml-1 text-gray-800">{contact.anniversary_date}</span>
+                              </div>
+
+
+                              <div className="col-span-2">
+                                <span className="font-medium text-gray-600">Communication Mode:</span>
+                                <span className="ml-1 text-gray-800">
+                                  {Array.isArray(contact.communication_mode)
+                                    ? contact.communication_mode.join(', ')
+                                    : contact.communication_mode}
+                                </span>
+                              </div>
+
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No contact persons added yet. Click "Add Contact Person" to add one.
+                    </p>
+                  )}
+
+                  {/* Add Contact Modal */}
+                  {showAddContact && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+                      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Add Contact Person</h3>
+                          <button
+                            onClick={() => {
+                              setShowAddContact(false);
+                              setSelectedContactForAdd("");
+                            }}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Select Contact Person {selectedBranchId ? "(Branch)" : "(Customer)"}
+                            </label>
+                            <select
+                              value={selectedContactForAdd}
+                              onChange={(e) => setSelectedContactForAdd(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">Select Contact Person</option>
+                              {contactPersons.map((person) => (
+                                <option key={person.id} value={person.id}>
+                                  {person.name}
+                                </option>
+                              ))}
+                            </select>
+                            {contactPersons.length === 0 && (
+                              <p className="text-xs text-amber-600 mt-1">
+                                No contacts available for this {selectedBranchId ? "branch" : "customer"}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex justify-end space-x-3 pt-4 border-t">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddContact(false);
+                                setSelectedContactForAdd("");
+                              }}
+                              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (selectedContactForAdd) {
+                                  const selectedContact = contactPersons.find(
+                                    (p) => p.id === selectedContactForAdd
+                                  );
+                                  if (selectedContact) {
+                                    // Check if already added using contact_id (not id, since new contacts don't have lead-contact id yet)
+                                    const alreadyAdded = formData.leadContacts.some(
+                                      (c: any) => c.contact_id === selectedContact.id
+                                    );
+                                    if (alreadyAdded) {
+                                      showToast("This contact person has already been added.");
+                                      return;
+                                    }
+
+                                    const newContactData = {
+                                      contact_id: selectedContact.id,
+                                      name: selectedContact.name,
+                                      designation: selectedContact.designation || "",
+                                      email: selectedContact.email || "",
+                                      phone: selectedContact.phone || "",
+                                      alternative_number: selectedContact.alternative_number || "",
+                                      date_of_birth: selectedContact.date_of_birth || "",
+                                      anniversary_date: selectedContact.anniversary_date || "",
+                                      communication_mode: selectedContact.communication_mode || "",
+                                    };
+
+                                    // If in edit mode, immediately save to backend via POST API
+                                    if (isEditMode && initialData?.id) {
+                                      try {
+                                        const response = await axios.post(
+                                          `${import.meta.env.VITE_API_BASE_URL}/lead-contact`,
+                                          {
+                                            lead_id: initialData.id,
+                                            ...newContactData,
+                                            created_by: userData?.id || null
+                                          }
+                                        );
+
+                                        // Add to local state with the returned lead-contact ID
+                                        const createdContact = response.data.data;
+                                        setFormData((prev: any) => ({
+                                          ...prev,
+                                          leadContacts: [
+                                            ...prev.leadContacts,
+                                            {
+                                              id: createdContact.id, // Now it has a lead-contact record ID
+                                              ...newContactData
+                                            }
+                                          ]
+                                        }));
+                                        setShowAddContact(false);
+                                        setSelectedContactForAdd("");
+                                        showToast("Contact person added successfully!", "success");
+                                      } catch (error) {
+                                        console.error("Error adding contact:", error);
+                                        showToast("Failed to add contact person. Please try again.", "error");
+                                      }
+                                    } else {
+                                      // Create mode: just add to local state (will be saved when lead is created)
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        leadContacts: [
+                                          ...prev.leadContacts,
+                                          newContactData
+                                        ]
+                                      }));
+                                      setShowAddContact(false);
+                                      setSelectedContactForAdd("");
+                                    }
+                                  }
+                                }
+                              }}
+                              disabled={!selectedContactForAdd}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                              Add Contact
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ===== SECTION 5: Involved Associates - KEEP EXISTING AS IS ===== */}
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Involved Associates</h3>
                   <div>
@@ -4393,8 +4873,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={isLoading}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                 >
-                  {isLoading ? "Saving..." : "Next"}
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  {isLoading ? "Saving..." : "Save"}
                 </button>
               ) : currentStep < 3 ? (
                 <button
@@ -4403,8 +4882,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={isLoading}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                 >
-                  {isLoading ? "Uploading..." : "Next"}
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  {isLoading ? "Uploading..." : "Save"}
+
                 </button>
               ) : (
                 <button

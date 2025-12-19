@@ -75,6 +75,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [isSendingHelp, setIsSendingHelp] = useState(false);
   const [designHelpSent, setDesignHelpSent] = useState(false);
 
+  // Lead competitors state
+  const [leadCompetitors, setLeadCompetitors] = useState<any[]>([]);
+
   // Fetch detailed lead information when lead is selected
 
   useEffect(() => {
@@ -158,12 +161,25 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           projectLocation: apiLead.project_location || null,
           projectZone: apiLead.project_zone || null,
           projectCurrentStatus: apiLead.project_current_status || null,
+          // Contact persons
+          contactPersons: apiLead.contact || [],
         };
 
         setLeadDetails(mappedLead);
 
         // Fetch follow-up comments
         fetchFollowUpComments(lead.id);
+
+        // Fetch lead competitors
+        try {
+          const competitorsResponse = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-competitor?lead_id=${lead.id}`
+          );
+          setLeadCompetitors(competitorsResponse.data.data || []);
+        } catch (competitorError) {
+          console.error("Error fetching lead competitors:", competitorError);
+          setLeadCompetitors([]);
+        }
 
         // Check if design help was sent
         checkDesignHelpStatus(lead.id);
@@ -852,16 +868,23 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <Clock className="h-5 w-5 text-gray-400" />
                     <div>
-                      <p className="text-sm text-gray-500">Contact Person</p>
+                      <p className="text-sm text-gray-500">Days in Pipeline</p>
                       <p className="text-sm font-medium text-gray-900">
-                        {displayLead.contactPerson || "-"}
+                        {displayLead.submittedDate
+                          ? Math.floor(
+                            (new Date().getTime() -
+                              new Date(displayLead.submittedDate).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                          )
+                          : 0}{" "}
+                        days
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
+                  {/* <div className="flex items-center space-x-3">
                     <Phone className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Contact No</p>
@@ -869,7 +892,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                         {displayLead.phone || displayLead.contactNo}
                       </p>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="flex items-center space-x-3">
                     <Calendar className="h-5 w-5 text-gray-400" />
@@ -1182,7 +1205,82 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 </div>
               </div>
 
-              {/* ===== SECTION 3: Other Details ===== */}
+              {/* ===== SECTION 3: Contact Persons ===== */}
+              {displayLead.contactPersons && displayLead.contactPersons.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Contact Persons</h3>
+                  <div className="space-y-2">
+                    {displayLead.contactPersons.map((contact: any, index: number) => (
+                      <div
+                        key={index}
+                        className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-colors"
+                      >
+                        {/* Header Row with Name and Designation */}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {contact.name || "Unnamed Contact"}
+                            </p>
+                            {contact.designation && (
+                              <p className="text-xs text-gray-500 truncate">{contact.designation}</p>
+                            )}
+                          </div>
+                          {displayLead.contactPersons.length > 1 && (
+                            <span className="ml-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full flex-shrink-0">
+                              #{index + 1}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Compact Info Grid */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                          {contact.email && (
+                            <div className="col-span-2">
+                              <span className="text-gray-500">📧</span>
+                              <span className="ml-1 text-gray-700 truncate">{contact.email}</span>
+                            </div>
+                          )}
+                          {contact.phone && (
+                            <div>
+                              <span className="text-gray-500">📞</span>
+                              <span className="ml-1 text-gray-700">{contact.phone}</span>
+                            </div>
+                          )}
+                          {contact.alternative_number && (
+                            <div>
+                              <span className="text-gray-500">📱</span>
+                              <span className="ml-1 text-gray-700">{contact.alternative_number}</span>
+                            </div>
+                          )}
+                          {contact.date_of_birth && (
+                            <div>
+                              <span className="text-gray-500">🎂</span>
+                              <span className="ml-1 text-gray-700">
+                                {new Date(contact.date_of_birth).toLocaleDateString("en-IN", {
+                                  day: '2-digit',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          {contact.anniversary_date && (
+                            <div>
+                              <span className="text-gray-500">💝</span>
+                              <span className="ml-1 text-gray-700">
+                                {new Date(contact.anniversary_date).toLocaleDateString("en-IN", {
+                                  day: '2-digit',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* ===== SECTION 4: Other Details ===== */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
                   Other Details
@@ -1199,7 +1297,33 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
+                  {/* Involved Associates - Full Width */}
+                  <div className="md:col-span-2">
+                    <div className="flex items-start space-x-3">
+                      <Users className="h-5 w-5 text-blue-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-2">Competitors</p>
+                        {leadCompetitors &&
+                          leadCompetitors.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {leadCompetitors.map((a: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="inline-flex items-center px-3 py-1 rounded-half bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
+                              >
+                                <span className="mr-1 text-gray-700">{a.competitor_name} ---- </span>
+                                <span className="font-semibold">{a.win_probability} %</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">-</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* <div className="flex items-center space-x-3">
                     <Calendar className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Submitted Date</p>
@@ -1211,9 +1335,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                           : "N/A"}
                       </p>
                     </div>
-                  </div>
+                  </div> */}
 
-                  <div className="flex items-center space-x-3">
+                  {/* <div className="flex items-center space-x-3">
                     <Clock className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Days in Pipeline</p>
@@ -1228,7 +1352,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                         days
                       </p>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Lead Details - Full Width */}
                   <div className="md:col-span-2">
