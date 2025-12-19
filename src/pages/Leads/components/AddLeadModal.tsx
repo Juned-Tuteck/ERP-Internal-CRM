@@ -185,7 +185,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const steps = [
     { id: 1, name: "General Information", description: "Basic lead details" },
     { id: 2, name: "Upload Files", description: "Supporting documents" },
-    { id: 3, name: "Follow-up Leads", description: "Communication log" },
+    // { id: 3, name: "Follow-up Leads", description: "Communication log" },
   ];
 
   const leadTypes = ["Industrial", "Hospital", "It", "Commercial", "Residential", "Govrment"];
@@ -440,11 +440,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
 
     // Step 3 validations
-    if (currentStep === 3) {
-      if (newComment && !validateStringLength(newComment.trim(), 0, 500)) {
-        errors.newComment = "Comment must not exceed 500 characters";
-      }
-    }
+    // if (currentStep === 3) {
+    //   if (newComment && !validateStringLength(newComment.trim(), 0, 500)) {
+    //     errors.newComment = "Comment must not exceed 500 characters";
+    //   }
+    // }
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -1656,6 +1656,25 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               console.error(`Error adding contacts for ${worktype}:`, contactError);
             }
           }
+
+          // POST: Lead Competitors (shared across all worktypes)
+          if (formData.leadCompetitors && formData.leadCompetitors.length > 0) {
+            try {
+              const competitorPayload = formData.leadCompetitors.map((competitor: any) => ({
+                lead_id: leadId,
+                competitor_name: competitor.competitor_name,
+                win_probability: competitor.win_probability,
+                created_by: userData?.id || null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
+                competitorPayload
+              );
+              console.log(`Competitors added for ${worktype}`);
+            } catch (competitorError) {
+              console.error(`Error adding competitors for ${worktype}:`, competitorError);
+            }
+          }
         } catch (error: any) {
           console.error(`Error creating lead for ${worktype}:`, error);
           const errorMessage = error.response?.data?.message || error.message || "Unknown error";
@@ -1850,6 +1869,25 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           console.log(`Contacts added for unified lead`);
         } catch (contactError) {
           console.error(`Error adding contacts:`, contactError);
+        }
+      }
+
+      // 4.6. Add Lead Competitors (Unified)
+      if (formData.leadCompetitors && formData.leadCompetitors.length > 0) {
+        try {
+          const competitorPayload = formData.leadCompetitors.map((competitor: any) => ({
+            lead_id: leadId,
+            competitor_name: competitor.competitor_name,
+            win_probability: competitor.win_probability,
+            created_by: userData?.id || null,
+          }));
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
+            competitorPayload
+          );
+          console.log(`Competitors added for unified lead`);
+        } catch (competitorError) {
+          console.error(`Error adding competitors:`, competitorError);
         }
       }
 
@@ -4654,8 +4692,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </div>
             )}
 
-            {/* Step 3: Follow-up Leads */}
-            {currentStep === 3 && (
+            {/* Step 3: Follow-up Leads - COMMENTED OUT */}
+            {/* {currentStep === 3 && (
               <div className="space-y-6">
                 {!isEditMode && creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                   // Multi-worktype mode: show fields per worktype
@@ -4665,7 +4703,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         Follow-up for: {worktype}
                       </h4>
 
-                      {/* Assign to Dropdown */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Assign to
@@ -4697,7 +4734,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
 
 
-                      {/* Follow-up Comments */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Follow-up Notes
@@ -4731,7 +4767,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 ) : (
                   // Edit mode or single worktype: original layout
                   <div className="space-y-4">
-                    {/* Assign to Dropdown */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Assign to
@@ -4837,7 +4872,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   </div>
                 )}
               </div>
-            )}
+            )} */}
           </form>
         </div>
 
@@ -4875,29 +4910,35 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 >
                   {isLoading ? "Saving..." : "Save"}
                 </button>
-              ) : currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={isLoading}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  {isLoading ? "Uploading..." : "Save"}
-
-                </button>
               ) : (
                 <button
-                  type="submit"
-                  onClick={handleSubmit}
+                  type="button"
+                  onClick={async () => {
+                    setIsLoading(true);
+                    try {
+                      if (uploadedFiles.length > 0) {
+                        const leadId = createdLeadId || initialData?.id;
+                        await uploadFilesForLead(leadId, uploadedFiles);
+                        await updateLeadStageAfterFileUpload(leadId);
+                      }
+                      handleSubmit({ preventDefault: () => { } } as any);
+                    } catch (err) {
+                      console.error(err);
+                      showToast("Error updating lead files");
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  disabled={isLoading}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Update Complete
+                  {isLoading ? "Updating..." : "Update Complete"}
                 </button>
               )
             ) : (
               <>
-                {currentStep < 3 ? (
+                {currentStep < 2 ? (
                   <button
                     type="button"
                     onClick={handleNext}
