@@ -73,6 +73,7 @@ interface Branch {
   bankName?: string;
   bankAccountNumber?: string;
   ifscCode?: string;
+  nameOfBranchProject?: string;
 }
 
 const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
@@ -106,7 +107,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       pincode: "",
       street: "",
       googleLocation: "",
-      addressType: "",
+      addressType: "HO",
       currentStatus: "Active",
       blacklistReason: "",
       customerCategory: "",
@@ -120,6 +121,9 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       customerClassification: "",
       msmeRegistered: "No",
       udyamRegistrationNumber: "",
+      nameOfBranchProject: "",
+      hoContactNumber: "",
+      hoEmailId: "",
       // Bank Details
       panNumber: "",
       tanNumber: "",
@@ -165,6 +169,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
+  // API-driven dropdown states
+  const [zones, setZones] = useState<Array<{ id: string; name: string }>>([]);
+  const [states, setStates] = useState<Array<{ id: string; name: string; zone_id: string }>>([]);
+  const [districts, setDistricts] = useState<Array<{ id: string; name: string; state_id: string }>>([]);
+
   // Customer autocomplete states
   const [customerSuggestions, setCustomerSuggestions] = useState<Array<{ id: string, name: string }>>([]);
   const [showCustomerPopup, setShowCustomerPopup] = useState(false);
@@ -193,7 +202,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         pincode: "",
         street: "",
         googleLocation: "",
-        addressType: "",
+        addressType: "HO",
+        zone: "",
+        nameOfBranchProject: "",
+        hoContactNumber: "",
+        hoEmailId: "",
         currentStatus: "Active",
         blacklistReason: "",
         customerCategory: "",
@@ -274,6 +287,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     customerClassification: "customer_classification",
     msmeRegistered: "msme_registered",
     udyamRegistrationNumber: "udyam_registration_number",
+    nameOfBranchProject: "name_of_branch_project",
+    zone: "zone",
+    hoContactNumber: "ho_contact_number",
+    hoEmailId: "ho_email_id",
   };
 
   const branchKeymap = {
@@ -301,7 +318,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     bankName: "bank_name",
     bankAccountNumber: "bank_account_number",
     ifscCode: "ifsc_code",
-    zone: "zone", // keymap for branch
+    zone: "zone",
+    nameOfBranchProject: "name_of_branch_project",
   };
 
   const branchContactKeymap = {
@@ -354,75 +372,14 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   // Mock data for dropdowns
   const countries = ["India", "USA", "UK", "Canada", "Australia"];
   const currencies = ["INR", "USD", "EUR", "GBP", "AUD"];
-  const states = [
-    "Maharashtra",
-    "Delhi",
-    "Karnataka",
-    "Tamil Nadu",
-    "Gujarat",
-    "Rajasthan",
-    "Uttar Pradesh",
-    "West Bengal",
+
+  // Static/dummy city data as per requirements
+  const cities = [
+    "Mumbai", "Delhi", "Bangalore", "Kolkata", "Chennai",
+    "Hyderabad", "Pune", "Ahmedabad", "Surat", "Jaipur",
+    "Lucknow", "Kanpur", "Nagpur", "Indore", "Thane",
+    "Bhopal", "Visakhapatnam", "Pimpri-Chinchwad", "Patna", "Vadodara"
   ];
-  const districts = {
-    Maharashtra: ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"],
-    Delhi: [
-      "Central Delhi",
-      "North Delhi",
-      "South Delhi",
-      "East Delhi",
-      "West Delhi",
-    ],
-    Karnataka: [
-      "Bangalore Urban",
-      "Mysore",
-      "Hubli-Dharwad",
-      "Mangalore",
-      "Belgaum",
-    ],
-    "Tamil Nadu": [
-      "Chennai",
-      "Coimbatore",
-      "Madurai",
-      "Tiruchirappalli",
-      "Salem",
-    ],
-    Gujarat: ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar"],
-    "West Bengal": [
-      "Kolkata",
-      "Howrah",
-      "Darjeeling",
-      "Siliguri",
-      "Durgapur",
-      "Asansol",
-      "Bardhaman",
-      "Kharagpur",
-      "Haldia",
-      "Malda",
-    ],
-  };
-  const zones = ["North", "South", "East", "West", "Central"];
-  const cities = {
-    Mumbai: ["Mumbai", "Navi Mumbai", "Thane", "Kalyan", "Vasai-Virar"],
-    Pune: ["Pune", "Pimpri-Chinchwad", "Wakad", "Hinjewadi", "Kharadi"],
-    "Bangalore Urban": [
-      "Bangalore",
-      "Electronic City",
-      "Whitefield",
-      "Koramangala",
-      "Indiranagar",
-    ],
-    Kolkata: ["Kolkata", "Salt Lake", "New Town", "Behala", "Dumdum"],
-    Howrah: ["Howrah", "Bally", "Uluberia"],
-    Darjeeling: ["Darjeeling", "Kurseong", "Mirik"],
-    Siliguri: ["Siliguri", "Matigara", "Bagdogra"],
-    Durgapur: ["Durgapur", "Bidhannagar", "Muchipara"],
-    Asansol: ["Asansol", "Burnpur", "Kulti"],
-    Bardhaman: ["Bardhaman", "Kalna", "Katwa"],
-    Kharagpur: ["Kharagpur", "Hijli", "Midnapore"],
-    Haldia: ["Haldia", "Mahishadal", "Nandigram"],
-    Malda: ["Malda", "English Bazar", "Old Malda"],
-  };
   const customerTypes = ["Industrial", "Hospital", "It", "Commercial", "Residential"];
   const customerPotentials = ["High", "Medium", "Low"];
 
@@ -511,6 +468,69 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     };
   }, []);
 
+  // Fetch zones from API
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_AUTH_BASE_URL}/zones`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+            }
+          }
+        );
+        setZones(response.data.data || response.data || []);
+      } catch (error) {
+        console.error('Error fetching zones:', error);
+        setZones([]);
+      }
+    };
+    fetchZones();
+  }, []);
+
+  // Fetch states from API
+  useEffect(() => {
+    const fetchStates = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_AUTH_BASE_URL}/states`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+            }
+          }
+        );
+        setStates(response.data.data || response.data || []);
+      } catch (error) {
+        console.error('Error fetching states:', error);
+        setStates([]);
+      }
+    };
+    fetchStates();
+  }, []);
+
+  // Fetch districts from API
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_AUTH_BASE_URL}/districts`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+            }
+          }
+        );
+        setDistricts(response.data.data || response.data || []);
+      } catch (error) {
+        console.error('Error fetching districts:', error);
+        setDistricts([]);
+      }
+    };
+    fetchDistricts();
+  }, []);
+
   // Fetch customer details
   const fetchCustomerDetails = async (customerId: string) => {
     setLoadingCustomerDetails(true);
@@ -546,7 +566,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       };
 
       // Handle cascade updates for location fields
-      if (name === "state") {
+      if (name === "zone") {
+        // When zone changes, reset state, district and city
+        updatedFormData.state = "";
+        updatedFormData.district = "";
+        updatedFormData.city = "";
+      } else if (name === "state") {
         // When state changes, reset district and city
         updatedFormData.district = "";
         updatedFormData.city = "";
@@ -1082,7 +1107,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       pincode: "",
       street: "",
       googleLocation: "",
-      addressType: "",
+      addressType: "HO",
       currentStatus: "Active",
       blacklistReason: "",
       customerCategory: "",
@@ -1096,6 +1121,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       bankName: "",
       bankAccountNumber: "",
       ifscCode: "",
+      nameOfBranchProject: "",
     };
     setFormData((prev: typeof formData) => ({
       ...prev,
@@ -1146,7 +1172,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           const updatedBranch = { ...branch, [field]: value };
 
           // Handle cascade updates
-          if (field === "state") {
+          if (field === "zone") {
+            // When zone changes, reset state, district and city
+            updatedBranch.state = "";
+            updatedBranch.district = "";
+            updatedBranch.city = "";
+          } else if (field === "state") {
             // When state changes, reset district and city
             updatedBranch.district = "";
             updatedBranch.city = "";
@@ -2799,29 +2830,115 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         Billing Address
       </h4>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isBranch && (
+        {/* Address Type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Address Type
+          </label>
+          <select
+            name={!isBranch ? "addressType" : undefined}
+            value={data.addressType || ""}
+            onChange={(e) => onChange("addressType", e.target.value)}
+            disabled={!isBranch || readOnly}
+            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!isBranch ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+          >
+            <option value="">Select Type</option>
+            {addressTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Name of Branch / Project */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Name of Branch / Project
+          </label>
+          <input
+            type="text"
+            name={!isBranch ? "nameOfBranchProject" : undefined}
+            value={data.nameOfBranchProject || ""}
+            onChange={(e) => onChange("nameOfBranchProject", e.target.value)}
+            disabled={readOnly}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter branch or project name"
+          />
+        </div>
+
+        {!isBranch && (
           <>
-            {/* Branch Name */}
+            {/* HO Contact Number (Customer specific) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Branch Name *
+                Contact Number *
               </label>
               <input
-                type="text"
-                value={data.branchName}
-                onChange={(e) => onChange("branchName", e.target.value)}
+                type="tel"
+                name="hoContactNumber"
+                value={data.hoContactNumber || ""}
+                onChange={(e) => onChange("hoContactNumber", e.target.value)}
                 disabled={readOnly}
                 required
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.branchName
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.hoContactNumber
                   ? "border-red-300 focus:ring-red-500 focus:border-red-500"
                   : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                   }`}
-                placeholder="Branch name"
+                placeholder="+91 98765 43210"
               />
-              {errors?.branchName && (
-                <p className="text-red-500 text-xs mt-1">{errors.branchName}</p>
+              {errors?.hoContactNumber && (
+                <p className="text-red-500 text-xs mt-1">{errors.hoContactNumber}</p>
               )}
             </div>
+
+            {/* HO Email ID (Customer specific) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email ID *
+              </label>
+              <input
+                type="email"
+                name="hoEmailId"
+                value={data.hoEmailId || ""}
+                onChange={(e) => onChange("hoEmailId", e.target.value)}
+                disabled={readOnly}
+                required
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.hoEmailId
+                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                placeholder="contact@company.com"
+              />
+              {errors?.hoEmailId && (
+                <p className="text-red-500 text-xs mt-1">{errors.hoEmailId}</p>
+              )}
+            </div>
+
+            {/* Country (Customer specific) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Country *
+              </label>
+              <select
+                name="country"
+                value={data.country}
+                onChange={(e) => onChange("country", e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {countries.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
+        {isBranch && (
+          <>
             {/* Contact Number (Branch specific) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2908,48 +3025,6 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </>
         )}
 
-        {/* Address Type */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Address Type
-          </label>
-          <select
-            name={!isBranch ? "addressType" : undefined}
-            value={data.addressType || ""}
-            onChange={(e) => onChange("addressType", e.target.value)}
-            disabled={readOnly}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Select Type</option>
-            {addressTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {!isBranch && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Country *
-            </label>
-            <select
-              name="country"
-              value={data.country}
-              onChange={(e) => onChange("country", e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {countries.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         {/* Zone */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2964,8 +3039,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           >
             <option value="">Select Zone</option>
             {zones.map((z) => (
-              <option key={z} value={z}>
-                {z}
+              <option key={z.id} value={z.name}>
+                {z.name}
               </option>
             ))}
           </select>
@@ -2980,19 +3055,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             name={!isBranch ? "state" : undefined}
             value={data.state}
             onChange={(e) => onChange("state", e.target.value)}
-            disabled={readOnly}
+            disabled={readOnly || !data.zone}
             required
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.state
               ? "border-red-300 focus:ring-red-500 focus:border-red-500"
               : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-              }`}
+              } disabled:bg-gray-100`}
           >
             <option value="">Select State</option>
-            {states.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
+            {data.zone &&
+              states
+                .filter((s) => s.zone_id === zones.find(z => z.name === data.zone)?.id)
+                .map((s) => (
+                  <option key={s.id} value={s.name}>
+                    {s.name}
+                  </option>
+                ))}
           </select>
           {errors?.state && (
             <p className="text-red-500 text-xs mt-1">{errors.state}</p>
@@ -3014,11 +3092,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           >
             <option value="">Select District</option>
             {data.state &&
-              districts[data.state as keyof typeof districts]?.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
+              districts
+                .filter((d) => d.state_id === states.find(s => s.name === data.state)?.id)
+                .map((d) => (
+                  <option key={d.id} value={d.name}>
+                    {d.name}
+                  </option>
+                ))}
           </select>
         </div>
 
@@ -3031,17 +3111,16 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             name={!isBranch ? "city" : undefined}
             value={data.city}
             onChange={(e) => onChange("city", e.target.value)}
-            disabled={readOnly || !data.district}
+            disabled={readOnly}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           >
             <option value="">Select City</option>
-            {data.district &&
-              cities[data.district as keyof typeof cities]?.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
+            {cities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -3824,20 +3903,135 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       !branch.isEditing
                     )}
 
+                    {/* Branch Compliance Section */}
+                    <div className="mt-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-4">
+                        Compliance
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* GST Number */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            GST Number
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.gstNumber || ""}
+                            onChange={(e) => updateBranch(branch.id, "gstNumber", e.target.value)}
+                            disabled={!branch.isEditing}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            placeholder="22AAAAA0000A1Z5"
+                          />
+                        </div>
+
+                        {/* PAN Number */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            PAN Number
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.panNumber || ""}
+                            onChange={(e) => updateBranch(branch.id, "panNumber", e.target.value)}
+                            disabled={!branch.isEditing}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            placeholder="ABCDE1234F"
+                          />
+                        </div>
+
+                        {/* TAN Number */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            TAN Number
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.tanNumber || ""}
+                            onChange={(e) => updateBranch(branch.id, "tanNumber", e.target.value)}
+                            disabled={!branch.isEditing}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            placeholder="ABCD12345E"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Branch Bank Details Section */}
-                    {renderCompliance(
-                      branch,
-                      (field, value) => updateBranch(branch.id, field, value),
-                      branchErrors[branch.id],
-                      !branch.isEditing
-                    )}
-                    {renderBankDetails(
-                      branch,
-                      (field, value) => updateBranch(branch.id, field, value),
-                      branchErrors[branch.id],
-                      true,
-                      !branch.isEditing
-                    )}
+                    <div className="mt-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-4">
+                        Bank Details
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* Branch Name */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Branch Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.branchName}
+                            onChange={(e) => updateBranch(branch.id, "branchName", e.target.value)}
+                            disabled={!branch.isEditing}
+                            required
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${branchErrors[branch.id]?.branchName
+                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                              } ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            placeholder="Branch name"
+                          />
+                          {branchErrors[branch.id]?.branchName && (
+                            <p className="text-red-500 text-xs mt-1">
+                              {branchErrors[branch.id].branchName}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Bank Name */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Bank Name
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.bankName || ""}
+                            onChange={(e) => updateBranch(branch.id, "bankName", e.target.value)}
+                            disabled={!branch.isEditing}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            placeholder="Bank name"
+                          />
+                        </div>
+
+                        {/* Bank Account Number */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Bank Account Number
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.bankAccountNumber || ""}
+                            onChange={(e) => updateBranch(branch.id, "bankAccountNumber", e.target.value)}
+                            disabled={!branch.isEditing}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            placeholder="Account number"
+                          />
+                        </div>
+
+                        {/* IFSC Code */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            IFSC Code
+                          </label>
+                          <input
+                            type="text"
+                            value={branch.ifscCode || ""}
+                            onChange={(e) => updateBranch(branch.id, "ifscCode", e.target.value)}
+                            disabled={!branch.isEditing}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                            placeholder="ABCD0123456"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Branch Contact Persons */}
                     {/* Branch Contact Persons */}

@@ -166,6 +166,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
             street: apiData.street || "",
             googleLocation: apiData.google_location || "",
             zone: apiData.zone || "",
+            nameOfBranchProject: apiData.name_of_branch_project || "",
+            hoContactNumber: apiData.ho_contact_number || "",
+            hoEmailId: apiData.ho_email_id || "",
             currentStatus: apiData.current_status || "",
             blacklistReason: apiData.blacklist_reason || "",
             customerCategory: apiData.customer_category || "",
@@ -208,6 +211,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 street: branch.street || "",
                 googleLocation: branch.google_location || "",
                 zone: branch.zone || "",
+                nameOfBranchProject: branch.name_of_branch_project || "",
                 currentStatus: branch.current_status || "",
                 blacklistReason: branch.blacklist_reason || "",
                 customerCategory: branch.customer_category || "",
@@ -468,34 +472,116 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
       <div className="p-6">
         {activeTab === "general" && (
           <div className="space-y-8">
-            {/* Business Information */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Business Information
+            {/* Basic Details Section */}
+            <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                Basic Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-3">
-                  <Building2 className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Industry</p>
+                    <p className="text-sm text-gray-500">Business Name</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.businessName}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Customer Type</p>
                     <p className="text-sm font-medium text-gray-900">
                       {mappedApiData.customerType}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Location</p>
+                    <p className="text-sm text-gray-500">Customer Group</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {mappedApiData.city}, {mappedApiData.state}
+                      {mappedApiData.customerGroup}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Calendar className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Customer Sub Group</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.customerSubGroup}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Customer Classification</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.customerClassification}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">MSME Registered</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.msmeRegistered}
+                    </p>
+                  </div>
+                </div>
+
+                {mappedApiData.msmeRegistered === "Yes" && (
+                  <div className="flex items-start space-x-3">
+                    <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Udyam Registration Number</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {mappedApiData.udyamRegistrationNumber}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-start space-x-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Customer Potential</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.customerPotential}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">TDS Applicability</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.tdsApplicability}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Current Status</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.currentStatus}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Customer Since</p>
                     <p className="text-sm font-medium text-gray-900">
@@ -508,28 +594,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Phone</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {mappedApiData.contactNo}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {mappedApiData.email}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <Users className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Total Leads</p>
                     <p className="text-sm font-medium text-gray-900">
@@ -540,24 +606,172 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               </div>
             </div>
 
-            {/* Bank Details */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Bank Details
+            {/* Billing Address Section */}
+            <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                Billing Address
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">PAN Number</p>
+                    <p className="text-sm text-gray-500">Address Type</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {mappedApiData.panNumber}
+                      {mappedApiData.addressType}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Name of Branch / Project</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.nameOfBranchProject}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Contact Number</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.hoContactNumber}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Email ID</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.hoEmailId}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Country</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.country}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Zone</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.zone}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">State</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.state}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">District</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.district}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">City</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.city}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Pincode</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.pincode}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3 md:col-span-2">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Street</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.street}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Google Location</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.googleLocation}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Customer Category</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.customerCategory}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Risk Level</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.riskLevel}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Credit Days</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.creditDays}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Compliance Section */}
+            <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                Compliance
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">GST Number</p>
                     <p className="text-sm font-medium text-gray-900">
@@ -566,8 +780,46 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Building2 className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">PAN Number</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.panNumber}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">TAN Number</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.tanNumber}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Details Section */}
+            <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                Bank Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Branch Name</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.branchName}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Bank Name</p>
                     <p className="text-sm font-medium text-gray-900">
@@ -576,8 +828,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Account Number</p>
                     <p className="text-sm font-medium text-gray-900">
@@ -586,8 +838,8 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Building2 className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">IFSC Code</p>
                     <p className="text-sm font-medium text-gray-900">
@@ -598,9 +850,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               </div>
             </div>
 
-            {/* Contact Persons */}
+            {/* Contact Persons Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
                 Contact Persons
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -675,116 +927,337 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               </div>
             </div>
           </div>
-        )}
+        )
+        }
 
-        {activeTab === "branches" && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Branch Information
-            </h3>
-
-            {mappedApiData.branches.map((branch: any, index: number) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-6 mb-4"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-medium text-gray-900">
-                    {branch.branchName}
-                  </h4>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {branch.contactNumber}
-                      </p>
-                    </div>
+        {
+          activeTab === "branches" && (
+            <div className="space-y-6">
+              {mappedApiData.branches.map((branch: any, index: number) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-6 space-y-6"
+                >
+                  {/* Branch Header */}
+                  <div className="border-b pb-4">
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {branch.branchName}
+                    </h3>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {branch.email}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {branch.address}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <CreditCard className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">GST Number</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {branch.gstNumber}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-4">
-                  <h5 className="text-sm font-medium text-gray-900 mb-3">
-                    Branch Contact Persons
-                  </h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {branch.contactPersons.map(
-                      (person: any, personIndex: number) => (
-                        <div
-                          key={personIndex}
-                          className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-white">
-                              {person.name
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {person.name}
-                            </p>
-                            <div className="flex items-center text-xs text-gray-500">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {person.phone}
-                            </div>
-                            <div className="flex items-center text-xs text-gray-500">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {person.email}
-                            </div>
-                          </div>
+                  {/* Billing Address Section */}
+                  <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                      Billing Address
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Address Type</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.addressType}
+                          </p>
                         </div>
-                      )
-                    )}
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Name of Branch / Project</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.nameOfBranchProject}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Contact Number</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.contactNumber}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Email ID</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Country</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.country}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Zone</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.zone}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">State</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.state}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">District</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.district}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">City</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.city}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Pincode</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.pincode}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3 md:col-span-2">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Street</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.street}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Google Location</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.googleLocation}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Customer Category</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.customerCategory}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Risk Level</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.riskLevel}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Credit Days</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.creditDays}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Current Status</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.currentStatus}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Compliance Section */}
+                  <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                      Compliance
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="flex items-start space-x-3">
+                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">GST Number</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.gstNumber}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">PAN Number</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.panNumber}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">TAN Number</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.tanNumber}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bank Details Section */}
+                  <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                      Bank Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="flex items-start space-x-3">
+                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Bank Name</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.bankName}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Branch Name</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.branchName}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Account Number</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.bankAccountNumber}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">IFSC Code</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {branch.ifscCode}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Persons Section */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                      Contact Persons
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {branch.contactPersons.map(
+                        (person: any, personIndex: number) => (
+                          <div
+                            key={personIndex}
+                            className="border border-gray-200 rounded-lg p-4"
+                          >
+                            <div className="flex items-center space-x-3 mb-3">
+                              <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-medium text-white">
+                                  {person.name
+                                    .split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {person.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {person.designation}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                                {person.phone}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                                {person.email}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )
+        }
 
-        {activeTab === "documents" && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Customer Documents
-            </h3>
+        {
+          activeTab === "documents" && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Customer Documents
+              </h3>
 
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {mappedApiData.uploadedFiles?.map((file: any, index: number) => (
                 <div
                   key={index}
@@ -811,129 +1284,134 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                 </div>
               ))}
             </div> */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(mappedApiData?.uploadedFiles ?? []).map((file: any) => {
-                const Icon = getIconByMime(file.mime, file.original_name);
-                const sizeLabel = formatBytes(file.size);
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {(mappedApiData?.uploadedFiles ?? []).map((file: any) => {
+                  const Icon = getIconByMime(file.mime, file.original_name);
+                  const sizeLabel = formatBytes(file.size);
 
-                return (
-                  <a
-                    key={file.id}
-                    href={`${import.meta.env.VITE_API_BASE_URL}/customer-file/${file.customerId}/files/${file.id}/download`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    <Icon className="h-8 w-8 text-blue-600 mr-3" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
-                        {file.original_name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {sizeLabel} • {file.mime ?? "unknown"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
-                      </p>
-                      <p className="">
-                        <User className="h-3 w-3 inline-block mr-1 text-gray-400" />
-                        {file.created_by_name || "-"}
-                      </p>
-                    </div>
+                  return (
+                    <a
+                      key={file.id}
+                      href={`${import.meta.env.VITE_API_BASE_URL}/customer-file/${file.customerId}/files/${file.id}/download`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <Icon className="h-8 w-8 text-blue-600 mr-3" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
+                          {file.original_name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {sizeLabel} • {file.mime ?? "unknown"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
+                        </p>
+                        <p className="">
+                          <User className="h-3 w-3 inline-block mr-1 text-gray-400" />
+                          {file.created_by_name || "-"}
+                        </p>
+                      </div>
 
-                    <Download className="h-4 w-4 text-gray-400 ml-3" />
-                  </a>
-                );
-              })}
+                      <Download className="h-4 w-4 text-gray-400 ml-3" />
+                    </a>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )
+        }
+      </div >
       {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
-            <div className="flex items-center mb-4">
-              <Trash2 className="h-6 w-6 text-red-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Delete Customer
-              </h3>
-            </div>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to{" "}
-              <span className="font-semibold text-red-600">
-                permanently delete
-              </span>{" "}
-              this customer? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
-                onClick={() => setIsDeleteModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                onClick={async () => {
-                  try {
-                    await axios.delete(
-                      `${import.meta.env.VITE_API_BASE_URL}/customer/${customer.id
-                      }`
-                    );
-                    alert("Customer deleted successfully!");
-                    setIsDeleteModalOpen(false);
-                    // You might want to redirect or refresh the parent component here
-                    // For example: navigate back to customer list or call a callback function
-                  } catch (error) {
-                    console.error("Error deleting customer:", error);
-                    alert("Failed to delete customer. Please try again.");
-                  }
-                }}
-              >
-                Delete
-              </button>
+      {
+        isDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+              <div className="flex items-center mb-4">
+                <Trash2 className="h-6 w-6 text-red-600 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Delete Customer
+                </h3>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to{" "}
+                <span className="font-semibold text-red-600">
+                  permanently delete
+                </span>{" "}
+                this customer? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                  onClick={async () => {
+                    try {
+                      await axios.delete(
+                        `${import.meta.env.VITE_API_BASE_URL}/customer/${customer.id
+                        }`
+                      );
+                      alert("Customer deleted successfully!");
+                      setIsDeleteModalOpen(false);
+                      // You might want to redirect or refresh the parent component here
+                      // For example: navigate back to customer list or call a callback function
+                    } catch (error) {
+                      console.error("Error deleting customer:", error);
+                      alert("Failed to delete customer. Please try again.");
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Deactivate Confirmation Modal */}
-      {isDeactivateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
-            <div className="flex items-center mb-4">
-              <Power className="h-6 w-6 text-yellow-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Deactivate Customer
-              </h3>
-            </div>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to{" "}
-              <span className="font-semibold text-yellow-600">deactivate</span>{" "}
-              this customer? You can reactivate them later.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
-                onClick={() => setIsDeactivateModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
-                onClick={() => {
-                  // TODO: Replace with actual deactivate logic
-                  alert("Customer deactivated!");
-                  setIsDeactivateModalOpen(false);
-                }}
-              >
-                Deactivate
-              </button>
+      {
+        isDeactivateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+              <div className="flex items-center mb-4">
+                <Power className="h-6 w-6 text-yellow-600 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Deactivate Customer
+                </h3>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to{" "}
+                <span className="font-semibold text-yellow-600">deactivate</span>{" "}
+                this customer? You can reactivate them later.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  onClick={() => setIsDeactivateModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
+                  onClick={() => {
+                    // TODO: Replace with actual deactivate logic
+                    alert("Customer deactivated!");
+                    setIsDeactivateModalOpen(false);
+                  }}
+                >
+                  Deactivate
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <AddCustomerModal
         isOpen={isEditModalOpen}
@@ -948,7 +1426,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
         }}
         initialData={{ ...customer, ...mappedApiData }}
       />
-    </div>
+    </div >
   );
 };
 
