@@ -7,8 +7,7 @@ import {
   Upload,
   MessageSquare,
   Trash2,
-  Currency,
-  UserCheck
+  Edit
 } from "lucide-react";
 import axios from "axios";
 
@@ -16,13 +15,18 @@ import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
 import { CustomLoader } from '../../../components/CustomLoader';
-import { create } from "domain";
+import { useToast } from '../../../components/Toast';
 
 interface AddLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (leadData: any) => void;
   initialData?: any;
+}
+
+interface FileWithNote {
+  file: File;
+  note: string;
 }
 
 const AddLeadModal: React.FC<AddLeadModalProps> = ({
@@ -36,6 +40,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const { userData } = useCRM();
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
+  const { showToast } = useToast(); // Modern toast notifications
   //------------------------------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState(
@@ -45,8 +50,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       avatar: "",
       customerBranch: "",
       currency: "",
-      contactPerson: "",
-      contactNo: "",
       leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
       referencedBy: "",
       projectName: "",
@@ -57,7 +60,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       leadSource: "",
       leadStage: "Information Stage",
       leadStagnation: "",
-      approximateResponseTime: "",
       eta: "",
       leadDetails: "",
       involvedAssociates: [],
@@ -67,6 +69,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       followUpComments: [],
       assignedTo: "",
       nextFollowUpDate: "",
+      // New fields
+      leadTemperature: "",
+      ownProbability: "",
+      projectState: "",
+      projectDistrict: "",
+      projectCity: "",
+      projectPincode: "",
+      projectStreet: "",
+      projectLocation: "",
+      projectZone: "",
+      projectCurrentStatus: "",
+      // Lead Contact Persons
+      leadContacts: [],
+      // Lead Competitors
+      leadCompetitors: [],
     }
   );
 
@@ -76,7 +93,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   }>({});
   const [fileErrors, setFileErrors] = useState<string[]>([]);
 
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<FileWithNote[]>([]);
   const [newComment, setNewComment] = useState("");
   const [showAssociateForm, setShowAssociateForm] = useState(false);
   const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
@@ -90,7 +107,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   // Multi-worktype state for CREATE mode only
   const [multiWorktypeState, setMultiWorktypeState] = useState<{
     step1: any;
-    step2: { documents: { [worktype: string]: File[] } };
+    step2: { documents: { [worktype: string]: FileWithNote[] } };
     step3: {
       comments: { [worktype: string]: string };
       assignedTo: { [worktype: string]: string };
@@ -112,6 +129,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   const [showWorkTypeDropdown, setShowWorkTypeDropdown] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
+  const [creationMode, setCreationMode] = useState<'single' | 'multiple'>('multiple');
 
   // State for API data
   const [customers, setCustomers] = useState<
@@ -129,8 +147,27 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     Array<{ id: string; branch_name: string, currency: string }>
   >([]);
   const [contactPersons, setContactPersons] = useState<
-    Array<{ id: string; name: string, phone: number }>
+    Array<{
+      id: string;
+      name: string;
+      phone: string;
+      email?: string;
+      designation?: string;
+      alternative_number?: string;
+      date_of_birth?: string;
+      anniversary_date?: string;
+      communication_mode?: string | string[]; // Can be string or array
+    }>
   >([]);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [selectedContactForAdd, setSelectedContactForAdd] = useState("");
+  const [editingContactIndex, setEditingContactIndex] = useState<number | null>(null);
+  const [editingContactData, setEditingContactData] = useState<any>(null);
+
+  // Competitor management states
+  const [showAddCompetitor, setShowAddCompetitor] = useState(false);
+  const [editingCompetitorIndex, setEditingCompetitorIndex] = useState<number | null>(null);
+  const [editingCompetitorData, setEditingCompetitorData] = useState<any>(null);
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -148,21 +185,59 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const steps = [
     { id: 1, name: "General Information", description: "Basic lead details" },
     { id: 2, name: "Upload Files", description: "Supporting documents" },
-    { id: 3, name: "Follow-up Leads", description: "Communication log" },
+    // { id: 3, name: "Follow-up Leads", description: "Communication log" },
   ];
 
-  const leadTypes = ["Government", "Private", "Semi-Government"];
+  const leadTypes = ["Industrial", "Hospital", "It", "Commercial", "Residential", "Govrment"];
   const workTypes = [
     "HVAC", "Ventilation", "Fire", "MGPS", "Electrical", "CCTV", "Plumbing MEP", "Interior", "Civil"
   ];
-  const leadCriticalities = ["Critical", "Normal"];
+  const leadCriticalities = [
+    "Urgent & Important",
+    "Urgent & Non-important",
+    "Non Urgent & Important",
+    "Non Urgent & Non Importaint"
+  ];
   const leadSources = [
-    "Lead source",
+    "Website",
+    "Google Search",
+    "Social Media",
+    "Facebook / Instagram  Campaign",
+    "LinkedIn",
+    "Email Campaign",
+    "WhatsApp  Campaign",
+    "SMS  Campaign",
+    "Referral",
+    "Existing Customer",
+    "Cold Call",
+    "Walk-in",
+    "Channel Partner",
+    "Dealer / Distributor",
+    "Vendor Referral",
+    "Consultant Referral",
+    "Contractor Referral",
+    "Tender Portal – GeM",
+    "Tender Portal – CPPP",
+    "Govt Tender",
+    "RFP / BOQ from Client",
+    "Architect Referral",
+    "Builder / Developer",
+    "Field Visit",
+    "IndiaMART",
+    "TradeIndia",
+    "JustDial",
+    "Sulekha",
+    "Exhibition / Event",
+    "Cross-sell",
+    "Up-sell",
+    "Internal Lead",
     "Others"
   ];
   const leadStages = [
     "Information Stage",
     "Enquiry",
+    "Design",
+    "Costing",
     "Quoted",
     "Won",
     "Lost",
@@ -175,6 +250,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Designer",
     "Contractor",
     "Other",
+  ];
+
+  const leadTemperatures = ["Hot", "Warm", "Cold"];
+
+  const projectStates = ["WB", "JG", "KG", "DH", "MB"];
+  const projectDistricts = ["WB", "JG", "KG", "DH", "MB"];
+  const projectCities = ["WB", "JG", "KG", "DH", "MB"];
+  const projectZones = ["WB", "JG", "KG", "DH", "MB"];
+
+  const projectCurrentStatuses = [
+    "Hold",
+    "Stalled",
+    "Cancelled",
+    "Active",
+    "Purchase",
   ];
 
   // Replace this with your actual registered associates source
@@ -257,6 +347,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       ".jpeg",
       ".png",
       ".dwg",
+      ".xls",
+      ".xlsx",
     ];
     const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
     return allowedTypes.includes(fileExtension);
@@ -276,17 +368,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       // if (!formData.customerBranch?.trim()) {
       //   errors.customerBranch = "Customer Branch is required";
       // }
-
-      // if (!formData.contactPerson?.trim()) {
-      //   errors.contactPerson = "Contact Person is required";
-      // }
-
-      if (!formData.contactNo?.trim()) {
-        errors.contactNo = "Contact Number is required";
-      } else if (!validatePhoneNumber(formData.contactNo)) {
-        errors.contactNo =
-          "Please enter a valid phone number (e.g., +91 9876543210)";
-      }
 
       if (!formData.leadGeneratedDate) {
         errors.leadGeneratedDate = "Lead Generated Date is required";
@@ -328,10 +409,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         errors.leadStage = "Lead Stage is required";
       }
 
-      if (!formData.approximateResponseTime) {
-        errors.approximateResponseTime = "Next Follow-Up Date is required";
+      if (!formData.nextFollowUpDate) {
+        errors.nextFollowUpDate = "Next Follow-Up Date is required";
       } else {
-        errors.approximateResponseTime = "Please enter a valid date";
+        if (!validateDate(formData.nextFollowUpDate)) {
+          errors.nextFollowUpDate = "Please enter a valid date";
+        }
       }
 
       // Optional field validations
@@ -357,11 +440,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
 
     // Step 3 validations
-    if (currentStep === 3) {
-      if (newComment && !validateStringLength(newComment.trim(), 0, 500)) {
-        errors.newComment = "Comment must not exceed 500 characters";
-      }
-    }
+    // if (currentStep === 3) {
+    //   if (newComment && !validateStringLength(newComment.trim(), 0, 500)) {
+    //     errors.newComment = "Comment must not exceed 500 characters";
+    //   }
+    // }
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -376,14 +459,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       case "customerBranch":
       // return !value?.trim() ? "Customer Branch is required" : "";
 
-      case "contactPerson":
-      // return !value?.trim() ? "Contact Person is required" : "";
-
-      case "contactNo":
-        if (!value?.trim()) return "Contact Number is required";
-        if (!validatePhoneNumber(value))
-          return "Please enter a valid phone number";
-        return "";
 
       case "projectName":
         if (!value?.trim()) return "Project Name is required";
@@ -406,7 +481,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       case "leadSource":
         return !value?.trim() ? "Lead Source is required" : "";
 
-      case "approximateResponseTime":
+      case "nextFollowUpDate":
         if (!value)
           return "Please enter a valid date";
         return "";
@@ -440,8 +515,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     avatar: "",
     customerBranch: "",
     currency: "",
-    contactPerson: "",
-    contactNo: "",
     leadGeneratedDate: new Date().toLocaleDateString("en-CA"),
     referencedBy: "",
     projectName: "",
@@ -452,7 +525,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     leadSource: "",
     leadStage: "Information Stage",
     leadStagnation: "",
-    approximateResponseTime: "",
     eta: "",
     leadDetails: "",
     involvedAssociates: [],
@@ -460,6 +532,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     followUpComments: [],
     assignedTo: "",
     nextFollowUpDate: "",
+    leadTemperature: "",
+    ownProbability: "",
+    projectState: "",
+    projectDistrict: "",
+    projectCity: "",
+    projectPincode: "",
+    projectStreet: "",
+    projectLocation: "",
+    projectZone: "",
+    projectCurrentStatus: "",
+    leadContacts: [],
+    leadCompetitors: [],
   };
 
   useEffect(() => {
@@ -492,10 +576,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           normalizedEta = "";
         }
 
-        // Normalize next_follow_up_date
+        // Normalize next_followup_date
         let normalizedNextFollowUpDate = "";
-        if (initialData.next_follow_up_date || initialData.nextFollowUpDate) {
-          const nextFollowUpDateObj = new Date(initialData.next_follow_up_date || initialData.nextFollowUpDate);
+        if (initialData.next_followup_date || initialData.nextFollowUpDate) {
+          const nextFollowUpDateObj = new Date(initialData.next_followup_date || initialData.nextFollowUpDate);
           if (!isNaN(nextFollowUpDateObj.getTime())) {
             normalizedNextFollowUpDate = nextFollowUpDateObj.toISOString().split("T")[0];
           } else {
@@ -511,8 +595,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           avatar: initialData.avatar || "",
           customerBranch: initialData.branch_name || initialData.customerBranch || "",
           currency: initialData.currency || "INR",
-          contactPerson: initialData.contactPerson || initialData.contact_person || "",
-          contactNo: initialData.contactNo || initialData.contact_no || "",
           leadGeneratedDate: normalizedDate,
           referencedBy: initialData.referencedBy || initialData.referenced_by || "",
           projectName: initialData.projectName || initialData.project_name || "",
@@ -521,19 +603,40 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               ? String(initialData.projectValue).replace(/[^\d.]/g, "")
               : "",
           leadType: initialData.leadType || initialData.lead_type || "",
-          workType: initialData.workType || initialData.work_type || "",
+          workType: (() => {
+            const raw = initialData.workType || initialData.work_type;
+            if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+              try {
+                return JSON.parse(raw);
+              } catch (e) {
+                return raw;
+              }
+            }
+            return raw || "";
+          })(),
           leadCriticality: initialData.leadCriticality || initialData.lead_criticality || "",
           leadSource: initialData.leadSource || initialData.lead_source || "",
           leadStage: initialData.leadStage || initialData.lead_stage || "New Lead",
           leadStagnation: initialData.leadStagnation || initialData.lead_stagnation || "",
-          approximateResponseTime: initialData.approximateResponseTime || initialData.approximate_response_time_day || "",
+          // approximateResponseTime: initialData.approximateResponseTime || initialData.approximate_response_time_day || "",
           eta: normalizedEta,
           leadDetails: initialData.leadDetails || initialData.lead_details || "",
           involvedAssociates: initialData.involvedAssociates || initialData.lead_associates || [],
           uploadedFiles: initialData.uploadedFiles || [],
           followUpComments: initialData.followUpComments || [],
           assignedTo: initialData.assignedTo || initialData.assigned_to || "",
-          nextFollowUpDate: normalizedNextFollowUpDate,
+          nextFollowUpDate: normalizedNextFollowUpDate || (initialData?.approximateResponseTime ? initialData.approximateResponseTime : ""),
+          // New fields
+          leadTemperature: initialData.leadTemperature || initialData.lead_temperature || "",
+          ownProbability: initialData.ownProbability || initialData.own_probability || "",
+          projectState: initialData.projectState || initialData.project_state || "",
+          projectDistrict: initialData.projectDistrict || initialData.project_district || "",
+          projectCity: initialData.projectCity || initialData.project_city || "",
+          projectPincode: initialData.projectPincode || initialData.project_pincode || "",
+          projectStreet: initialData.projectStreet || initialData.project_street || "",
+          projectLocation: initialData.projectLocation || initialData.project_location || "",
+          projectZone: initialData.projectZone || initialData.project_zone || "",
+          projectCurrentStatus: initialData.projectCurrentStatus || initialData.project_current_status || "",
           // also snapshot backend ids if present
           customer_id: initialData.customer_id || initialData.customerId || null,
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
@@ -545,7 +648,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         setFormData({
           ...normalizedFormSnapshot,
         });
-        setUploadedFiles(initialData.uploadedFiles || []);
+        setUploadedFiles([]);
 
         // Check if lead source is a custom value (not in predefined list)
         const leadSourceValue = initialData.leadSource || initialData.lead_source || "";
@@ -683,6 +786,53 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     }
                   }
                 }
+              }
+            }
+
+            // Fetch existing lead contacts for edit mode
+            if (initialData.id) {
+              try {
+                const contactsResponse = await axios.get(
+                  `${import.meta.env.VITE_API_BASE_URL}/lead-contact?lead_id=${initialData.id}`
+                );
+                const existingContacts = contactsResponse.data.data || [];
+                setFormData((prev: any) => ({
+                  ...prev,
+                  leadContacts: existingContacts.map((contact: any) => ({
+                    id: contact.id,
+                    contact_id: contact.contact_id,
+                    name: contact.name,
+                    designation: contact.designation || "",
+                    email: contact.email || "",
+                    phone: contact.phone || "",
+                    alternative_number: contact.alternative_number || "",
+                    date_of_birth: contact.date_of_birth || "",
+                    anniversary_date: contact.anniversary_date || "",
+                    communication_mode: contact.communication_mode || "",
+                  }))
+                }));
+              } catch (contactError) {
+                console.error("Error fetching lead contacts:", contactError);
+              }
+            }
+
+            // Fetch existing lead competitors for edit mode
+            if (initialData.id) {
+              try {
+                const competitorsResponse = await axios.get(
+                  `${import.meta.env.VITE_API_BASE_URL}/lead-competitor?lead_id=${initialData.id}`
+                );
+                const existingCompetitors = competitorsResponse.data.data || [];
+                setFormData((prev: any) => ({
+                  ...prev,
+                  leadCompetitors: existingCompetitors.map((comp: any) => ({
+                    id: comp.id,
+                    competitor_name: comp.competitor_name,
+                    win_probability: comp.win_probability
+                  }))
+                }));
+              } catch (competitorError) {
+                console.error("Error fetching lead competitors:", competitorError);
               }
             }
           } catch (error) {
@@ -943,20 +1093,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       return;
     }
 
-    // Handle contact person selection
-    if (name === "contactPerson") {
-      const selectedContact = contactPersons.find(
-        (contact) => contact.name === value
-      );
-      if (selectedContact) {
-
-        setSelectedContactId(selectedContact.id);
-        setFormData((prev: any) => ({
-          ...prev,
-          contactNo: selectedContact.phone,
-        }));
-      }
-    }
 
     // Handle lead source selection
     if (name === "leadSource") {
@@ -984,9 +1120,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     // Perform real-time validation for critical fields
     if (
-      name === "contactNo" ||
       name === "projectValue" ||
-      name === "approximateResponseTime" ||
+      name === "nextFollowUpDate" ||
       name === "eta"
     ) {
       const errorMessage = validateField(name, value);
@@ -1012,7 +1147,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       // Validate file type
       if (!validateFileType(file)) {
         newFileErrors.push(
-          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG`
+          `${file.name}: Invalid file type. Allowed types: PDF, DOC, DOCX, JPG, PNG, DWG, XLS, XLSX`
         );
         return;
       }
@@ -1028,6 +1163,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
     setFileErrors(newFileErrors);
     if (validFiles.length > 0) {
+      const filesWithNotes: FileWithNote[] = validFiles.map(file => ({ file, note: "" }));
+
       if (!isEditMode && worktype) {
         // Multi-worktype mode: store files per worktype
         setMultiWorktypeState((prev) => ({
@@ -1035,26 +1172,59 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           step2: {
             documents: {
               ...prev.step2.documents,
-              [worktype]: [...(prev.step2.documents[worktype] || []), ...validFiles],
+              [worktype]: [...(prev.step2.documents[worktype] || []), ...filesWithNotes],
             },
           },
         }));
       } else {
         // Edit mode or single worktype: use existing state
-        setUploadedFiles((prev) => [...prev, ...validFiles]);
+        setUploadedFiles((prev) => [...prev, ...filesWithNotes]);
       }
+    }
+  };
+
+  const handleFileNoteChange = (index: number, note: string, worktype?: string) => {
+    if (!isEditMode && worktype) {
+      setMultiWorktypeState((prev) => {
+        const currentDocs = prev.step2.documents[worktype] || [];
+        const updatedDocs = [...currentDocs];
+        if (updatedDocs[index]) {
+          updatedDocs[index] = { ...updatedDocs[index], note };
+        }
+        return {
+          ...prev,
+          step2: {
+            ...prev.step2,
+            documents: {
+              ...prev.step2.documents,
+              [worktype]: updatedDocs
+            }
+          }
+        };
+      });
+    } else {
+      setUploadedFiles((prev) => {
+        const updated = [...prev];
+        if (updated[index]) {
+          updated[index] = { ...updated[index], note };
+        }
+        return updated;
+      });
     }
   };
 
   const uploadFilesForLead = async (
     leadId: string,
-    files: File[],
+    files: FileWithNote[],
     onProgress?: (percent: number) => void
   ) => {
     if (!leadId || files.length === 0) return;
 
     const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
+    files.forEach((item) => {
+      formData.append("files", item.file);
+      formData.append("fileNote", item.note || "");
+    });
     formData.append("upload_by", userData?.id || "");
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/lead-file/${leadId}/files`,
@@ -1101,8 +1271,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       business_name: formData.businessName || "",
       customer_id: selectedCustomerId || null,
       customer_branch_id: selectedBranchId || null,
-      contact_person: selectedContactId || null,
-      contact_no: formData.contactNo || "",
       lead_date_generated_on: formData.leadGeneratedDate || "",
       referenced_by: formData.referencedBy || null,
       project_name: formData.projectName || "",
@@ -1112,12 +1280,23 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       lead_criticality: formData.leadCriticality || "",
       lead_source: formData.leadSource || "",
       lead_stage: formData.leadStage || "",
-      approximate_response_time_day:
-        parseInt(String(formData.approximateResponseTime || "0")) || 0,
+      approximate_response_time_day: 0,
+      // parseInt(String(formData.approximateResponseTime || "0")) || 0,
       eta: formData.eta || null,
       lead_details: formData.leadDetails || null,
       assigned_to: formData.assignedTo || null,
-      next_follow_up_date: formData.nextFollowUpDate || null,
+      next_followup_date: formData.nextFollowUpDate || null,
+      // New fields
+      lead_temperature: formData.leadTemperature || null,
+      own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
+      project_state: formData.projectState || null,
+      project_district: formData.projectDistrict || null,
+      project_city: formData.projectCity || null,
+      project_pincode: formData.projectPincode || null,
+      project_street: formData.projectStreet || null,
+      project_location: formData.projectLocation || null,
+      project_zone: formData.projectZone || null,
+      project_current_status: formData.projectCurrentStatus || null,
     };
   };
 
@@ -1126,7 +1305,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     setIsLoading(true);
     try {
       if (!initialData || !initialData.id) {
-        alert("No lead ID found for update.");
+        showToast("No lead ID found for update.", "error");
         setIsLoading(false);
         return;
       }
@@ -1140,8 +1319,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           business_name: initialFormRef.current.businessName || "",
           customer_id: initialFormRef.current.customer_id || null,
           customer_branch_id: initialFormRef.current.customer_branch_id || null,
-          contact_person: initialFormRef.current.contact_person_id || null,
-          contact_no: initialFormRef.current.contactNo || "",
           lead_date_generated_on: initialFormRef.current.leadGeneratedDate || "",
           referenced_by: initialFormRef.current.referencedBy || null,
           project_name: initialFormRef.current.projectName || "",
@@ -1151,20 +1328,29 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           lead_criticality: initialFormRef.current.leadCriticality || "",
           lead_source: initialFormRef.current.leadSource || "",
           lead_stage: initialFormRef.current.leadStage || "",
-          approximate_response_time_day:
-            parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
+          approximate_response_time_day: 0,
+          // parseInt(String(initialFormRef.current.approximateResponseTime || "0")) || 0,
           eta: initialFormRef.current.eta || null,
           lead_details: initialFormRef.current.leadDetails || null,
           assigned_to: initialFormRef.current.assignedTo || null,
-          next_follow_up_date: initialFormRef.current.nextFollowUpDate || null,
+          next_followup_date: initialFormRef.current.nextFollowUpDate || null,
+          // New fields
+          lead_temperature: initialFormRef.current.leadTemperature || null,
+          own_probability: initialFormRef.current.ownProbability ? parseFloat(initialFormRef.current.ownProbability) : null,
+          project_state: initialFormRef.current.projectState || null,
+          project_district: initialFormRef.current.projectDistrict || null,
+          project_city: initialFormRef.current.projectCity || null,
+          project_pincode: initialFormRef.current.projectPincode || null,
+          project_street: initialFormRef.current.projectStreet || null,
+          project_location: initialFormRef.current.projectLocation || null,
+          project_zone: initialFormRef.current.projectZone || null,
+          project_current_status: initialFormRef.current.projectCurrentStatus || null,
         }
         : {
           // best-effort fallback from initialData prop
           business_name: initialData.business_name || initialData.businessName || "",
           customer_id: initialData.customer_id || null,
           customer_branch_id: initialData.customer_branch_id || initialData.customer_branch || null,
-          contact_person: initialData.contact_person || null,
-          contact_no: initialData.contact_no || "",
           lead_date_generated_on: initialData.lead_date_generated_on || initialData.leadGeneratedDate || "",
           referenced_by: initialData.referenced_by || null,
           project_name: initialData.project_name || initialData.projectName || "",
@@ -1179,7 +1365,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           eta: initialData.eta || initialData.eta || null,
           lead_details: initialData.lead_details || initialData.leadDetails || null,
           assigned_to: initialData.assigned_to || initialData.assignedTo || null,
-          next_follow_up_date: initialData.next_follow_up_date || initialData.nextFollowUpDate || null,
+          next_followup_date: initialData.next_followup_date || initialData.nextFollowUpDate || null,
+          // New fields
+          lead_temperature: initialData.lead_temperature || initialData.leadTemperature || null,
+          own_probability: initialData.own_probability || initialData.ownProbability || null,
+          project_state: initialData.project_state || initialData.projectState || null,
+          project_district: initialData.project_district || initialData.projectDistrict || null,
+          project_city: initialData.project_city || initialData.projectCity || null,
+          project_pincode: initialData.project_pincode || initialData.projectPincode || null,
+          project_street: initialData.project_street || initialData.projectStreet || null,
+          project_location: initialData.project_location || initialData.projectLocation || null,
+          project_zone: initialData.project_zone || initialData.projectZone || null,
+          project_current_status: initialData.project_current_status || initialData.projectCurrentStatus || null,
         };
 
       // Build diff: include only keys that changed (strict comparison)
@@ -1204,7 +1401,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       });
 
       if (Object.keys(diffPayload).length === 0) {
-        alert("No changes detected to update.");
+        showToast("No changes detected to update.");
         setIsLoading(false);
         return;
       }
@@ -1242,7 +1439,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       }
     } catch (error) {
       console.error("Error updating lead:", error);
-      alert("Failed to update lead. Please try again.");
+      showToast("Failed to update lead. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -1259,9 +1456,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         // EDIT mode: Update lead and move to step 2
         handleUpdateLead();
       } else {
+        console.log("Form Data contect:", formData.leadContacts);
         // CREATE mode: Just validate and move to step 2 (save to state only)
         if (!Array.isArray(formData.workType) || formData.workType.length === 0) {
-          alert("Please select at least one work type.");
+          showToast("Please select at least one work type.");
           return;
         }
         // Store Step 1 data in multi-worktype state
@@ -1295,6 +1493,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           console.error("Upload failed", err);
         }
       } else {
+        console.log("form date in step 2 ", formData.leadContacts);
+
         // CREATE mode: Just move to step 3 (documents already in state)
         setCurrentStep(3);
       }
@@ -1313,7 +1513,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
 
       if (selectedWorktypes.length === 0) {
-        alert("No work types selected.");
+        showToast("No work types selected.");
         setIsLoading(false);
         return;
       }
@@ -1329,24 +1529,34 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             business_name: formData.businessName,
             customer_id: selectedCustomerId || null,
             customer_branch_id: selectedBranchId || null,
-            contact_person: selectedContactId || null,
-            contact_no: formData.contactNo,
             lead_date_generated_on: formData.leadGeneratedDate,
             referenced_by: formData.referencedBy || null,
             project_name: formData.projectName,
             project_value: parseFloat(formData.projectValue) || 0,
             lead_type: formData.leadType,
-            work_type: worktype,
+            work_type: JSON.stringify([worktype]), // Changed to JSON string array
             lead_criticality: formData.leadCriticality,
             lead_source: formData.leadSource,
             lead_stage: formData.leadStage,
-            approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
+            approximate_response_time_day: 0,
+            //approximate_response_time_day: parseInt(formData.approximateResponseTime) || 0,
             eta: formData.eta || null,
             lead_details: formData.leadDetails || null,
             currency: formData.currency || null,
             created_by: userData?.id || null,
             assigned_user_id: multiWorktypeState.step3.assignedTo[worktype] || null,
-            next_followup_date: multiWorktypeState.step3.nextFollowUpDate[worktype] || null,
+            next_followup_date: formData.nextFollowUpDate || null, // Use unified Step 1 date
+            // New fields
+            lead_temperature: formData.leadTemperature || null,
+            own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
+            project_state: formData.projectState || null,
+            project_district: formData.projectDistrict || null,
+            project_city: formData.projectCity || null,
+            project_pincode: formData.projectPincode || null,
+            project_street: formData.projectStreet || null,
+            project_location: formData.projectLocation || null,
+            project_zone: formData.projectZone || null,
+            project_current_status: formData.projectCurrentStatus || null,
           };
 
           // POST: Create lead
@@ -1422,6 +1632,49 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               console.error(`Error adding associates for ${worktype}:`, associateError);
             }
           }
+
+          // POST: Lead Contacts (shared across all worktypes)
+          if (formData.leadContacts && formData.leadContacts.length > 0) {
+            try {
+              const contactsPayload = formData.leadContacts.map((contact: any) => ({
+                lead_id: leadId,
+                name: contact.name,
+                designation: contact.designation || null,
+                email: contact.email || null,
+                phone: contact.phone,
+                alternative_number: contact.alternative_number || null,
+                date_of_birth: contact.date_of_birth || null,
+                anniversary_date: contact.anniversary_date || null,
+                communication_mode: contact.communication_mode || null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
+                contactsPayload
+              );
+              console.log(`Contacts added for ${worktype}`);
+            } catch (contactError) {
+              console.error(`Error adding contacts for ${worktype}:`, contactError);
+            }
+          }
+
+          // POST: Lead Competitors (shared across all worktypes)
+          if (formData.leadCompetitors && formData.leadCompetitors.length > 0) {
+            try {
+              const competitorPayload = formData.leadCompetitors.map((competitor: any) => ({
+                lead_id: leadId,
+                competitor_name: competitor.competitor_name,
+                win_probability: competitor.win_probability,
+                created_by: userData?.id || null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
+                competitorPayload
+              );
+              console.log(`Competitors added for ${worktype}`);
+            } catch (competitorError) {
+              console.error(`Error adding competitors for ${worktype}:`, competitorError);
+            }
+          }
         } catch (error: any) {
           console.error(`Error creating lead for ${worktype}:`, error);
           const errorMessage = error.response?.data?.message || error.message || "Unknown error";
@@ -1480,18 +1733,202 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         });
       }
 
-      alert(message);
+      showToast(message);
 
       // Close modal and refresh
       onSubmit({ success: true });
       handleClose();
     } catch (error) {
       console.error("Error in complete registration:", error);
-      alert("An unexpected error occurred during registration.");
+      showToast("An unexpected error occurred during registration.", "error");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Unified Lead Creation Handlers (Single Mode)
+  const handleUnifiedLeadCreation = async () => {
+    setIsLoading(true);
+    try {
+      const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
+
+      if (selectedWorktypes.length === 0) {
+        showToast("No work types selected.");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("Creating unified lead with worktypes:", selectedWorktypes);
+
+      // 1. Create Lead
+      const leadPayload = {
+        business_name: formData.businessName,
+        customer_id: selectedCustomerId || null,
+        customer_branch_id: selectedBranchId || null,
+        lead_date_generated_on: formData.leadGeneratedDate,
+        referenced_by: formData.referencedBy || null,
+        project_name: formData.projectName,
+        project_value: parseFloat(formData.projectValue) || 0,
+        lead_type: formData.leadType,
+        work_type: JSON.stringify(selectedWorktypes), // Unified Array String
+        lead_criticality: formData.leadCriticality,
+        lead_source: formData.leadSource,
+        lead_stage: formData.leadStage,
+        approximate_response_time_day: 0,
+        eta: formData.eta || null,
+        lead_details: formData.leadDetails || null,
+        currency: formData.currency || null,
+        created_by: userData?.id || null,
+        assigned_user_id: formData.assignedTo || null, // Single assignment
+        next_followup_date: formData.nextFollowUpDate || null,
+        // New fields
+        lead_temperature: formData.leadTemperature || null,
+        own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
+        project_state: formData.projectState || null,
+        project_district: formData.projectDistrict || null,
+        project_city: formData.projectCity || null,
+        project_pincode: formData.projectPincode || null,
+        project_street: formData.projectStreet || null,
+        project_location: formData.projectLocation || null,
+        project_zone: formData.projectZone || null,
+        project_current_status: formData.projectCurrentStatus || null,
+      };
+
+      const leadResponse = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/lead`,
+        leadPayload
+      );
+      const leadData = leadResponse.data.data;
+      const leadId = leadData.lead_id;
+
+      console.log(`Unified lead created: ${leadId}`);
+
+      // 2. Upload Files (Unified)
+      if (uploadedFiles.length > 0) {
+        try {
+          await uploadFilesForLead(leadId, uploadedFiles);
+          await updateLeadStageAfterFileUpload(leadId);
+        } catch (uploadError) {
+          console.error("Error uploading unified files:", uploadError);
+        }
+      }
+
+      // 3. Add Comment (Unified)
+      if (newComment && newComment.trim()) {
+        try {
+          const commentPayload = {
+            lead_id: leadId,
+            comment: newComment.trim(),
+            created_by: userData?.id || "unknown",
+          };
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-follow-up`,
+            commentPayload
+          );
+        } catch (commentError) {
+          console.error("Error adding unified comment:", commentError);
+        }
+      }
+
+      // 4. Add Associates (Unified)
+      if (formData.involvedAssociates && formData.involvedAssociates.length > 0) {
+        try {
+          const associatePayload = formData.involvedAssociates.map((associate: any) => ({
+            lead_id: leadId,
+            associate_type: associate.designation,
+            associate_name: associate.associateName,
+            other_information: associate.otherInfo || null,
+          }));
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-associate/bulk`,
+            associatePayload
+          );
+        } catch (associateError) {
+          console.error(`Error adding associates:`, associateError);
+        }
+      }
+
+      // 4.5. Add Lead Contacts (Unified)
+      if (formData.leadContacts && formData.leadContacts.length > 0) {
+        try {
+          const contactsPayload = formData.leadContacts.map((contact: any) => ({
+            lead_id: leadId,
+            name: contact.name,
+            designation: contact.designation || null,
+            email: contact.email || null,
+            phone: contact.phone,
+            alternative_number: contact.alternative_number || null,
+            date_of_birth: contact.date_of_birth || null,
+            anniversary_date: contact.anniversary_date || null,
+            communication_mode: contact.communication_mode || null,
+          }));
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
+            contactsPayload
+          );
+          console.log(`Contacts added for unified lead`);
+        } catch (contactError) {
+          console.error(`Error adding contacts:`, contactError);
+        }
+      }
+
+      // 4.6. Add Lead Competitors (Unified)
+      if (formData.leadCompetitors && formData.leadCompetitors.length > 0) {
+        try {
+          const competitorPayload = formData.leadCompetitors.map((competitor: any) => ({
+            lead_id: leadId,
+            competitor_name: competitor.competitor_name,
+            win_probability: competitor.win_probability,
+            created_by: userData?.id || null,
+          }));
+          await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
+            competitorPayload
+          );
+          console.log(`Competitors added for unified lead`);
+        } catch (competitorError) {
+          console.error(`Error adding competitors:`, competitorError);
+        }
+      }
+
+      // 5. Update Customer Flag
+      if (selectedCustomerId) {
+        try {
+          await updateCustomer(selectedCustomerId, { is_lead_generated: true });
+        } catch (custErr) {
+          console.error("Failed to update customer is_lead_generated flag:", custErr);
+        }
+      }
+
+      // 6. Notification
+      try {
+        await sendNotification({
+          receiver_ids: ["admin"],
+          title: `New Unified Lead Created : ${formData.businessName || "Lead"}`,
+          message: `Unified Lead ${formData.businessName || "Lead"} created successfully by ${userData?.name || "a user"} with worktypes: ${selectedWorktypes.join(", ")}`,
+          service_type: "CRM",
+          link: "/leads",
+          sender_id: userRole || "user",
+          access: {
+            module: "CRM",
+            menu: "Lead",
+          },
+        });
+      } catch (notifError) {
+        console.error("Failed to send notification:", notifError);
+      }
+
+      showToast("Lead Created Successfully!");
+      onSubmit({ success: true });
+      handleClose();
+
+    } catch (error) {
+      console.error("Error creating unified lead:", error);
+      showToast("Failed to create lead. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   // Create lead API call
   const handleCreateLead = async () => {
@@ -1502,8 +1939,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         business_name: formData.businessName,
         customer_id: selectedCustomerId || null,
         customer_branch_id: selectedBranchId || null,
-        contact_person: selectedContactId || null,
-        contact_no: formData.contactNo,
         lead_date_generated_on: formData.leadGeneratedDate,
         referenced_by: formData.referencedBy || null,
         project_name: formData.projectName,
@@ -1513,12 +1948,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         lead_criticality: formData.leadCriticality,
         lead_source: formData.leadSource,
         lead_stage: formData.leadStage,
-        approximate_response_time_day:
-          parseInt(formData.approximateResponseTime) || 0,
+        approximate_response_time_day: 0,
+        //  parseInt(formData.approximateResponseTime) || 0,
         eta: formData.eta || null,
         lead_details: formData.leadDetails || null,
         currency: formData.currency || null,
         created_by: userData?.id || null,
+        next_followup_date: formData.nextFollowUpDate || null,
       };
 
       const leadResponse = await axios.post(
@@ -1582,7 +2018,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setCurrentStep(2);
     } catch (error) {
       console.error("Error creating lead:", error);
-      alert("Failed to create lead. Please try again.");
+      showToast("Failed to create lead. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -1621,7 +2057,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       setNewComment("");
     } catch (error) {
       console.error("Error adding comment:", error);
-      alert("Failed to add comment. Please try again.");
+      showToast("Failed to add comment. Please try again.");
     }
   };
 
@@ -1695,7 +2131,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       leadSource: "",
       leadStage: "Information Stage",
       leadStagnation: "",
-      approximateResponseTime: "",
       eta: "",
       leadDetails: "",
       involvedAssociates: [],
@@ -1780,7 +2215,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[100vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
@@ -1862,7 +2297,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
           <form onSubmit={handleSubmit}>
             {/* Step 1: General Information */}
-            {currentStep === 1 && (
+            {/* {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -2184,6 +2619,36 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </div>
                     )}
 
+                    {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                      <div className="mt-4 mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Completion Mode</label>
+                        <div className="flex space-x-4">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="creationMode"
+                              value="multiple"
+                              checked={creationMode === 'multiple'}
+                              onChange={() => setCreationMode('multiple')}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-sm text-gray-700">Multiple Leads (One per Work Type)</span>
+                          </label>
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="creationMode"
+                              value="single"
+                              checked={creationMode === 'single'}
+                              onChange={() => setCreationMode('single')}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-sm text-gray-700">Single Lead (Unified)</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
                     <ValidationError fieldName="workType" />
                   </div>
 
@@ -2302,19 +2767,19 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     </label>
                     <input
                       type="date"
-                      name="approximateResponseTime"
-                      value={formData.approximateResponseTime}
+                      name="nextFollowUpDate"
+                      value={formData.nextFollowUpDate}
                       onChange={handleInputChange}
                       min={today}
                       max={maxDate}
                       required
-                      placeholder="Enter days"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.approximateResponseTime
+                      placeholder="Select date"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.nextFollowUpDate
                         ? "border-red-500"
                         : "border-gray-300"
                         }`}
                     />
-                    <ValidationError fieldName="approximateResponseTime" />
+                    <ValidationError fieldName="nextFollowUpDate" />
                   </div>
 
                   <div>
@@ -2478,12 +2943,1591 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   )}
                 </div>
               </div>
+            )} */}
+
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                {/* ===== SECTION 1: Basic Information ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Customer */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Customer *
+                      </label>
+                      <select
+                        name="businessName"
+                        value={formData.businessName}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.businessName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Business</option>
+                        {customers.map((customer) => (
+                          <option key={customer.id} value={customer.name}>
+                            {customer.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="businessName" />
+                    </div>
+                    {/* Customer Branch */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Customer Branch
+                      </label>
+                      <select
+                        name="customerBranch"
+                        value={formData.customerBranch}
+                        onChange={handleInputChange}
+                        disabled={!formData.businessName}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 ${validationErrors.customerBranch
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Branch</option>
+                        {customerBranches.map((branch) => (
+                          <option key={branch.id} value={branch.branch_name}>
+                            {branch.branch_name}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="customerBranch" />
+                    </div>
+                    {/* Currency */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Currency *
+                      </label>
+                      <select
+                        name="currency"
+                        value={formData.currency}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {currenciesToShow.map((currency, index) => (
+                          <option key={index} value={currency}>
+                            {currency}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Lead Generated Date */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Generated Date *
+                      </label>
+                      <input
+                        type="date"
+                        name="leadGeneratedDate"
+                        value={formData.leadGeneratedDate}
+                        onChange={handleInputChange}
+                        required
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
+                      />
+                      <ValidationError fieldName="leadGeneratedDate" />
+                    </div>
+                    {/* Referenced By */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Referenced By
+                      </label>
+                      <select
+                        name="referencedBy"
+                        value={formData.referencedBy}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.referencedBy
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select User</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.name}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="referencedBy" />
+                    </div>
+                    {/* Lead Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Type *
+                      </label>
+                      <select
+                        name="leadType"
+                        value={formData.leadType}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadType
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Lead Type</option>
+                        {leadTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="leadType" />
+                    </div>
+                    {/* Work Type - KEEP EXISTING COMPLEX LOGIC AS IS */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Work Type {!isEditMode && <span className="text-blue-600">(Select multiple)</span>}
+                      </label>
+                      {isEditMode ? (
+                        <select
+                          name="workType"
+                          value={formData.workType}
+                          onChange={handleInputChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.workType
+                            ? "border-red-500"
+                            : "border-gray-300"}`}
+                        >
+                          <option value="">Select Work Type</option>
+                          {workTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="relative">
+                          <div
+                            onClick={() => setShowWorkTypeDropdown(!showWorkTypeDropdown)}
+                            className={`w-full px-3 py-2 border rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[42px] flex items-center ${validationErrors.workType ? "border-red-500" : "border-gray-300"
+                              }`}
+                          >
+                            {formData.workType.length > 0 ? (
+                              <span className="text-gray-900">{formData.workType.join(", ")}</span>
+                            ) : (
+                              <span className="text-gray-400">Select Work types</span>
+                            )}
+                          </div>
+                          {showWorkTypeDropdown && (
+                            <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+                              {workTypes.map((type) => (
+                                <label key={type} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={Array.isArray(formData.workType) && formData.workType.includes(type)}
+                                    onChange={(e) => {
+                                      const currentWorktypes = Array.isArray(formData.workType) ? formData.workType : [];
+                                      let newWorktypes;
+                                      if (e.target.checked) {
+                                        newWorktypes = [...currentWorktypes, type];
+                                      } else {
+                                        newWorktypes = currentWorktypes.filter((w) => w !== type);
+                                      }
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        workType: newWorktypes,
+                                      }));
+                                    }}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                  />
+                                  <span className="text-sm text-gray-700">{type}</span>
+                                </label>
+                              ))}
+                              <div className="border-t border-gray-200 p-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowWorkTypeDropdown(false)}
+                                  className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                                >
+                                  Done
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!isEditMode && (
+                        <div className="mt-2">
+                          {Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {formData.workType.map((type: string) => (
+                                <span
+                                  key={type}
+                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {type}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        workType: prev.workType.filter((w: string) => w !== type),
+                                      }));
+                                    }}
+                                    className="ml-1 hover:text-blue-900"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 && (
+                        <div className="mt-4 mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Completion Mode</label>
+                          <div className="flex space-x-4">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="creationMode"
+                                value="multiple"
+                                checked={creationMode === 'multiple'}
+                                onChange={() => setCreationMode('multiple')}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                              />
+                              <span className="text-sm text-gray-700">Multiple Leads (One per Work Type)</span>
+                            </label>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="creationMode"
+                                value="single"
+                                checked={creationMode === 'single'}
+                                onChange={() => setCreationMode('single')}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                              />
+                              <span className="text-sm text-gray-700">Single Lead (Unified)</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                      <ValidationError fieldName="workType" />
+                    </div>
+                    {/* Lead Criticality */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Criticality *
+                      </label>
+                      <select
+                        name="leadCriticality"
+                        value={formData.leadCriticality}
+                        onChange={handleInputChange}
+                        required
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadCriticality
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      >
+                        <option value="">Select Criticality</option>
+                        {leadCriticalities.map((criticality) => (
+                          <option key={criticality} value={criticality}>
+                            {criticality}
+                          </option>
+                        ))}
+                      </select>
+                      <ValidationError fieldName="leadCriticality" />
+                    </div>
+                    {/* Lead Source - KEEP EXISTING CUSTOM SOURCE LOGIC */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Source *
+                      </label>
+                      {!showCustomLeadSource ? (
+                        <select
+                          name="leadSource"
+                          value={formData.leadSource}
+                          onChange={handleInputChange}
+                          required
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                            ? "border-red-500"
+                            : "border-gray-300"
+                            }`}
+                        >
+                          <option value="">Select Source</option>
+                          {leadSources.map((source) => (
+                            <option key={source} value={source}>
+                              {source}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            name="customLeadSource"
+                            value={customLeadSource}
+                            onChange={(e) => {
+                              setCustomLeadSource(e.target.value);
+                              setFormData((prev) => ({
+                                ...prev,
+                                leadSource: e.target.value,
+                              }));
+                            }}
+                            placeholder="Enter custom lead source"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadSource
+                              ? "border-red-500"
+                              : "border-gray-300"
+                              }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCustomLeadSource(false);
+                              setCustomLeadSource("");
+                              setFormData((prev) => ({
+                                ...prev,
+                                leadSource: "",
+                              }));
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            Back to dropdown
+                          </button>
+                        </div>
+                      )}
+                      <ValidationError fieldName="leadSource" />
+                    </div>
+                    {/* Lead Stage */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Stage * (Auto-updated)
+                      </label>
+                      <select
+                        name="leadStage"
+                        value={formData.leadStage}
+                        onChange={handleInputChange}
+                        required
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
+                        title="Lead stage is automatically updated based on file uploads and quotations"
+                      >
+                        {leadStages.map((stage) => (
+                          <option key={stage} value={stage}>
+                            {stage}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Stage changes to "Enquiry" when files are uploaded
+                      </p>
+                    </div>
+                    {/* Next Follow-Up Date */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Next Follow-Up Date *
+                      </label>
+                      <input
+                        type="date"
+                        name="nextFollowUpDate"
+                        value={formData.nextFollowUpDate}
+                        onChange={handleInputChange}
+                        min={today}
+                        max={maxDate}
+                        required
+                        placeholder="Select date"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.nextFollowUpDate
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="nextFollowUpDate" />
+                    </div>
+                    {/* Deal Closure */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Deal Closure
+                      </label>
+                      <input
+                        type="date"
+                        name="eta"
+                        value={formData.eta}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.eta
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="eta" />
+                    </div>
+                    {/* NEW FIELD: Lead Temperature */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Temperature
+                      </label>
+                      <select
+                        name="leadTemperature"
+                        value={formData.leadTemperature}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Temperature</option>
+                        {leadTemperatures.map((temp) => (
+                          <option key={temp} value={temp}>
+                            {temp}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ===== SECTION 2: Project Details ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Project Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Project Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="projectName"
+                        value={formData.projectName}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Enter project name"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.projectName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="projectName" />
+                    </div>
+                    {/* Project Value */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Value ( lakh )*
+                      </label>
+                      <input
+                        type="number"
+                        name="projectValue"
+                        value={String(formData.projectValue ?? "")}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Enter value in selected currency"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.projectValue
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="projectValue" />
+                    </div>
+                    {/* NEW FIELD: Project State */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project State
+                      </label>
+                      <select
+                        name="projectState"
+                        value={formData.projectState}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select State</option>
+                        {projectStates.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project District */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project District
+                      </label>
+                      <select
+                        name="projectDistrict"
+                        value={formData.projectDistrict}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select District</option>
+                        {projectDistricts.map((district) => (
+                          <option key={district} value={district}>
+                            {district}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project City */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project City
+                      </label>
+                      <select
+                        name="projectCity"
+                        value={formData.projectCity}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select City</option>
+                        {projectCities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project Pincode */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Pincode
+                      </label>
+                      <input
+                        type="text"
+                        name="projectPincode"
+                        value={formData.projectPincode}
+                        onChange={handleInputChange}
+                        placeholder="Enter pincode"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {/* NEW FIELD: Project Street */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Street
+                      </label>
+                      <input
+                        type="text"
+                        name="projectStreet"
+                        value={formData.projectStreet}
+                        onChange={handleInputChange}
+                        placeholder="Enter street address"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {/* NEW FIELD: Project Location */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Location
+                      </label>
+                      <input
+                        type="text"
+                        name="projectLocation"
+                        value={formData.projectLocation}
+                        onChange={handleInputChange}
+                        placeholder="Enter location details"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    {/* NEW FIELD: Project Zone */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Zone
+                      </label>
+                      <select
+                        name="projectZone"
+                        value={formData.projectZone}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Zone</option>
+                        {projectZones.map((zone) => (
+                          <option key={zone} value={zone}>
+                            {zone}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* NEW FIELD: Project Current Status */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Current Status
+                      </label>
+                      <select
+                        name="projectCurrentStatus"
+                        value={formData.projectCurrentStatus}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Status</option>
+                        {projectCurrentStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ===== SECTION 3: Other Details ==` */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Other Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* NEW FIELD: Probability % */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Probability %
+                      </label>
+                      <input
+                        type="number"
+                        name="ownProbability"
+                        value={formData.ownProbability}
+                        onChange={handleInputChange}
+                        placeholder="Enter probability (0-100)"
+                        min="0"
+                        max="100"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-4 border-b pb-2">
+                          <h3 className="text-md font-semibold text-gray-800">Competitors</h3>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddCompetitor(true)}
+                            className="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700"
+                          >
+                            + Add Competitor
+                          </button>
+                        </div>
+
+                        {/* Display added competitors */}
+                        {formData.leadCompetitors && formData.leadCompetitors.length > 0 ? (
+                          <div className="space-y-3">
+                            {formData.leadCompetitors.map((competitor: any, index: number) => (
+                              <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                                <div className="flex justify-between items-start mb-3">
+                                  <h4 className="font-medium text-gray-900">
+                                    {editingCompetitorIndex === index ? "Edit Competitor" : competitor.competitor_name}
+                                  </h4>
+                                  <div className="flex space-x-2">
+                                    {editingCompetitorIndex === index ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            // Save changes
+                                            if (competitor.id && isEditMode) {
+                                              // Update existing competitor via PUT API
+                                              try {
+                                                // Build payload with only modified non-empty fields
+                                                const modifiedFields: any = {};
+
+                                                // Compare each field with original competitor data
+                                                Object.keys(editingCompetitorData).forEach((key) => {
+                                                  const originalValue = competitor[key];
+                                                  const newValue = editingCompetitorData[key];
+
+                                                  // Skip if values are the same
+                                                  if (JSON.stringify(originalValue) === JSON.stringify(newValue)) {
+                                                    return;
+                                                  }
+
+                                                  // Skip if new value is empty/null/undefined
+                                                  if (newValue === null || newValue === undefined || newValue === '') {
+                                                    return;
+                                                  }
+
+                                                  modifiedFields[key] = newValue;
+                                                });
+
+                                                // Send PUT request if there are modified fields
+                                                if (Object.keys(modifiedFields).length > 0) {
+                                                  const response = await axios.put(
+                                                    `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/${competitor.id}`,
+                                                    {
+                                                      ...modifiedFields,
+                                                      updated_by: userData?.id || ''
+                                                    }
+                                                  );
+
+                                                  if (response.data.success) {
+                                                    showToast('Competitor updated successfully', 'success');
+
+                                                    // Update local state
+                                                    setFormData((prev: any) => ({
+                                                      ...prev,
+                                                      leadCompetitors: prev.leadCompetitors.map((c: any, i: number) =>
+                                                        i === index ? { ...c, ...editingCompetitorData } : c
+                                                      )
+                                                    }));
+                                                  }
+                                                }
+                                              } catch (error: any) {
+                                                console.error('Error updating competitor:', error);
+                                                showToast(error.response?.data?.clientMessage || 'Failed to update competitor', 'error');
+                                              }
+                                            } else {
+                                              // Just update local state for new competitors
+                                              setFormData((prev: any) => ({
+                                                ...prev,
+                                                leadCompetitors: prev.leadCompetitors.map((c: any, i: number) =>
+                                                  i === index ? { ...editingCompetitorData } : c
+                                                )
+                                              }));
+                                            }
+                                            setEditingCompetitorIndex(null);
+                                            setEditingCompetitorData(null);
+                                          }}
+                                          className="text-green-500 hover:text-green-700"
+                                        >
+                                          <Save className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingCompetitorIndex(null);
+                                            setEditingCompetitorData(null);
+                                          }}
+                                          className="text-gray-500 hover:text-gray-700"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingCompetitorIndex(index);
+                                            setEditingCompetitorData({ ...competitor });
+                                          }}
+                                          className="text-blue-500 hover:text-blue-700"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (competitor.id && isEditMode) {
+                                              // Delete via API for existing competitors
+                                              try {
+                                                const response = await axios.delete(
+                                                  `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/${competitor.id}`
+                                                );
+                                                if (response.data.success) {
+                                                  showToast('Competitor deleted successfully', 'success');
+                                                  setFormData((prev: any) => ({
+                                                    ...prev,
+                                                    leadCompetitors: prev.leadCompetitors.filter((_: any, i: number) => i !== index)
+                                                  }));
+                                                }
+                                              } catch (error: any) {
+                                                console.error('Error deleting competitor:', error);
+                                                showToast(error.response?.data?.clientMessage || 'Failed to delete competitor', 'error');
+                                              }
+                                            } else {
+                                              // Just remove from array for new competitors
+                                              setFormData((prev: any) => ({
+                                                ...prev,
+                                                leadCompetitors: prev.leadCompetitors.filter((_: any, i: number) => i !== index)
+                                              }));
+                                            }
+                                          }}
+                                          className="text-red-500 hover:text-red-700"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {editingCompetitorIndex === index ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">Competitor Name *</label>
+                                      <input
+                                        type="text"
+                                        value={editingCompetitorData.competitor_name}
+                                        onChange={(e) => setEditingCompetitorData({ ...editingCompetitorData, competitor_name: e.target.value })}
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1">Win Probability % *</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={editingCompetitorData.win_probability}
+                                        onChange={(e) => setEditingCompetitorData({ ...editingCompetitorData, win_probability: e.target.value })}
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                      <span className="font-medium text-gray-600">Win Probability:</span>
+                                      <span className="ml-1 text-orange-600 font-semibold">{competitor.win_probability}%</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            No competitors added yet. Click "Add Competitor" to add one.
+                          </p>
+                        )}
+
+                        {/* Add Competitor Modal */}
+                        {showAddCompetitor && (
+                          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+                            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                              <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">Add Competitor</h3>
+                                <button
+                                  onClick={() => {
+                                    setShowAddCompetitor(false);
+                                  }}
+                                  className="text-gray-400 hover:text-gray-600"
+                                >
+                                  <X className="h-5 w-5" />
+                                </button>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Competitor Name *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    id="new-competitor-name"
+                                    placeholder="Enter competitor name"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Win Probability % *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    id="new-competitor-probability"
+                                    min="0"
+                                    max="100"
+                                    placeholder="0-100"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                  onClick={() => {
+                                    setShowAddCompetitor(false);
+                                  }}
+                                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const nameInput = document.getElementById('new-competitor-name') as HTMLInputElement;
+                                    const probabilityInput = document.getElementById('new-competitor-probability') as HTMLInputElement;
+
+                                    const competitorName = nameInput?.value?.trim();
+                                    const winProbability = probabilityInput?.value?.trim();
+
+                                    // Validation
+                                    if (!competitorName) {
+                                      showToast('Please enter competitor name', 'error');
+                                      return;
+                                    }
+
+                                    if (!winProbability || parseFloat(winProbability) < 0 || parseFloat(winProbability) > 100) {
+                                      showToast('Please enter a valid win probability between 0-100', 'error');
+                                      return;
+                                    }
+
+                                    const newCompetitor = {
+                                      competitor_name: competitorName,
+                                      win_probability: parseFloat(winProbability)
+                                    };
+
+                                    // If in edit mode, immediately save to backend
+                                    if (isEditMode && initialData?.id) {
+                                      try {
+                                        const response = await axios.post(
+                                          `${import.meta.env.VITE_API_BASE_URL}/lead-competitor`,
+                                          {
+                                            lead_id: initialData.id,
+                                            competitor_name: competitorName,
+                                            win_probability: parseFloat(winProbability),
+                                            created_by: userData?.id || ''
+                                          }
+                                        );
+
+                                        if (response.data.success) {
+                                          showToast('Competitor added successfully', 'success');
+                                          // Add to local state with the returned ID
+                                          setFormData((prev: any) => ({
+                                            ...prev,
+                                            leadCompetitors: [...(prev.leadCompetitors || []), {
+                                              id: response.data.data.id,
+                                              ...newCompetitor
+                                            }]
+                                          }));
+                                        }
+                                      } catch (error: any) {
+                                        console.error('Error adding competitor:', error);
+                                        showToast(error.response?.data?.clientMessage || 'Failed to add competitor', 'error');
+                                        return;
+                                      }
+                                    } else {
+                                      // In create mode, just add to array
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        leadCompetitors: [...(prev.leadCompetitors || []), newCompetitor]
+                                      }));
+                                      showToast('Competitor added', 'success');
+                                    }
+
+                                    // Clear inputs and close modal
+                                    if (nameInput) nameInput.value = '';
+                                    if (probabilityInput) probabilityInput.value = '';
+                                    setShowAddCompetitor(false);
+                                  }}
+                                  className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700"
+                                >
+                                  Add Competitor
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+
+                    {/* Lead Details */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Details
+                      </label>
+                      <textarea
+                        name="leadDetails"
+                        value={formData.leadDetails}
+                        onChange={handleInputChange}
+                        rows={4}
+                        placeholder="Enter detailed description of the lead..."
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.leadDetails
+                          ? "border-red-500"
+                          : "border-gray-300"
+                          }`}
+                      />
+                      <ValidationError fieldName="leadDetails" />
+                      {formData.leadDetails && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formData.leadDetails.length}/1000 characters
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ===== SECTION 4: Competitors ===== */}
+
+                {/* ===== SECTION 5: Contact Persons ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 className="text-md font-semibold text-gray-800">Contact Persons</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddContact(true)}
+                      disabled={!formData.businessName}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      + Add Contact Person
+                    </button>
+                  </div>
+
+                  {/* Display added contacts */}
+                  {formData.leadContacts && formData.leadContacts.length > 0 ? (
+                    <div className="space-y-3">
+                      {formData.leadContacts.map((contact: any, index: number) => (
+                        <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                          <div className="flex justify-between items-start mb-3">
+                            <h4 className="font-medium text-gray-900">
+                              {editingContactIndex === index ? "Edit Contact Person" : contact.name}
+                            </h4>
+                            <div className="flex space-x-2">
+                              {editingContactIndex === index ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      // Save changes
+                                      if (contact.id && isEditMode) {
+                                        // Update existing contact via PUT API
+                                        try {
+                                          // Build payload with only modified non-empty fields
+                                          const modifiedFields: any = {};
+
+                                          // Compare each field with original contact data
+                                          Object.keys(editingContactData).forEach((key) => {
+                                            const originalValue = contact[key];
+                                            const newValue = editingContactData[key];
+
+                                            // Skip if values are the same
+                                            if (JSON.stringify(originalValue) === JSON.stringify(newValue)) {
+                                              return;
+                                            }
+
+                                            // Skip if new value is empty/null/undefined
+                                            if (newValue === null || newValue === undefined || newValue === '') {
+                                              return;
+                                            }
+
+                                            // Skip if new value is an empty array
+                                            if (Array.isArray(newValue) && newValue.length === 0) {
+                                              return;
+                                            }
+
+                                            // Include the modified non-empty field
+                                            modifiedFields[key] = newValue;
+                                          });
+
+                                          // Always include updated_by
+                                          modifiedFields.updated_by = userData?.id || null;
+
+                                          // Only make API call if there are fields to update
+                                          if (Object.keys(modifiedFields).length > 1) { // > 1 because updated_by is always included
+                                            await axios.put(
+                                              `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`,
+                                              modifiedFields
+                                            );
+
+                                            // Update local state
+                                            setFormData((prev: any) => ({
+                                              ...prev,
+                                              leadContacts: prev.leadContacts.map((c: any, i: number) =>
+                                                i === index ? { ...c, ...editingContactData } : c
+                                              )
+                                            }));
+                                            setEditingContactIndex(null);
+                                            setEditingContactData(null);
+                                            showToast("Contact updated successfully!");
+                                          } else {
+                                            // No changes detected
+                                            setEditingContactIndex(null);
+                                            setEditingContactData(null);
+                                            showToast("No changes detected.");
+                                          }
+                                        } catch (error) {
+                                          console.error("Error updating contact:", error);
+                                          showToast("Failed to update contact. Please try again.");
+                                        }
+                                      } else {
+                                        // Just update local state for new contacts
+                                        setFormData((prev: any) => ({
+                                          ...prev,
+                                          leadContacts: prev.leadContacts.map((c: any, i: number) =>
+                                            i === index ? { ...c, ...editingContactData } : c
+                                          )
+                                        }));
+                                        setEditingContactIndex(null);
+                                        setEditingContactData(null);
+                                      }
+                                    }}
+                                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingContactIndex(null);
+                                      setEditingContactData(null);
+                                    }}
+                                    className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingContactIndex(index);
+                                      setEditingContactData({ ...contact });
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (contact.id && isEditMode) {
+                                        // Delete via API
+                                        if (window.confirm("Are you sure you want to delete this contact?")) {
+                                          try {
+                                            await axios.delete(
+                                              `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`
+                                            );
+                                            setFormData((prev: any) => ({
+                                              ...prev,
+                                              leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
+                                            }));
+                                            showToast("Contact deleted successfully!", "success");
+                                          } catch (error) {
+                                            console.error("Error deleting contact:", error);
+                                            showToast("Failed to delete contact. Please try again.", "error");
+                                          }
+                                        }
+                                      } else {
+                                        // Just remove from local state
+                                        if (window.confirm("Are you sure you want to remove this contact?")) {
+                                          setFormData((prev: any) => ({
+                                            ...prev,
+                                            leadContacts: prev.leadContacts.filter((_: any, i: number) => i !== index)
+                                          }));
+                                        }
+                                      }
+                                    }}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {editingContactIndex === index ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                                <input
+                                  type="text"
+                                  value={editingContactData.name}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, name: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Designation</label>
+                                <input
+                                  type="text"
+                                  value={editingContactData.designation || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, designation: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Contact Number *</label>
+                                <input
+                                  type="tel"
+                                  value={editingContactData.phone}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, phone: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Alternative Number</label>
+                                <input
+                                  type="tel"
+                                  value={editingContactData.alternative_number || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, alternative_number: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Email ID</label>
+                                <input
+                                  type="email"
+                                  value={editingContactData.email || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, email: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Date Of Birth</label>
+                                <input
+                                  type="date"
+                                  value={editingContactData.date_of_birth || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, date_of_birth: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Anniversary Date</label>
+                                <input
+                                  type="date"
+                                  value={editingContactData.anniversary_date || ""}
+                                  onChange={(e) => setEditingContactData({ ...editingContactData, anniversary_date: e.target.value })}
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Communication Mode *</label>
+                                <div className="flex flex-wrap gap-3 mt-2">
+                                  {['WhatsApp', 'Email', 'Call', 'VC', 'Physical'].map((mode) => {
+                                    const communicationModes = Array.isArray(editingContactData.communication_mode)
+                                      ? editingContactData.communication_mode
+                                      : (editingContactData.communication_mode ? editingContactData.communication_mode.split(',').map((m: string) => m.trim()) : []);
+
+                                    return (
+                                      <label key={mode} className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={communicationModes.includes(mode)}
+                                          onChange={(e) => {
+                                            let updatedModes = [...communicationModes];
+                                            if (e.target.checked) {
+                                              updatedModes.push(mode);
+                                            } else {
+                                              updatedModes = updatedModes.filter(m => m !== mode);
+                                            }
+                                            setEditingContactData({
+                                              ...editingContactData,
+                                              communication_mode: updatedModes
+                                            });
+                                          }}
+                                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <span className="text-sm text-gray-700">{mode}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+
+                              <div>
+                                <span className="font-medium text-gray-600">Designation:</span>
+                                <span className="ml-1 text-gray-800">{contact.designation}</span>
+                              </div>
+
+                              <div>
+                                <span className="font-medium text-gray-600">Phone:</span>
+                                <span className="ml-1 text-gray-800">{contact.phone}</span>
+                              </div>
+
+                              <div>
+                                <span className="font-medium text-gray-600">Alt Phone:</span>
+                                <span className="ml-1 text-gray-800">{contact.alternative_number}</span>
+                              </div>
+
+
+                              <div>
+                                <span className="font-medium text-gray-600">Email:</span>
+                                <span className="ml-1 text-gray-800">{contact.email}</span>
+                              </div>
+
+
+                              <div>
+                                <span className="font-medium text-gray-600">DOB:</span>
+                                <span className="ml-1 text-gray-800">{contact.date_of_birth}</span>
+                              </div>
+
+
+                              <div>
+                                <span className="font-medium text-gray-600">Anniversary:</span>
+                                <span className="ml-1 text-gray-800">{contact.anniversary_date}</span>
+                              </div>
+
+
+                              <div className="col-span-2">
+                                <span className="font-medium text-gray-600">Communication Mode:</span>
+                                <span className="ml-1 text-gray-800">
+                                  {Array.isArray(contact.communication_mode)
+                                    ? contact.communication_mode.join(', ')
+                                    : contact.communication_mode}
+                                </span>
+                              </div>
+
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No contact persons added yet. Click "Add Contact Person" to add one.
+                    </p>
+                  )}
+
+                  {/* Add Contact Modal */}
+                  {showAddContact && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+                      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900">Add Contact Person</h3>
+                          <button
+                            onClick={() => {
+                              setShowAddContact(false);
+                              setSelectedContactForAdd("");
+                            }}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Select Contact Person {selectedBranchId ? "(Branch)" : "(Customer)"}
+                            </label>
+                            <select
+                              value={selectedContactForAdd}
+                              onChange={(e) => setSelectedContactForAdd(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">Select Contact Person</option>
+                              {contactPersons.map((person) => (
+                                <option key={person.id} value={person.id}>
+                                  {person.name}
+                                </option>
+                              ))}
+                            </select>
+                            {contactPersons.length === 0 && (
+                              <p className="text-xs text-amber-600 mt-1">
+                                No contacts available for this {selectedBranchId ? "branch" : "customer"}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex justify-end space-x-3 pt-4 border-t">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowAddContact(false);
+                                setSelectedContactForAdd("");
+                              }}
+                              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (selectedContactForAdd) {
+                                  const selectedContact = contactPersons.find(
+                                    (p) => p.id === selectedContactForAdd
+                                  );
+                                  if (selectedContact) {
+                                    // Check if already added using contact_id (not id, since new contacts don't have lead-contact id yet)
+                                    const alreadyAdded = formData.leadContacts.some(
+                                      (c: any) => c.contact_id === selectedContact.id
+                                    );
+                                    if (alreadyAdded) {
+                                      showToast("This contact person has already been added.");
+                                      return;
+                                    }
+
+                                    const newContactData = {
+                                      contact_id: selectedContact.id,
+                                      name: selectedContact.name,
+                                      designation: selectedContact.designation || "",
+                                      email: selectedContact.email || "",
+                                      phone: selectedContact.phone || "",
+                                      alternative_number: selectedContact.alternative_number || "",
+                                      date_of_birth: selectedContact.date_of_birth || "",
+                                      anniversary_date: selectedContact.anniversary_date || "",
+                                      communication_mode: selectedContact.communication_mode || "",
+                                    };
+
+                                    // If in edit mode, immediately save to backend via POST API
+                                    if (isEditMode && initialData?.id) {
+                                      try {
+                                        const response = await axios.post(
+                                          `${import.meta.env.VITE_API_BASE_URL}/lead-contact`,
+                                          {
+                                            lead_id: initialData.id,
+                                            ...newContactData,
+                                            created_by: userData?.id || null
+                                          }
+                                        );
+
+                                        // Add to local state with the returned lead-contact ID
+                                        const createdContact = response.data.data;
+                                        setFormData((prev: any) => ({
+                                          ...prev,
+                                          leadContacts: [
+                                            ...prev.leadContacts,
+                                            {
+                                              id: createdContact.id, // Now it has a lead-contact record ID
+                                              ...newContactData
+                                            }
+                                          ]
+                                        }));
+                                        setShowAddContact(false);
+                                        setSelectedContactForAdd("");
+                                        showToast("Contact person added successfully!", "success");
+                                      } catch (error) {
+                                        console.error("Error adding contact:", error);
+                                        showToast("Failed to add contact person. Please try again.", "error");
+                                      }
+                                    } else {
+                                      // Create mode: just add to local state (will be saved when lead is created)
+                                      setFormData((prev: any) => ({
+                                        ...prev,
+                                        leadContacts: [
+                                          ...prev.leadContacts,
+                                          newContactData
+                                        ]
+                                      }));
+                                      setShowAddContact(false);
+                                      setSelectedContactForAdd("");
+                                    }
+                                  }
+                                }
+                              }}
+                              disabled={!selectedContactForAdd}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                              Add Contact
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ===== SECTION 5: Involved Associates - KEEP EXISTING AS IS ===== */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Involved Associates</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Involved Associates
+                    </label>
+                    {formData.involvedAssociates.length === 0 &&
+                      !showAssociateForm && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAssociateForm(true)}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
+                        >
+                          + Tag Associate
+                        </button>
+                      )}
+                    {showAssociateForm && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                        <div>
+                          <select
+                            name="designation"
+                            value={associateForm.designation}
+                            onChange={handleAssociateFormChange}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                          >
+                            <option value="">Select Designation</option>
+                            {associateDesignations.map((des) => (
+                              <option key={des} value={des}>
+                                {des}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <select
+                            name="associateId"
+                            value={associateForm.associateId}
+                            onChange={handleAssociateFormChange}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                          >
+                            <option value="">Select Associate</option>
+                            {registeredAssociates.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            name="otherInfo"
+                            value={associateForm.otherInfo}
+                            onChange={handleAssociateFormChange}
+                            placeholder="Other Information"
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
+                          />
+                        </div>
+                        <div className="col-span-3 flex gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={addAssociate}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                            disabled={
+                              !associateForm.designation ||
+                              !associateForm.associateId
+                            }
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAssociateForm(false)}
+                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {formData.involvedAssociates.length > 0 && (
+                      <div className="space-y-2">
+                        {formData.involvedAssociates.map((a: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                          >
+                            <div>
+                              <span className="font-thin text-sm">
+                                {a.designation}
+                              </span>{" "}
+                              <span className="text-gray-700 text-sm">
+                                {a.associateName}
+                              </span>
+                              {a.otherInfo && (
+                                <span className="text-gray-500 ml-2 text-xs">
+                                  ({a.otherInfo})
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeAssociate(idx)}
+                              className="text-red-600 hover:text-red-800 text-xs"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setShowAssociateForm(true)}
+                          className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs mt-1"
+                        >
+                          + Tag Another Associate
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Step 2: Upload Files */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                {!isEditMode && creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                   // Multi-worktype mode: show upload per worktype
                   formData.workType.map((worktype: string) => (
                     <div key={worktype} className="border border-gray-200 rounded-lg p-4">
@@ -2499,7 +4543,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                           <input
                             type="file"
                             multiple
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
                             onChange={(e) => handleFileUpload(e, worktype)}
                             className="hidden"
                             id={`file-upload-${worktype}`}
@@ -2514,32 +4558,41 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
                         {multiWorktypeState.step2.documents[worktype] &&
                           multiWorktypeState.step2.documents[worktype].length > 0 && (
-                            <div className="mt-3 space-y-1">
-                              {multiWorktypeState.step2.documents[worktype].map((file, idx) => (
+                            <div className="mt-3 space-y-2">
+                              {multiWorktypeState.step2.documents[worktype].map((item, idx) => (
                                 <div
                                   key={idx}
-                                  className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+                                  className="flex flex-col p-2 bg-gray-50 rounded text-xs"
                                 >
-                                  <span className="truncate">{file.name}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setMultiWorktypeState((prev) => ({
-                                        ...prev,
-                                        step2: {
-                                          documents: {
-                                            ...prev.step2.documents,
-                                            [worktype]: prev.step2.documents[worktype].filter(
-                                              (_, i) => i !== idx
-                                            ),
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="truncate font-medium">{item.file.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMultiWorktypeState((prev) => ({
+                                          ...prev,
+                                          step2: {
+                                            documents: {
+                                              ...prev.step2.documents,
+                                              [worktype]: prev.step2.documents[worktype].filter(
+                                                (_, i) => i !== idx
+                                              ),
+                                            },
                                           },
-                                        },
-                                      }));
-                                    }}
-                                    className="text-red-600 hover:text-red-800 ml-2"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
+                                        }));
+                                      }}
+                                      className="text-red-600 hover:text-red-800 ml-2"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="Add note for this file..."
+                                    value={item.note || ""}
+                                    onChange={(e) => handleFileNoteChange(idx, e.target.value, worktype)}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  />
                                 </div>
                               ))}
                             </div>
@@ -2566,7 +4619,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       <input
                         type="file"
                         multiple
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
                         onChange={(e) => handleFileUpload(e)}
                         className="hidden"
                         id="file-upload"
@@ -2599,27 +4652,36 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         <h4 className="text-sm font-medium text-gray-700 mb-2">
                           Uploaded Files
                         </h4>
-                        <div className="space-y-2">
-                          {uploadedFiles.map((file, index) => (
+                        <div className="space-y-3">
+                          {uploadedFiles.map((item, index) => (
                             <div
                               key={index}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                              className="p-3 bg-gray-50 rounded-md"
                             >
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {file.name}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </p>
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {item.file.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {(item.file.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFile(index)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => removeFile(index)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                              <input
+                                type="text"
+                                placeholder="Add note for this file..."
+                                value={item.note || ""}
+                                onChange={(e) => handleFileNoteChange(index, e.target.value)}
+                                className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              />
                             </div>
                           ))}
                         </div>
@@ -2630,10 +4692,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               </div>
             )}
 
-            {/* Step 3: Follow-up Leads */}
-            {currentStep === 3 && (
+            {/* Step 3: Follow-up Leads - COMMENTED OUT */}
+            {/* {currentStep === 3 && (
               <div className="space-y-6">
-                {!isEditMode && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                {!isEditMode && creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                   // Multi-worktype mode: show fields per worktype
                   formData.workType.map((worktype: string) => (
                     <div key={worktype} className="border border-gray-200 rounded-lg p-4 space-y-4">
@@ -2641,7 +4703,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         Follow-up for: {worktype}
                       </h4>
 
-                      {/* Assign to Dropdown */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Assign to
@@ -2671,32 +4732,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         </select>
                       </div>
 
-                      {/* Next Follow Up Date */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Next Follow Up Date
-                        </label>
-                        <input
-                          type="date"
-                          value={multiWorktypeState.step3.nextFollowUpDate[worktype] || ""}
-                          onChange={(e) => {
-                            setMultiWorktypeState((prev) => ({
-                              ...prev,
-                              step3: {
-                                ...prev.step3,
-                                nextFollowUpDate: {
-                                  ...prev.step3.nextFollowUpDate,
-                                  [worktype]: e.target.value,
-                                },
-                              },
-                            }));
-                          }}
-                          min={new Date().toISOString().split('T')[0]}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                        />
-                      </div>
 
-                      {/* Follow-up Comments */}
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Follow-up Notes
@@ -2730,7 +4767,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 ) : (
                   // Edit mode or single worktype: original layout
                   <div className="space-y-4">
-                    {/* Assign to Dropdown */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Assign to
@@ -2754,24 +4790,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </select>
                     </div>
 
-                    {/* Next Follow Up Date */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Next Follow Up Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.nextFollowUpDate || ""}
-                        onChange={(e) => {
-                          setFormData((prev: any) => ({
-                            ...prev,
-                            nextFollowUpDate: e.target.value,
-                          }));
-                        }}
-                        min={new Date().toISOString().split('T')[0]}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
+
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2853,7 +4872,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   </div>
                 )}
               </div>
-            )}
+            )} */}
           </form>
         </div>
 
@@ -2889,32 +4908,37 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   disabled={isLoading}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                 >
-                  {isLoading ? "Saving..." : "Next"}
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </button>
-              ) : currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={isLoading}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  {isLoading ? "Uploading..." : "Next"}
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  {isLoading ? "Saving..." : "Save"}
                 </button>
               ) : (
                 <button
-                  type="submit"
-                  onClick={handleSubmit}
+                  type="button"
+                  onClick={async () => {
+                    setIsLoading(true);
+                    try {
+                      if (uploadedFiles.length > 0) {
+                        const leadId = createdLeadId || initialData?.id;
+                        await uploadFilesForLead(leadId, uploadedFiles);
+                        await updateLeadStageAfterFileUpload(leadId);
+                      }
+                      handleSubmit({ preventDefault: () => { } } as any);
+                    } catch (err) {
+                      console.error(err);
+                      showToast("Error updating lead files");
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  disabled={isLoading}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Update Complete
+                  {isLoading ? "Updating..." : "Update Complete"}
                 </button>
               )
             ) : (
               <>
-                {currentStep < 3 ? (
+                {currentStep < 2 ? (
                   <button
                     type="button"
                     onClick={handleNext}
@@ -2926,7 +4950,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   </button>
                 ) : (
                   <>
-                    {Array.isArray(formData.workType) && formData.workType.length > 0 ? (
+                    {creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                       <button
                         type="button"
                         onClick={handleCompleteRegistration}
@@ -2938,12 +4962,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </button>
                     ) : (
                       <button
-                        type="submit"
-                        onClick={handleSubmit}
+                        type="button"
+                        onClick={!isEditMode && creationMode === 'single' ? handleUnifiedLeadCreation : handleSubmit}
                         className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
                       >
                         <Save className="h-4 w-4 mr-2" />
-                        Complete
+                        {creationMode === 'single' && !isEditMode ? "Create Unified Lead" : "Complete"}
                       </button>
                     )}
                   </>
