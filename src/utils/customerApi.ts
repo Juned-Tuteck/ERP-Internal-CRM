@@ -110,3 +110,25 @@ export const updateCustomer = async (
 
   return response.data;
 };
+
+export interface ComplianceFile {
+  id: string;
+  document_type: string;
+  entity_level: string;
+  customer_branch_id: string | null;
+  original_name: string;
+  size: number;
+  created_at: string;
+  url: string;
+}
+
+export const getComplianceFiles = async (customerId: string): Promise<ComplianceFile[]> => {
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/customer/${customerId}/compliance-files`,
+    {
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
+
+  return response.data?.data || [];
+};

@@ -20,6 +20,8 @@ import {
   hasErrors,
   getFirstError,
 } from "../../../utils/validationUtils";
+import { getComplianceFiles, ComplianceFile } from "../../../utils/customerApi";
+import ComplianceFileUpload from "../../../components/ComplianceFileUpload";
 
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
@@ -173,6 +175,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [zones, setZones] = useState<Array<{ id: string; name: string }>>([]);
   const [states, setStates] = useState<Array<{ id: string; name: string; zone_id: string }>>([]);
   const [districts, setDistricts] = useState<Array<{ id: string; name: string; state_id: string }>>([]);
+
+  // Compliance files state
+  const [complianceFiles, setComplianceFiles] = useState<ComplianceFile[]>([]);
+  const [uploadError, setUploadError] = useState<string>("");
 
   // Customer autocomplete states
   const [customerSuggestions, setCustomerSuggestions] = useState<Array<{ id: string, name: string }>>([]);
@@ -530,6 +536,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     };
     fetchDistricts();
   }, []);
+
+  useEffect(() => {
+    if (isEditMode && formData.id) {
+      const fetchFiles = async () => {
+        try {
+          const files = await getComplianceFiles(formData.id);
+          setComplianceFiles(files);
+        } catch (error) {
+          console.error('Error fetching compliance files:', error);
+        }
+      };
+      fetchFiles();
+    }
+  }, [isEditMode, formData.id]);
 
   // Fetch customer details
   const fetchCustomerDetails = async (customerId: string) => {
@@ -3306,172 +3326,281 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     data: any,
     onChange: (field: string, value: any) => void,
     errors: any,
-    readOnly: boolean = false
-  ) => (
-    <div>
-      <h4 className="text-lg font-medium text-gray-900 mb-4">Compliance</h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* GST */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            GST Number
-          </label>
-          <input
-            type="text"
-            name="gstNumber"
-            value={data.gstNumber || ""}
-            onChange={(e) => onChange("gstNumber", e.target.value)}
-            disabled={readOnly}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.gstNumber
-              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-              }`}
-            placeholder="GST Number"
-          />
-          {errors?.gstNumber && (
-            <p className="text-red-500 text-xs mt-1">{errors.gstNumber}</p>
-          )}
+    readOnly: boolean = false,
+    entityLevel: 'HO' | 'BRANCH' = 'HO',
+    customerBranchId?: string
+  ) => {
+    const getFilesForDocument = (docType: 'PAN' | 'TAN' | 'GST') => {
+      return complianceFiles.filter(
+        f => f.document_type === docType &&
+        f.entity_level === entityLevel &&
+        (entityLevel === 'HO' || f.customer_branch_id === customerBranchId)
+      );
+    };
+
+    const handleUploadSuccess = async (file: ComplianceFile) => {
+      setComplianceFiles(prev => [...prev, file]);
+      if (formData.id) {
+        const updatedFiles = await getComplianceFiles(formData.id);
+        setComplianceFiles(updatedFiles);
+      }
+    };
+
+    return (
+      <div>
+        <h4 className="text-lg font-medium text-gray-900 mb-4">Compliance</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* GST */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              GST Number
+            </label>
+            <input
+              type="text"
+              name="gstNumber"
+              value={data.gstNumber || ""}
+              onChange={(e) => onChange("gstNumber", e.target.value)}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.gstNumber
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                }`}
+              placeholder="GST Number"
+            />
+            {errors?.gstNumber && (
+              <p className="text-red-500 text-xs mt-1">{errors.gstNumber}</p>
+            )}
+            {createdCustomerId && (
+              <div className="mt-2">
+                <ComplianceFileUpload
+                  documentType="GST"
+                  entityLevel={entityLevel}
+                  customerId={createdCustomerId}
+                  customerBranchId={customerBranchId}
+                  uploadedFiles={getFilesForDocument('GST')}
+                  onUploadSuccess={handleUploadSuccess}
+                  onUploadError={(error) => setUploadError(error)}
+                  disabled={readOnly}
+                  uploadBy={currentUserId}
+                />
+              </div>
+            )}
+          </div>
+          {/* PAN */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              PAN Number
+            </label>
+            <input
+              type="text"
+              name="panNumber"
+              value={data.panNumber || ""}
+              onChange={(e) => onChange("panNumber", e.target.value)}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.panNumber
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                }`}
+              placeholder="Pan Number"
+            />
+            {errors?.panNumber && (
+              <p className="text-red-500 text-xs mt-1">{errors.panNumber}</p>
+            )}
+            {createdCustomerId && (
+              <div className="mt-2">
+                <ComplianceFileUpload
+                  documentType="PAN"
+                  entityLevel={entityLevel}
+                  customerId={createdCustomerId}
+                  customerBranchId={customerBranchId}
+                  uploadedFiles={getFilesForDocument('PAN')}
+                  onUploadSuccess={handleUploadSuccess}
+                  onUploadError={(error) => setUploadError(error)}
+                  disabled={readOnly}
+                  uploadBy={currentUserId}
+                />
+              </div>
+            )}
+          </div>
+          {/* TAN */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              TAN Number
+            </label>
+            <input
+              type="text"
+              name="tanNumber"
+              value={data.tanNumber || ""}
+              onChange={(e) => onChange("tanNumber", e.target.value)}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.tanNumber
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                }`}
+              placeholder="Tan Number"
+            />
+            {errors?.tanNumber && (
+              <p className="text-red-500 text-xs mt-1">{errors.tanNumber}</p>
+            )}
+            {createdCustomerId && (
+              <div className="mt-2">
+                <ComplianceFileUpload
+                  documentType="TAN"
+                  entityLevel={entityLevel}
+                  customerId={createdCustomerId}
+                  customerBranchId={customerBranchId}
+                  uploadedFiles={getFilesForDocument('TAN')}
+                  onUploadSuccess={handleUploadSuccess}
+                  onUploadError={(error) => setUploadError(error)}
+                  disabled={readOnly}
+                  uploadBy={currentUserId}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        {/* PAN */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            PAN Number
-          </label>
-          <input
-            type="text"
-            name="panNumber"
-            value={data.panNumber || ""}
-            onChange={(e) => onChange("panNumber", e.target.value)}
-            disabled={readOnly}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.panNumber
-              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-              }`}
-            placeholder="Pan Number"
-          />
-          {errors?.panNumber && (
-            <p className="text-red-500 text-xs mt-1">{errors.panNumber}</p>
-          )}
-        </div>
-        {/* TAN */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            TAN Number
-          </label>
-          <input
-            type="text"
-            name="tanNumber"
-            value={data.tanNumber || ""}
-            onChange={(e) => onChange("tanNumber", e.target.value)}
-            disabled={readOnly}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.tanNumber
-              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-              }`}
-            placeholder="Tan Number"
-          />
-          {errors?.tanNumber && (
-            <p className="text-red-500 text-xs mt-1">{errors.tanNumber}</p>
-          )}
-        </div>
+        {uploadError && (
+          <p className="text-red-500 text-sm mt-2">{uploadError}</p>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderBankDetails = (
     data: any,
     onChange: (field: string, value: any) => void,
     errors: any,
     isBranch: boolean = false,
-    readOnly: boolean = false
-  ) => (
-    <div>
-      <h4 className="text-lg font-medium text-gray-900 mb-4">Bank Details</h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Bank Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Bank Name
-          </label>
-          <input
-            type="text"
-            name="bankName"
-            value={data.bankName || ""}
-            onChange={(e) => onChange("bankName", e.target.value)}
-            disabled={readOnly}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.bankName
-              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-              }`}
-            placeholder="Bank Name"
-          />
-          {errors?.bankName && (
-            <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>
-          )}
-        </div>
-        {/* Bank Account Number */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Bank Account Number
-          </label>
-          <input
-            type="text"
-            name="bankAccountNumber"
-            value={data.bankAccountNumber || ""}
-            onChange={(e) => onChange("bankAccountNumber", e.target.value)}
-            disabled={readOnly}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.bankAccountNumber
-              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-              }`}
-            placeholder="Account Number"
-          />
-          {errors?.bankAccountNumber && (
-            <p className="text-red-500 text-xs mt-1">
-              {errors.bankAccountNumber}
-            </p>
-          )}
-        </div>
-        {/* IFSC */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            IFSC Code
-          </label>
-          <input
-            type="text"
-            name="ifscCode"
-            value={data.ifscCode || ""}
-            onChange={(e) => onChange("ifscCode", e.target.value)}
-            disabled={readOnly}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.ifscCode
-              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-              }`}
-            placeholder="IFSC Code"
-          />
-          {errors?.ifscCode && (
-            <p className="text-red-500 text-xs mt-1">{errors.ifscCode}</p>
-          )}
-        </div>
-        {/* Branch Name (Bank Branch) - Customer Only */}
-        {!isBranch && (
+    readOnly: boolean = false,
+    entityLevel: 'HO' | 'BRANCH' = 'HO',
+    customerBranchId?: string
+  ) => {
+    const getFilesForDocument = (docType: 'BANK') => {
+      return complianceFiles.filter(
+        f => f.document_type === docType &&
+        f.entity_level === entityLevel &&
+        (entityLevel === 'HO' || f.customer_branch_id === customerBranchId)
+      );
+    };
+
+    const handleUploadSuccess = async (file: ComplianceFile) => {
+      setComplianceFiles(prev => [...prev, file]);
+      if (formData.id) {
+        const updatedFiles = await getComplianceFiles(formData.id);
+        setComplianceFiles(updatedFiles);
+      }
+    };
+
+    return (
+      <div>
+        <h4 className="text-lg font-medium text-gray-900 mb-4">Bank Details</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Bank Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Branch Name (Bank)
+              Bank Name
             </label>
             <input
               type="text"
-              name="branchName"
-              value={data.branchName}
-              onChange={(e) => onChange("branchName", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Bank Branch Name"
+              name="bankName"
+              value={data.bankName || ""}
+              onChange={(e) => onChange("bankName", e.target.value)}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.bankName
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                }`}
+              placeholder="Bank Name"
+            />
+            {errors?.bankName && (
+              <p className="text-red-500 text-xs mt-1">{errors.bankName}</p>
+            )}
+          </div>
+          {/* Bank Account Number */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bank Account Number
+            </label>
+            <input
+              type="text"
+              name="bankAccountNumber"
+              value={data.bankAccountNumber || ""}
+              onChange={(e) => onChange("bankAccountNumber", e.target.value)}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.bankAccountNumber
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                }`}
+              placeholder="Account Number"
+            />
+            {errors?.bankAccountNumber && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.bankAccountNumber}
+              </p>
+            )}
+          </div>
+          {/* IFSC */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              IFSC Code
+            </label>
+            <input
+              type="text"
+              name="ifscCode"
+              value={data.ifscCode || ""}
+              onChange={(e) => onChange("ifscCode", e.target.value)}
+              disabled={readOnly}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.ifscCode
+                ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                }`}
+              placeholder="IFSC Code"
+            />
+            {errors?.ifscCode && (
+              <p className="text-red-500 text-xs mt-1">{errors.ifscCode}</p>
+            )}
+          </div>
+          {/* Branch Name (Bank Branch) - Customer Only */}
+          {!isBranch && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Branch Name (Bank)
+              </label>
+              <input
+                type="text"
+                name="branchName"
+                value={data.branchName}
+                onChange={(e) => onChange("branchName", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Bank Branch Name"
+              />
+            </div>
+          )}
+        </div>
+        {createdCustomerId && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Bank Documents
+            </label>
+            <ComplianceFileUpload
+              documentType="BANK"
+              entityLevel={entityLevel}
+              customerId={createdCustomerId}
+              customerBranchId={customerBranchId}
+              uploadedFiles={getFilesForDocument('BANK')}
+              onUploadSuccess={handleUploadSuccess}
+              onUploadError={(error) => setUploadError(error)}
+              disabled={readOnly}
+              uploadBy={currentUserId}
             />
           </div>
         )}
+        {uploadError && (
+          <p className="text-red-500 text-sm mt-2">{uploadError}</p>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderContactPersons = (
     persons: ContactPerson[],
