@@ -129,6 +129,33 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     leads: {},
   });
 
+  // Location Data State
+  const [zones, setZones] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      try {
+        const [zonesData, statesData, districtsData] = await Promise.all([
+          zoneApi.getAll(),
+          stateApi.getAll(),
+          districtApi.getAll()
+        ]);
+        setZones(zonesData);
+        setStates(statesData);
+        setDistricts(districtsData);
+      } catch (error) {
+        console.error("Failed to fetch location data", error);
+      }
+    };
+
+    if (isOpen) {
+      fetchLocationData();
+    }
+  }, [isOpen]);
+
+  // Dropdown states
   const [showWorkTypeDropdown, setShowWorkTypeDropdown] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [creationMode, setCreationMode] = useState<'single' | 'multiple'>('multiple');
@@ -3503,7 +3530,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       <ValidationError fieldName="projectValue" />
                     </div>
                     {/* NEW FIELD: Project Zone */}
-                    <div>
+                    {/* <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Project Zone
                       </label>
@@ -3520,46 +3547,65 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                           </option>
                         ))}
                       </select>
+                    </div> */}
+
+                    {/* NEW FIELD: Project Zone */}
+                    <div>
+                      <SearchableSelect
+                        label="Project Zone"
+                        options={zones.map(z => ({ value: z.id, label: z.name }))}
+                        value={formData.projectZone}
+                        onChange={(value) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            projectZone: value,
+                            projectState: '',
+                            projectDistrict: ''
+                          }));
+                        }}
+                        placeholder="Select Zone"
+                      />
                     </div>
 
                     {/* NEW FIELD: Project State */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Project State
-                      </label>
-                      <select
-                        name="projectState"
+                      <SearchableSelect
+                        label="Project State"
+                        options={states
+                          .filter(s => s.zone_id === formData.projectZone)
+                          .map(s => ({ value: s.id, label: s.name }))}
                         value={formData.projectState}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select State</option>
-                        {projectStates.map((state) => (
-                          <option key={state} value={state}>
-                            {state}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            projectState: value,
+                            projectDistrict: ''
+                          }));
+                        }}
+                        placeholder="Select State"
+                        disabled={!formData.projectZone}
+                      />
                     </div>
+
                     {/* NEW FIELD: Project District */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Project District
-                      </label>
-                      <select
-                        name="projectDistrict"
+                      <SearchableSelect
+                        label="Project District"
+                        options={districts
+                          .filter(d => d.state_id === formData.projectState)
+                          .map(d => ({ value: d.id, label: d.name }))}
                         value={formData.projectDistrict}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select District</option>
-                        {projectDistricts.map((district) => (
-                          <option key={district} value={district}>
-                            {district}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            projectDistrict: value
+                          }));
+                        }}
+                        placeholder="Select District"
+                        disabled={!formData.projectState}
+                      />
                     </div>
+
                     {/* NEW FIELD: Project City */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">

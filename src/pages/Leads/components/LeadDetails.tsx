@@ -36,6 +36,7 @@ import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
 import { useCRM } from "../../../context/CRMContext";
 import { createProjectFromLead, CreateProjectRequest } from "../../../utils/projectApi";
+import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
 
 interface LeadDetailsProps {
   lead: any;
@@ -77,6 +78,11 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   // Lead competitors state
   const [leadCompetitors, setLeadCompetitors] = useState<any[]>([]);
+
+  // Location Data State
+  const [zones, setZones] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
 
   // Fetch detailed lead information when lead is selected
 
@@ -192,6 +198,22 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       }
     };
 
+    const fetchLocationData = async () => {
+      try {
+        const [zonesData, statesData, districtsData] = await Promise.all([
+          zoneApi.getAll(),
+          stateApi.getAll(),
+          districtApi.getAll()
+        ]);
+        setZones(zonesData);
+        setStates(statesData);
+        setDistricts(districtsData);
+      } catch (error) {
+        console.error("Failed to fetch location data", error);
+      }
+    };
+
+    fetchLocationData();
     fetchLeadDetails();
   }, [lead, refreshTrigger]);
 
@@ -1109,13 +1131,24 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     </div>
                   </div>
 
+                  {/* NEW FIELD: Project Zone */}
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Zone</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {zones.find((zone) => zone.id === displayLead.projectZone)?.name || "-"}
+                      </p>
+                    </div>
+                  </div>
+
                   {/* NEW FIELD: Project State */}
                   <div className="flex items-center space-x-3">
                     <Building className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Project State</p>
                       <p className="text-sm font-medium text-gray-900">
-                        {displayLead.projectState || "-"}
+                        {states.find((state) => state.id === displayLead.projectState)?.name || "-"}
                       </p>
                     </div>
                   </div>
@@ -1126,7 +1159,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     <div>
                       <p className="text-sm text-gray-500">Project District</p>
                       <p className="text-sm font-medium text-gray-900">
-                        {displayLead.projectDistrict || "-"}
+                        {districts.find((district) => district.id === displayLead.projectDistrict)?.name || "-"}
                       </p>
                     </div>
                   </div>
@@ -1138,17 +1171,6 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                       <p className="text-sm text-gray-500">Project City</p>
                       <p className="text-sm font-medium text-gray-900">
                         {displayLead.projectCity || "-"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* NEW FIELD: Project Pincode */}
-                  <div className="flex items-center space-x-3">
-                    <Building className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Project Pincode</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {displayLead.projectPincode || "-"}
                       </p>
                     </div>
                   </div>
@@ -1175,13 +1197,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     </div>
                   </div>
 
-                  {/* NEW FIELD: Project Zone */}
+                  {/* NEW FIELD: Project Pincode */}
                   <div className="flex items-center space-x-3">
                     <Building className="h-5 w-5 text-gray-400" />
                     <div>
-                      <p className="text-sm text-gray-500">Project Zone</p>
+                      <p className="text-sm text-gray-500">Project Pincode</p>
                       <p className="text-sm font-medium text-gray-900">
-                        {displayLead.projectZone || "-"}
+                        {displayLead.projectPincode || "-"}
                       </p>
                     </div>
                   </div>
