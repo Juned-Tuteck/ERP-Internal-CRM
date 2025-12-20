@@ -110,3 +110,84 @@ export const updateCustomer = async (
 
   return response.data;
 };
+
+// Compliance File Upload APIs
+
+/**
+ * Upload a compliance file for a customer
+ * @param customerId - Customer ID
+ * @param file - File to upload
+ * @param documentType - Type of document (PAN, TAN, GST, BANK)
+ * @param entityLevel - Entity level (HO or BRANCH)
+ * @param customerBranchId - Branch ID (required for BRANCH level)
+ * @param uploadBy - User ID who is uploading
+ * @returns Upload response data
+ */
+export const uploadComplianceFile = async (
+  customerId: string,
+  file: File,
+  documentType: string,
+  entityLevel: string,
+  customerBranchId: string | null,
+  uploadBy: string
+): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('document_type', documentType);
+  formData.append('entity_level', entityLevel);
+  formData.append('upload_by', uploadBy);
+
+  if (entityLevel === 'BRANCH' && customerBranchId) {
+    formData.append('customer_branch_id', customerBranchId);
+  }
+
+  const response = await axios.post(
+    `${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${customerId}/compliance-files`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+
+  return response.data;
+};
+
+/**
+ * Get all compliance files for a customer
+ * @param customerId - Customer ID
+ * @returns Array of compliance files
+ */
+export const getComplianceFiles = async (customerId: string): Promise<any[]> => {
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${customerId}/compliance-files`,
+    {
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
+
+  return response.data.data || [];
+};
+
+/**
+ * Download a compliance file
+ * @param customerId - Customer ID
+ * @param fileId - File ID
+ * @returns Blob data for download
+ */
+export const downloadComplianceFile = async (
+  customerId: string,
+  fileId: string
+): Promise<Blob> => {
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${customerId}/compliance-files/${fileId}/download`,
+    {
+      responseType: 'blob',
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
+
+  return response.data;
+};
+
