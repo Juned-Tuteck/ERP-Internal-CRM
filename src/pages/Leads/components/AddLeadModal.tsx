@@ -16,6 +16,8 @@ import { useCRM } from '../../../context/CRMContext';
 import { updateCustomer } from '../../../utils/customerApi';
 import { CustomLoader } from '../../../components/CustomLoader';
 import { useToast } from '../../../components/Toast';
+import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
+import { SearchableSelect } from '../../../components/SearchableSelect';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -127,6 +129,33 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     leads: {},
   });
 
+  // Location Data State
+  const [zones, setZones] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      try {
+        const [zonesData, statesData, districtsData] = await Promise.all([
+          zoneApi.getAll(),
+          stateApi.getAll(),
+          districtApi.getAll()
+        ]);
+        setZones(zonesData);
+        setStates(statesData);
+        setDistricts(districtsData);
+      } catch (error) {
+        console.error("Failed to fetch location data", error);
+      }
+    };
+
+    if (isOpen) {
+      fetchLocationData();
+    }
+  }, [isOpen]);
+
+  // Dropdown states
   const [showWorkTypeDropdown, setShowWorkTypeDropdown] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [creationMode, setCreationMode] = useState<'single' | 'multiple'>('multiple');
@@ -254,10 +283,47 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   const leadTemperatures = ["Hot", "Warm", "Cold"];
 
-  const projectStates = ["WB", "JG", "KG", "DH", "MB"];
+  const projectStates = ["West Bengal",
+    "Odisha",
+    "Bihar",
+    "Jharkhand",
+    "Assam",
+    "Arunachal Pradesh",
+    "Nagaland",
+    "Manipur",
+    "Mizoram",
+    "Tripura",
+    "Meghalaya",
+    "Sikkim",
+    "Delhi",
+    "Haryana",
+    "Punjab",
+    "Himachal Pradesh",
+    "Jammu & Kashmir",
+    "Ladakh",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "Chandigarh",
+    "Maharashtra",
+    "Gujarat",
+    "Rajasthan",
+    "Goa",
+    "Dadra & Nagar Haveli",
+    "Daman & Diu",
+    "Madhya Pradesh",
+    "Chhattisgarh",
+    "Tamil Nadu",
+    "Karnataka",
+    "Kerala",
+    "Andhra Pradesh",
+    "Telangana",
+    "Puducherry",
+    "Lakshadweep",
+    "Andaman & Nicobar Islands"
+  ];
   const projectDistricts = ["WB", "JG", "KG", "DH", "MB"];
   const projectCities = ["WB", "JG", "KG", "DH", "MB"];
-  const projectZones = ["WB", "JG", "KG", "DH", "MB"];
+  const projectZones = ["East Zone", "North-East Zone", "North Zone", "West Zone", "South Zone", "Central Zone", "Islands Zone"];
 
   const projectCurrentStatuses = [
     "Hold",
@@ -352,6 +418,35 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     ];
     const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
     return allowedTypes.includes(fileExtension);
+  };
+
+  // Check Step 1 Validity (for enabling/disabling "Complete" button)
+  const checkStep1Validity = (): boolean => {
+    // Required field validations
+    if (!formData.businessName?.trim()) return false;
+    if (!formData.leadGeneratedDate || !validateDate(formData.leadGeneratedDate)) return false;
+    if (!formData.projectName?.trim() || !validateStringLength(formData.projectName.trim(), 2, 200)) return false;
+    if (!formData.projectValue?.toString().trim() || !validateProjectValue(formData.projectValue.toString())) return false;
+    if (!formData.leadType?.trim()) return false;
+
+    // Check workType (array or string)
+    if (Array.isArray(formData.workType)) {
+      if (formData.workType.length === 0) return false;
+    } else if (!formData.workType) {
+      return false;
+    }
+
+    if (!formData.leadCriticality?.trim()) return false;
+    if (!formData.leadSource?.trim()) return false;
+    if (!formData.leadStage?.trim()) return false;
+    if (!formData.nextFollowUpDate || !validateDate(formData.nextFollowUpDate)) return false;
+
+    // Optional field validations
+    if (formData.referencedBy && !validateStringLength(formData.referencedBy.trim(), 0, 100)) return false;
+    if (formData.eta && (!validateDate(formData.eta) || !validateFutureDate(formData.eta))) return false;
+    if (formData.leadDetails && !validateStringLength(formData.leadDetails.trim(), 0, 1000)) return false;
+
+    return true;
   };
 
   // Comprehensive validation function
@@ -1505,6 +1600,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   // Complete Registration for multi-worktype CREATE mode (called from Step 3)
   const handleCompleteRegistration = async () => {
+    if (!checkStep1Validity()) {
+      alert("Fill required fields");
+      return;
+    }
     setIsLoading(true);
 
     console.log("form data for lead :", formData);
@@ -1581,7 +1680,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           results[worktype] = { success: true, leadId };
 
           // POST: Upload documents for this worktype (if any)
-          const documents = multiWorktypeState.step2.documents[worktype] || [];
+          const worktypeDocuments = multiWorktypeState.step2.documents[worktype] || [];
+          const commonDocuments = multiWorktypeState.step2.documents['COMMON'] || [];
+          const documents = [...worktypeDocuments, ...commonDocuments];
+
           if (documents.length > 0) {
             try {
               console.log(`Uploading ${documents.length} documents for ${worktype}`);
@@ -1748,6 +1850,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
   // Unified Lead Creation Handlers (Single Mode)
   const handleUnifiedLeadCreation = async () => {
+    if (!checkStep1Validity()) {
+      alert("Fill required fields");
+      return;
+    }
     setIsLoading(true);
     try {
       const selectedWorktypes = (Array.isArray(formData.workType) ? formData.workType : []) as string[];
@@ -2104,6 +2210,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   };
 
   const handleSubmit = (e: React.FormEvent) => {
+    if (!checkStep1Validity()) {
+      alert("First fill required fields in step 1");
+      return;
+    }
     e.preventDefault();
 
     // Get the appropriate lead ID
@@ -2242,24 +2352,20 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               <div key={step.id} className="flex items-center">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isEditMode) {
-                      setCurrentStep(step.id);
-                    }
-                  }}
+                  onClick={() => setCurrentStep(step.id)}
                   className={`flex items-center space-x-2 ${currentStep === step.id
                     ? "text-blue-600"
                     : currentStep > step.id
                       ? "text-green-600"
                       : "text-gray-400"
-                    } ${isEditMode ? "cursor-pointer hover:text-blue-700" : ""}`}
+                    } cursor-pointer hover:text-blue-700`}
                 >
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === step.id
                       ? "bg-blue-100 text-blue-600"
                       : currentStep > step.id
                         ? "bg-green-100 text-green-600"
-                        : "bg-gray-100 text-gray-400"
+                        : "text-gray-500 bg-gray-100" // active-like style for clickable steps
                       }`}
                   >
                     {step.id}
@@ -3423,44 +3529,83 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       />
                       <ValidationError fieldName="projectValue" />
                     </div>
+                    {/* NEW FIELD: Project Zone */}
+                    {/* <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project Zone
+                      </label>
+                      <select
+                        name="projectZone"
+                        value={formData.projectZone}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Zone</option>
+                        {projectZones.map((zone) => (
+                          <option key={zone} value={zone}>
+                            {zone}
+                          </option>
+                        ))}
+                      </select>
+                    </div> */}
+
+                    {/* NEW FIELD: Project Zone */}
+                    <div>
+                      <SearchableSelect
+                        label="Project Zone"
+                        options={zones.map(z => ({ value: z.id, label: z.name }))}
+                        value={formData.projectZone}
+                        onChange={(value) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            projectZone: value,
+                            projectState: '',
+                            projectDistrict: ''
+                          }));
+                        }}
+                        placeholder="Select Zone"
+                      />
+                    </div>
+
                     {/* NEW FIELD: Project State */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Project State
-                      </label>
-                      <select
-                        name="projectState"
+                      <SearchableSelect
+                        label="Project State"
+                        options={states
+                          .filter(s => s.zone_id === formData.projectZone)
+                          .map(s => ({ value: s.id, label: s.name }))}
                         value={formData.projectState}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select State</option>
-                        {projectStates.map((state) => (
-                          <option key={state} value={state}>
-                            {state}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            projectState: value,
+                            projectDistrict: ''
+                          }));
+                        }}
+                        placeholder="Select State"
+                        disabled={!formData.projectZone}
+                      />
                     </div>
+
                     {/* NEW FIELD: Project District */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Project District
-                      </label>
-                      <select
-                        name="projectDistrict"
+                      <SearchableSelect
+                        label="Project District"
+                        options={districts
+                          .filter(d => d.state_id === formData.projectState)
+                          .map(d => ({ value: d.id, label: d.name }))}
                         value={formData.projectDistrict}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select District</option>
-                        {projectDistricts.map((district) => (
-                          <option key={district} value={district}>
-                            {district}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            projectDistrict: value
+                          }));
+                        }}
+                        placeholder="Select District"
+                        disabled={!formData.projectState}
+                      />
                     </div>
+
                     {/* NEW FIELD: Project City */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3479,20 +3624,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                           </option>
                         ))}
                       </select>
-                    </div>
-                    {/* NEW FIELD: Project Pincode */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Project Pincode
-                      </label>
-                      <input
-                        type="text"
-                        name="projectPincode"
-                        value={formData.projectPincode}
-                        onChange={handleInputChange}
-                        placeholder="Enter pincode"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
                     </div>
                     {/* NEW FIELD: Project Street */}
                     <div className="md:col-span-2">
@@ -3522,25 +3653,22 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-                    {/* NEW FIELD: Project Zone */}
+
+                    {/* NEW FIELD: Project Pincode */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Project Zone
+                        Project Pincode
                       </label>
-                      <select
-                        name="projectZone"
-                        value={formData.projectZone}
+                      <input
+                        type="text"
+                        name="projectPincode"
+                        value={formData.projectPincode}
                         onChange={handleInputChange}
+                        placeholder="Enter pincode"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select Zone</option>
-                        {projectZones.map((zone) => (
-                          <option key={zone} value={zone}>
-                            {zone}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
+
                     {/* NEW FIELD: Project Current Status */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -4529,40 +4657,41 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               <div className="space-y-6">
                 {!isEditMode && creationMode === 'multiple' && Array.isArray(formData.workType) && formData.workType.length > 0 ? (
                   // Multi-worktype mode: show upload per worktype
-                  formData.workType.map((worktype: string) => (
-                    <div key={worktype} className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                        Documents for: {worktype}
+                  <div className="space-y-6">
+                    {/* COMMON FILES SECTION */}
+                    <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                        Common Documents (Applied to all selected work types)
                       </h4>
                       <div>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                          <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-xs text-gray-600 mb-2">
-                            Upload documents for {worktype}
+                        <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center bg-white">
+                          <Upload className="h-8 w-8 text-blue-400 mx-auto mb-2" />
+                          <p className="text-xs text-blue-600 mb-2">
+                            Upload common documents for all leads
                           </p>
                           <input
                             type="file"
                             multiple
                             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
-                            onChange={(e) => handleFileUpload(e, worktype)}
+                            onChange={(e) => handleFileUpload(e, 'COMMON')}
                             className="hidden"
-                            id={`file-upload-${worktype}`}
+                            id="file-upload-common"
                           />
                           <label
-                            htmlFor={`file-upload-${worktype}`}
+                            htmlFor="file-upload-common"
                             className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
                           >
-                            Choose Files
+                            Choose Common Files
                           </label>
                         </div>
 
-                        {multiWorktypeState.step2.documents[worktype] &&
-                          multiWorktypeState.step2.documents[worktype].length > 0 && (
+                        {multiWorktypeState.step2.documents['COMMON'] &&
+                          multiWorktypeState.step2.documents['COMMON'].length > 0 && (
                             <div className="mt-3 space-y-2">
-                              {multiWorktypeState.step2.documents[worktype].map((item, idx) => (
+                              {multiWorktypeState.step2.documents['COMMON'].map((item, idx) => (
                                 <div
                                   key={idx}
-                                  className="flex flex-col p-2 bg-gray-50 rounded text-xs"
+                                  className="flex flex-col p-2 bg-white border border-blue-100 rounded text-xs"
                                 >
                                   <div className="flex items-center justify-between mb-2">
                                     <span className="truncate font-medium">{item.file.name}</span>
@@ -4574,7 +4703,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                                           step2: {
                                             documents: {
                                               ...prev.step2.documents,
-                                              [worktype]: prev.step2.documents[worktype].filter(
+                                              'COMMON': prev.step2.documents['COMMON'].filter(
                                                 (_, i) => i !== idx
                                               ),
                                             },
@@ -4590,7 +4719,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                                     type="text"
                                     placeholder="Add note for this file..."
                                     value={item.note || ""}
-                                    onChange={(e) => handleFileNoteChange(idx, e.target.value, worktype)}
+                                    onChange={(e) => handleFileNoteChange(idx, e.target.value, 'COMMON')}
                                     className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                   />
                                 </div>
@@ -4599,7 +4728,80 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                           )}
                       </div>
                     </div>
-                  ))
+
+                    {/* Worktype specific files */}
+                    {formData.workType.map((worktype: string) => (
+                      <div key={worktype} className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                          Documents for: {worktype}
+                        </h4>
+                        <div>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-xs text-gray-600 mb-2">
+                              Upload documents for {worktype}
+                            </p>
+                            <input
+                              type="file"
+                              multiple
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.xls,.xlsx"
+                              onChange={(e) => handleFileUpload(e, worktype)}
+                              className="hidden"
+                              id={`file-upload-${worktype}`}
+                            />
+                            <label
+                              htmlFor={`file-upload-${worktype}`}
+                              className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                            >
+                              Choose Files
+                            </label>
+                          </div>
+
+                          {multiWorktypeState.step2.documents[worktype] &&
+                            multiWorktypeState.step2.documents[worktype].length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                {multiWorktypeState.step2.documents[worktype].map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex flex-col p-2 bg-gray-50 rounded text-xs"
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="truncate font-medium">{item.file.name}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMultiWorktypeState((prev) => ({
+                                            ...prev,
+                                            step2: {
+                                              documents: {
+                                                ...prev.step2.documents,
+                                                [worktype]: prev.step2.documents[worktype].filter(
+                                                  (_, i) => i !== idx
+                                                ),
+                                              },
+                                            },
+                                          }));
+                                        }}
+                                        className="text-red-600 hover:text-red-800 ml-2"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                    <input
+                                      type="text"
+                                      placeholder="Add note for this file..."
+                                      value={item.note || ""}
+                                      onChange={(e) => handleFileNoteChange(idx, e.target.value, worktype)}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   // Edit mode or single worktype: original layout
                   <div>
@@ -4954,8 +5156,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       <button
                         type="button"
                         onClick={handleCompleteRegistration}
-                        disabled={isLoading}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-purple-600 hover:bg-purple-700"
+                        disabled={isLoading || !checkStep1Validity()}
+                        className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${isLoading || !checkStep1Validity() ? "bg-purple-400 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700"}`}
                       >
                         {isLoading ? "Processing..." : "Complete Registration"}
                         <Save className="h-4 w-4 ml-2" />
@@ -4964,7 +5166,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       <button
                         type="button"
                         onClick={!isEditMode && creationMode === 'single' ? handleUnifiedLeadCreation : handleSubmit}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                        disabled={(creationMode === 'single' && !isEditMode) ? (isLoading || !checkStep1Validity()) : isLoading}
+                        className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${((creationMode === 'single' && !isEditMode && !checkStep1Validity()) || isLoading) ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
                       >
                         <Save className="h-4 w-4 mr-2" />
                         {creationMode === 'single' && !isEditMode ? "Create Unified Lead" : "Complete"}
