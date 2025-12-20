@@ -230,9 +230,11 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     communicationMode: person.communication_mode,
 
                   })) || [],
+                complianceFiles: branch.complianceFiles || [],
               })) || [],
             uploadedFiles:
               apiData.uploadedfiles || customer.uploadedFiles || [],
+            complianceFiles: apiData.compliancefiles || [],
           };
           console.log("Mapped enhanced customer:", mappedEnhancedCustomer);
           setMappedApiData(mappedEnhancedCustomer);
@@ -354,6 +356,57 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
     // fallback
     return File;
   }
+
+  // Helper function to render HO level compliance file
+  const renderComplianceFile = (files: any[], documentType: string) => {
+    const file = files?.find(f => f.documentType === documentType && f.entityLevel === 'HO');
+    console.log("file", file);
+    if (!file) return null;
+
+    const Icon = getIconByMime(file.mime, file.originalName);
+    const sizeLabel = formatBytes(file.size);
+
+    return (
+      <a
+        href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${file.customerId}/compliance-files/${file.id}/download`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-xs"
+      >
+        <Icon className="h-4 w-4 text-blue-600 mr-2" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 truncate" title={file.originalName}>{file.originalName}</p>
+          <p className="text-gray-500">{sizeLabel}</p>
+        </div>
+        <Download className="h-3 w-3 text-gray-400 ml-2" />
+      </a>
+    );
+  };
+
+  // Helper function to render branch level compliance file
+  const renderBranchComplianceFile = (files: any[], documentType: string) => {
+    const file = files?.find(f => f.documentType === documentType && f.entityLevel === 'BRANCH');
+    if (!file) return null;
+
+    const Icon = getIconByMime(file.mime, file.originalName);
+    const sizeLabel = formatBytes(file.size);
+
+    return (
+      <a
+        href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${file.customerId}/compliance-files/${file.id}/download`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-xs"
+      >
+        <Icon className="h-4 w-4 text-blue-600 mr-2" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 truncate" title={file.originalName}>{file.originalName}</p>
+          <p className="text-gray-500">{sizeLabel}</p>
+        </div>
+        <Download className="h-3 w-3 text-gray-400 ml-2" />
+      </a>
+    );
+  };
 
   const [activeTab, setActiveTab] = useState("general");
 
@@ -772,31 +825,37 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex items-start space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm text-gray-500">GST Number</p>
                     <p className="text-sm font-medium text-gray-900">
                       {mappedApiData.gstNumber}
                     </p>
+                    {/* GST File Display */}
+                    {renderComplianceFile(mappedApiData.complianceFiles, 'GST')}
                   </div>
                 </div>
 
                 <div className="flex items-start space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm text-gray-500">PAN Number</p>
                     <p className="text-sm font-medium text-gray-900">
                       {mappedApiData.panNumber}
                     </p>
+                    {/* PAN File Display */}
+                    {renderComplianceFile(mappedApiData.complianceFiles, 'PAN')}
                   </div>
                 </div>
 
                 <div className="flex items-start space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm text-gray-500">TAN Number</p>
                     <p className="text-sm font-medium text-gray-900">
                       {mappedApiData.tanNumber}
                     </p>
+                    {/* TAN File Display */}
+                    {renderComplianceFile(mappedApiData.complianceFiles, 'TAN')}
                   </div>
                 </div>
               </div>
@@ -846,6 +905,12 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                       {mappedApiData.ifscCode}
                     </p>
                   </div>
+                </div>
+
+                {/* Bank Document Display */}
+                <div className="md:col-span-3">
+                  <p className="text-sm text-gray-500 mb-2">Bank Documents</p>
+                  {renderComplianceFile(mappedApiData.complianceFiles, 'BANK')}
                 </div>
               </div>
             </div>
@@ -941,7 +1006,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   {/* Branch Header */}
                   <div className="border-b pb-4">
                     <h3 className="text-xl font-semibold text-gray-900">
-                      {branch.branchName}
+                      {branch.nameOfBranchProject}
                     </h3>
                   </div>
 
@@ -1121,31 +1186,37 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div className="flex items-start space-x-3">
                         <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm text-gray-500">GST Number</p>
                           <p className="text-sm font-medium text-gray-900">
                             {branch.gstNumber}
                           </p>
+                          {/* Branch GST File Display */}
+                          {renderBranchComplianceFile(branch.complianceFiles, 'GST')}
                         </div>
                       </div>
 
                       <div className="flex items-start space-x-3">
                         <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm text-gray-500">PAN Number</p>
                           <p className="text-sm font-medium text-gray-900">
                             {branch.panNumber}
                           </p>
+                          {/* Branch PAN File Display */}
+                          {renderBranchComplianceFile(branch.complianceFiles, 'PAN')}
                         </div>
                       </div>
 
                       <div className="flex items-start space-x-3">
                         <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm text-gray-500">TAN Number</p>
                           <p className="text-sm font-medium text-gray-900">
                             {branch.tanNumber}
                           </p>
+                          {/* Branch TAN File Display */}
+                          {renderBranchComplianceFile(branch.complianceFiles, 'TAN')}
                         </div>
                       </div>
                     </div>
@@ -1196,6 +1267,12 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                           </p>
                         </div>
                       </div>
+
+                      {/* Branch Bank Document Display */}
+                      <div className="md:col-span-3">
+                        <p className="text-sm text-gray-500 mb-2">Bank Documents</p>
+                        {renderBranchComplianceFile(branch.complianceFiles, 'BANK')}
+                      </div>
                     </div>
                   </div>
 
@@ -1245,8 +1322,9 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+              }
+            </div >
           )
         }
 

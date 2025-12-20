@@ -24,6 +24,7 @@ import {
 import useNotifications from '../../../hook/useNotifications';
 import { useCRM } from '../../../context/CRMContext';
 import { log } from "console";
+import ComplianceFileUpload from '../../../components/ComplianceFileUpload';
 
 interface AddCustomerModalProps {
   isOpen: boolean;
@@ -149,11 +150,36 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [activeFileTab, setActiveFileTab] = useState<number>(0);
 
   const [fieldChanges, setFieldChanges] = useState<Record<string, any>>({});
+
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(
-    null
+    initialData?.customer_id || initialData?.id || null
   );
   const [createdBranches, setCreatedBranches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // File queue for HO level compliance documents (General Information section)
+  const [pendingFiles, setPendingFiles] = useState<{
+    PAN: File | null;
+    TAN: File | null;
+    GST: File | null;
+    BANK: File | null;
+  }>({
+    PAN: null,
+    TAN: null,
+    GST: null,
+    BANK: null,
+  });
+
+  // File queue for Branch level compliance documents (Branch Information section)
+  // Structure: { branchTempId: { PAN: File, TAN: File, GST: File, BANK: File } }
+  const [pendingBranchFiles, setPendingBranchFiles] = useState<
+    Record<string, {
+      PAN: File | null;
+      TAN: File | null;
+      GST: File | null;
+      BANK: File | null;
+    }>
+  >({});
 
   // Validation states
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
@@ -1135,34 +1161,34 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     }));
   };
 
-  const copyFromCustomerDetails = (branchId: string) => {
-    setFormData((prev: typeof formData) => ({
-      ...prev,
-      branches: prev.branches.map((branch: Branch) =>
-        branch.id === branchId
-          ? {
-            ...branch,
-            contactNumber: prev.contactNo,
-            email: prev.email,
-            country: prev.country,
-            currency: prev.currency.length > 0 ? prev.currency[0] : "",
-            state: prev.state,
-            zone: prev.zone,
-            district: prev.district,
-            city: prev.city,
-            pincode: prev.pincode,
-            contactPersons: [...prev.contactPersons],
-            gstNumber: prev.gstNumber || branch.gstNumber || "",
-            panNumber: prev.panNumber || branch.panNumber || "",
-            tanNumber: prev.tanNumber || branch.tanNumber || "",
-            bankName: prev.bankName || branch.bankName || "",
-            bankAccountNumber: prev.bankAccountNumber || branch.bankAccountNumber || "",
-            ifscCode: prev.ifscCode || branch.ifscCode || "",
-          }
-          : branch
-      ),
-    }));
-  };
+  // const copyFromCustomerDetails = (branchId: string) => {
+  //   setFormData((prev: typeof formData) => ({
+  //     ...prev,
+  //     branches: prev.branches.map((branch: Branch) =>
+  //       branch.id === branchId
+  //         ? {
+  //           ...branch,
+  //           contactNumber: prev.contactNo,
+  //           email: prev.email,
+  //           country: prev.country,
+  //           currency: prev.currency.length > 0 ? prev.currency[0] : "",
+  //           state: prev.state,
+  //           zone: prev.zone,
+  //           district: prev.district,
+  //           city: prev.city,
+  //           pincode: prev.pincode,
+  //           contactPersons: [...prev.contactPersons],
+  //           gstNumber: prev.gstNumber || branch.gstNumber || "",
+  //           panNumber: prev.panNumber || branch.panNumber || "",
+  //           tanNumber: prev.tanNumber || branch.tanNumber || "",
+  //           bankName: prev.bankName || branch.bankName || "",
+  //           bankAccountNumber: prev.bankAccountNumber || branch.bankAccountNumber || "",
+  //           ifscCode: prev.ifscCode || branch.ifscCode || "",
+  //         }
+  //         : branch
+  //     ),
+  //   }));
+  // };
 
   const updateBranch = (id: string, field: string, value: string) => {
     setFormData((prev: typeof formData) => ({
@@ -1883,6 +1909,227 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     setActiveFileTab((prev) => (prev > 0 ? prev - 1 : 0));
   };
 
+  // Upload pending files after customer creation (File Queue System)
+  const uploadPendingFiles = async (customerId: string) => {
+    const uploadPromises: Promise<any>[] = [];
+
+    try {
+      // Import the upload function
+      const { uploadComplianceFile } = await import('../../../utils/customerApi');
+
+      // Upload PAN if selected
+      if (pendingFiles.PAN) {
+        console.log('Uploading pending PAN file...');
+        uploadPromises.push(
+          uploadComplianceFile(
+            customerId,
+            pendingFiles.PAN,
+            'PAN',
+            'HO',
+            null,
+            currentUserId
+          )
+        );
+      }
+
+      // Upload TAN if selected
+      if (pendingFiles.TAN) {
+        console.log('Uploading pending TAN file...');
+        uploadPromises.push(
+          uploadComplianceFile(
+            customerId,
+            pendingFiles.TAN,
+            'TAN',
+            'HO',
+            null,
+            currentUserId
+          )
+        );
+      }
+
+      // Upload GST if selected
+      if (pendingFiles.GST) {
+        console.log('Uploading pending GST file...');
+        uploadPromises.push(
+          uploadComplianceFile(
+            customerId,
+            pendingFiles.GST,
+            'GST',
+            'HO',
+            null,
+            currentUserId
+          )
+        );
+      }
+
+      // Upload BANK if selected
+      if (pendingFiles.BANK) {
+        console.log('Uploading pending BANK file...');
+        uploadPromises.push(
+          uploadComplianceFile(
+            customerId,
+            pendingFiles.BANK,
+            'BANK',
+            'HO',
+            null,
+            currentUserId
+          )
+        );
+      }
+
+      // Wait for all uploads to complete
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+        console.log('All pending files uploaded successfully');
+
+
+
+        // Clear pending files after successful upload
+        setPendingFiles({
+          PAN: null,
+          TAN: null,
+          GST: null,
+          BANK: null,
+        });
+      }
+    } catch (error) {
+      console.error('Error uploading pending files:', error);
+      // Don't throw error - allow user to continue even if upload fails
+      // They can upload manually later
+    }
+  };
+
+  // Upload pending branch files after branch creation (File Queue System for Branches)
+  const uploadPendingBranchFiles = async (branchTempId: string, createdBranchId: string) => {
+    console.log('Uploading pending branch files...', branchTempId, createdBranchId);
+    const branchPendingFiles = pendingBranchFiles[branchTempId];
+    if (!branchPendingFiles) return;
+
+    const uploadPromises: Promise<any>[] = [];
+
+    try {
+      // Import the upload function
+      const { uploadComplianceFile } = await import('../../../utils/customerApi');
+
+      // Upload PAN if selected
+      if (branchPendingFiles.PAN) {
+        console.log(`Uploading pending PAN file for branch ${createdBranchId}...`);
+        uploadPromises.push(
+          uploadComplianceFile(
+            createdCustomerId!,
+            branchPendingFiles.PAN,
+            'PAN',
+            'BRANCH',
+            createdBranchId,
+            currentUserId
+          )
+        );
+      }
+
+      // Upload TAN if selected
+      if (branchPendingFiles.TAN) {
+        console.log(`Uploading pending TAN file for branch ${createdBranchId}...`);
+        uploadPromises.push(
+          uploadComplianceFile(
+            createdCustomerId!,
+            branchPendingFiles.TAN,
+            'TAN',
+            'BRANCH',
+            createdBranchId,
+            currentUserId
+          )
+        );
+      }
+
+      // Upload GST if selected
+      if (branchPendingFiles.GST) {
+        console.log(`Uploading pending GST file for branch ${createdBranchId}...`);
+        uploadPromises.push(
+          uploadComplianceFile(
+            createdCustomerId!,
+            branchPendingFiles.GST,
+            'GST',
+            'BRANCH',
+            createdBranchId,
+            currentUserId
+          )
+        );
+      }
+
+      // Upload BANK if selected
+      if (branchPendingFiles.BANK) {
+        console.log(`Uploading pending BANK file for branch ${createdBranchId}...`);
+        uploadPromises.push(
+          uploadComplianceFile(
+            createdCustomerId!,
+            branchPendingFiles.BANK,
+            'BANK',
+            'BRANCH',
+            createdBranchId,
+            currentUserId
+          )
+        );
+      }
+
+      // Wait for all uploads to complete
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+        console.log(`All pending files uploaded successfully for branch ${createdBranchId}`);
+
+        // Clear pending files for this branch after successful upload
+        setPendingBranchFiles(prev => {
+          const updated = { ...prev };
+          delete updated[branchTempId];
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error(`Error uploading pending files for branch ${createdBranchId}:`, error);
+      // Don't throw error - allow user to continue even if upload fails
+    }
+  };
+
+  // Copy Billing Address, Compliance, and Bank Details from Customer (HO) to Branch
+  const copyFromCustomerDetails = (branchId: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      branches: prev.branches.map((branch: any) =>
+        branch.id === branchId
+          ? {
+            ...branch,
+            // Billing Address fields
+            contactNumber: prev.hoContactNumber,
+            currency: prev.currency.length > 0 ? prev.currency[0] : "",
+            email: prev.hoEmailId,
+            country: prev.country,
+            state: prev.state,
+            district: prev.district,
+            city: prev.city,
+            pincode: prev.pincode,
+            zone: prev.zone,
+            street: prev.street,
+            googleLocation: prev.googleLocation,
+            customerCategory: prev.customerCategory,
+            riskLevel: prev.riskLevel,
+            creditDays: prev.creditDays,
+            currentStatus: prev.currentStatus,
+            blacklistReason: prev.blacklistReason,
+            contactPersons: [...prev.contactPersons],
+            // Compliance fields
+            gstNumber: prev.gstNumber,
+            panNumber: prev.panNumber,
+            tanNumber: prev.tanNumber,
+            // Bank Details fields
+            bankName: prev.bankName,
+            bankAccountNumber: prev.bankAccountNumber,
+            branchName: prev.branchName,
+            ifscCode: prev.ifscCode,
+          }
+          : branch
+      ),
+    }));
+  };
+
   const isEditMode = Boolean(initialData);
 
   const handleNext = async () => {
@@ -1997,12 +2244,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         }
       });
 
-      setBranchErrors(branchValidationErrors);
+      // setBranchErrors(branchValidationErrors);
 
-      if (Object.keys(branchValidationErrors).length > 0) {
-        alert("Please fix branch validation errors before proceeding");
-        return;
-      }
+      // if (Object.keys(branchValidationErrors).length > 0) {
+      //   alert("Please fix branch validation errors before proceeding");
+      //   return;
+      // }
     }
 
     // If we're in register mode (not edit mode) and on step 1
@@ -2118,8 +2365,13 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           );
         }
 
-        // Move to next step
+        // Auto-upload pending compliance files (File Queue System)
+        await uploadPendingFiles(customerId);
         setCurrentStep(currentStep + 1);
+
+        // Don't auto-advance to next step - stay on Step 1 to show uploaded files
+        // User will manually click "Next" when ready to proceed to Step 2
+        // setCurrentStep(currentStep + 1); // REMOVED: Let user see uploaded files first
       } catch (error) {
         console.error("Error in step 1 API calls:", error);
         // You might want to show a toast notification or error message here
@@ -2176,6 +2428,23 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           const createdBranchesData =
             branchResponse.data.data || branchResponse.data;
           setCreatedBranches(createdBranchesData);
+
+          // Auto-upload pending branch files (File Queue System for Branches)
+          // Map temp branch IDs to created branch IDs and upload files
+          if (createdBranchesData && createdBranchesData.length > 0) {
+            const uploadPromises = formData.branches.map(async (branch: Branch, index: number) => {
+              const createdBranch = createdBranchesData[index];
+              // API returns 'id' field for branch ID, not 'customer_branch_id'
+              const branchId = createdBranch?.id || createdBranch?.customer_branch_id;
+              console.log(`Processing branch ${index}:`, { branchId: branch.id, createdBranchId: branchId });
+
+              if (createdBranch && branchId) {
+                await uploadPendingBranchFiles(branch.id, branchId);
+              }
+            });
+            await Promise.all(uploadPromises);
+            console.log('Branch file uploads completed');
+          }
 
           // Update customer status from DRAFT to PENDING since branches are now completed
           if (createdCustomerId) {
@@ -3306,7 +3575,17 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     data: any,
     onChange: (field: string, value: any) => void,
     errors: any,
-    readOnly: boolean = false
+    readOnly: boolean = false,
+    isBranch: boolean = false,
+    branchId?: string,
+    queueCallbacks?: {
+      onPANSelect?: (file: File | null) => void;
+      onTANSelect?: (file: File | null) => void;
+      onGSTSelect?: (file: File | null) => void;
+      queuedPAN?: File | null;
+      queuedTAN?: File | null;
+      queuedGST?: File | null;
+    }
   ) => (
     <div>
       <h4 className="text-lg font-medium text-gray-900 mb-4">Compliance</h4>
@@ -3331,6 +3610,46 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           {errors?.gstNumber && (
             <p className="text-red-500 text-xs mt-1">{errors.gstNumber}</p>
           )}
+          {createdCustomerId && isEditMode && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={createdCustomerId}
+                documentType="GST"
+                entityLevel={isBranch ? "BRANCH" : "HO"}
+                customerBranchId={isBranch ? branchId : null}
+                uploadBy={currentUserId}
+                disabled={!createdCustomerId}
+              />
+            </div>
+          )}
+          {/* Queue mode: Show upload before customer creation */}
+          {!createdCustomerId && !isBranch && !isEditMode && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={null}
+                documentType="GST"
+                entityLevel="HO"
+                customerBranchId={null}
+                uploadBy={currentUserId}
+                onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, GST: file }))}
+                queuedFile={pendingFiles.GST}
+              />
+            </div>
+          )}
+          {/* Branch queue mode: Show upload for branches before branch creation */}
+          {isBranch && !isEditMode && queueCallbacks?.onGSTSelect && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={null}
+                documentType="GST"
+                entityLevel="BRANCH"
+                customerBranchId={null}
+                uploadBy={currentUserId}
+                onFileSelect={queueCallbacks.onGSTSelect}
+                queuedFile={queueCallbacks.queuedGST || null}
+              />
+            </div>
+          )}
         </div>
         {/* PAN */}
         <div>
@@ -3351,6 +3670,46 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           />
           {errors?.panNumber && (
             <p className="text-red-500 text-xs mt-1">{errors.panNumber}</p>
+          )}
+          {createdCustomerId && isEditMode && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={createdCustomerId}
+                documentType="PAN"
+                entityLevel={isBranch ? "BRANCH" : "HO"}
+                customerBranchId={isBranch ? branchId : null}
+                uploadBy={currentUserId}
+                disabled={!createdCustomerId}
+              />
+            </div>
+          )}
+          {/* Queue mode: Show upload before customer creation */}
+          {!createdCustomerId && !isEditMode && !isBranch && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={null}
+                documentType="PAN"
+                entityLevel="HO"
+                customerBranchId={null}
+                uploadBy={currentUserId}
+                onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, PAN: file }))}
+                queuedFile={pendingFiles.PAN}
+              />
+            </div>
+          )}
+          {/* Branch queue mode: Show upload for branches before branch creation */}
+          {isBranch && !isEditMode && queueCallbacks?.onPANSelect && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={null}
+                documentType="PAN"
+                entityLevel="BRANCH"
+                customerBranchId={null}
+                uploadBy={currentUserId}
+                onFileSelect={queueCallbacks.onPANSelect}
+                queuedFile={queueCallbacks.queuedPAN || null}
+              />
+            </div>
           )}
         </div>
         {/* TAN */}
@@ -3373,6 +3732,46 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           {errors?.tanNumber && (
             <p className="text-red-500 text-xs mt-1">{errors.tanNumber}</p>
           )}
+          {createdCustomerId && isEditMode && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={createdCustomerId}
+                documentType="TAN"
+                entityLevel={isBranch ? "BRANCH" : "HO"}
+                customerBranchId={isBranch ? branchId : null}
+                uploadBy={currentUserId}
+                disabled={!createdCustomerId}
+              />
+            </div>
+          )}
+          {/* Queue mode: Show upload before customer creation */}
+          {!createdCustomerId && !isEditMode && !isBranch && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={null}
+                documentType="TAN"
+                entityLevel="HO"
+                customerBranchId={null}
+                uploadBy={currentUserId}
+                onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, TAN: file }))}
+                queuedFile={pendingFiles.TAN}
+              />
+            </div>
+          )}
+          {/* Branch queue mode: Show upload for branches before branch creation */}
+          {isBranch && !isEditMode && queueCallbacks?.onTANSelect && (
+            <div className="mt-2">
+              <ComplianceFileUpload
+                customerId={null}
+                documentType="TAN"
+                entityLevel="BRANCH"
+                customerBranchId={null}
+                uploadBy={currentUserId}
+                onFileSelect={queueCallbacks.onTANSelect}
+                queuedFile={queueCallbacks.queuedTAN || null}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -3383,7 +3782,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     onChange: (field: string, value: any) => void,
     errors: any,
     isBranch: boolean = false,
-    readOnly: boolean = false
+    readOnly: boolean = false,
+    branchId?: string,
+    queueCallbacks?: {
+      onBANKSelect?: (file: File | null) => void;
+      queuedBANK?: File | null;
+    }
   ) => (
     <div>
       <h4 className="text-lg font-medium text-gray-900 mb-4">Bank Details</h4>
@@ -3454,18 +3858,71 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           )}
         </div>
         {/* Branch Name (Bank Branch) - Customer Only */}
-        {!isBranch && (
-          <div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Branch Name (Bank)
+          </label>
+          <input
+            type="text"
+            name="branchName"
+            value={data.branchName}
+            onChange={(e) => onChange("branchName", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Bank Branch Name"
+          />
+        </div>
+
+        {/* Bank Document Upload */}
+        {createdCustomerId && isEditMode && (
+          <div className="md:col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Branch Name (Bank)
+              Bank Documents
             </label>
-            <input
-              type="text"
-              name="branchName"
-              value={data.branchName}
-              onChange={(e) => onChange("branchName", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Bank Branch Name"
+            <ComplianceFileUpload
+              customerId={createdCustomerId}
+              documentType="BANK"
+              entityLevel={isBranch ? "BRANCH" : "HO"}
+              customerBranchId={isBranch ? branchId : null}
+              uploadBy={currentUserId}
+              disabled={!createdCustomerId}
+              label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
+            />
+          </div>
+        )}
+        {/* Queue mode: Show upload before customer creation */}
+        {!createdCustomerId && !isEditMode && !isBranch && (
+          <div className="md:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bank Documents
+            </label>
+            <ComplianceFileUpload
+              customerId={null}
+              documentType="BANK"
+              entityLevel="HO"
+              customerBranchId={null}
+              uploadBy={currentUserId}
+              onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, BANK: file }))}
+              queuedFile={pendingFiles.BANK}
+              label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
+            />
+          </div>
+        )}
+        {/* Branch queue mode: Show upload for branches before branch creation */}
+        {isBranch && !isEditMode && queueCallbacks?.onBANKSelect && (
+          <div className="md:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bank Documents
+            </label>
+            <ComplianceFileUpload
+              customerId={null}
+              documentType="BANK"
+              entityLevel="BRANCH"
+              customerBranchId={null}
+              uploadBy={currentUserId}
+              onFileSelect={queueCallbacks.onBANKSelect}
+              queuedFile={queueCallbacks.queuedBANK || null}
+              label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
             />
           </div>
         )}
@@ -3903,135 +4360,52 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       !branch.isEditing
                     )}
 
+
                     {/* Branch Compliance Section */}
-                    <div className="mt-6">
-                      <h4 className="text-lg font-medium text-gray-900 mb-4">
-                        Compliance
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {/* GST Number */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            GST Number
-                          </label>
-                          <input
-                            type="text"
-                            value={branch.gstNumber || ""}
-                            onChange={(e) => updateBranch(branch.id, "gstNumber", e.target.value)}
-                            disabled={!branch.isEditing}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                            placeholder="22AAAAA0000A1Z5"
-                          />
-                        </div>
-
-                        {/* PAN Number */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            PAN Number
-                          </label>
-                          <input
-                            type="text"
-                            value={branch.panNumber || ""}
-                            onChange={(e) => updateBranch(branch.id, "panNumber", e.target.value)}
-                            disabled={!branch.isEditing}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                            placeholder="ABCDE1234F"
-                          />
-                        </div>
-
-                        {/* TAN Number */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            TAN Number
-                          </label>
-                          <input
-                            type="text"
-                            value={branch.tanNumber || ""}
-                            onChange={(e) => updateBranch(branch.id, "tanNumber", e.target.value)}
-                            disabled={!branch.isEditing}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                            placeholder="ABCD12345E"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    {renderCompliance(
+                      branch,
+                      (field, value) => updateBranch(branch.id, field, value),
+                      branchErrors[branch.id],
+                      !branch.isEditing,
+                      true,
+                      branch.id,
+                      // Queue mode callbacks for branches
+                      {
+                        onPANSelect: (file) => setPendingBranchFiles(prev => ({
+                          ...prev,
+                          [branch.id]: { ...prev[branch.id], PAN: file, TAN: prev[branch.id]?.TAN || null, GST: prev[branch.id]?.GST || null, BANK: prev[branch.id]?.BANK || null }
+                        })),
+                        onTANSelect: (file) => setPendingBranchFiles(prev => ({
+                          ...prev,
+                          [branch.id]: { ...prev[branch.id], TAN: file, PAN: prev[branch.id]?.PAN || null, GST: prev[branch.id]?.GST || null, BANK: prev[branch.id]?.BANK || null }
+                        })),
+                        onGSTSelect: (file) => setPendingBranchFiles(prev => ({
+                          ...prev,
+                          [branch.id]: { ...prev[branch.id], GST: file, PAN: prev[branch.id]?.PAN || null, TAN: prev[branch.id]?.TAN || null, BANK: prev[branch.id]?.BANK || null }
+                        })),
+                        queuedPAN: pendingBranchFiles[branch.id]?.PAN || null,
+                        queuedTAN: pendingBranchFiles[branch.id]?.TAN || null,
+                        queuedGST: pendingBranchFiles[branch.id]?.GST || null,
+                      }
+                    )}
 
                     {/* Branch Bank Details Section */}
-                    <div className="mt-6">
-                      <h4 className="text-lg font-medium text-gray-900 mb-4">
-                        Bank Details
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {/* Branch Name */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Branch Name *
-                          </label>
-                          <input
-                            type="text"
-                            value={branch.branchName}
-                            onChange={(e) => updateBranch(branch.id, "branchName", e.target.value)}
-                            disabled={!branch.isEditing}
-                            required
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${branchErrors[branch.id]?.branchName
-                              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-                              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                              } ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                            placeholder="Branch name"
-                          />
-                          {branchErrors[branch.id]?.branchName && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {branchErrors[branch.id].branchName}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Bank Name */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Bank Name
-                          </label>
-                          <input
-                            type="text"
-                            value={branch.bankName || ""}
-                            onChange={(e) => updateBranch(branch.id, "bankName", e.target.value)}
-                            disabled={!branch.isEditing}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                            placeholder="Bank name"
-                          />
-                        </div>
-
-                        {/* Bank Account Number */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Bank Account Number
-                          </label>
-                          <input
-                            type="text"
-                            value={branch.bankAccountNumber || ""}
-                            onChange={(e) => updateBranch(branch.id, "bankAccountNumber", e.target.value)}
-                            disabled={!branch.isEditing}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                            placeholder="Account number"
-                          />
-                        </div>
-
-                        {/* IFSC Code */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            IFSC Code
-                          </label>
-                          <input
-                            type="text"
-                            value={branch.ifscCode || ""}
-                            onChange={(e) => updateBranch(branch.id, "ifscCode", e.target.value)}
-                            disabled={!branch.isEditing}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 border-gray-300 focus:ring-blue-500 ${!branch.isEditing ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                            placeholder="ABCD0123456"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    {renderBankDetails(
+                      branch,
+                      (field, value) => updateBranch(branch.id, field, value),
+                      branchErrors[branch.id],
+                      true,
+                      !branch.isEditing,
+                      branch.id,
+                      // Queue mode callbacks for branches
+                      {
+                        onBANKSelect: (file) => setPendingBranchFiles(prev => ({
+                          ...prev,
+                          [branch.id]: { ...prev[branch.id], BANK: file, PAN: prev[branch.id]?.PAN || null, TAN: prev[branch.id]?.TAN || null, GST: prev[branch.id]?.GST || null }
+                        })),
+                        queuedBANK: pendingBranchFiles[branch.id]?.BANK || null,
+                      }
+                    )}
 
                     {/* Branch Contact Persons */}
                     {/* Branch Contact Persons */}
