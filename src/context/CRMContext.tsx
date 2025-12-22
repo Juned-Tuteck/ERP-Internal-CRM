@@ -71,7 +71,7 @@ export const CRMProvider: React.FC<{ children: ReactNode }> = ({
     return userAccesses.some(
       (access) =>
         access.level_type === "MENU" &&
-        access.name.toLowerCase().includes(menuName.toLowerCase()) &&
+        access.name.toLowerCase() === menuName.toLowerCase() &&
         access.access_type === "READ" &&
         (access.parent_name === "CRM" || access.grandparent_name === "CRM")
     );
@@ -90,7 +90,7 @@ export const CRMProvider: React.FC<{ children: ReactNode }> = ({
     return userAccesses.some(
       (access) =>
         access.level_type === "SUBMENU" &&
-        access.name.toLowerCase().includes(submenuName.toLowerCase()) &&
+        access.name.toLowerCase() === submenuName.toLowerCase() &&
         access.access_type === "READ" &&
         access.grandparent_name === "CRM"
     );
