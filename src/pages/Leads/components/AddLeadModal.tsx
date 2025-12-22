@@ -3059,26 +3059,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Customer */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Customer *
-                      </label>
-                      <select
-                        name="businessName"
+                      <SearchableSelect
+                        label="Customer *"
+                        options={customers.map((customer) => ({
+                          value: customer.name,
+                          label: customer.name,
+                        }))}
                         value={formData.businessName}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.businessName
-                          ? "border-red-500"
-                          : "border-gray-300"
-                          }`}
-                      >
-                        <option value="">Select Business</option>
-                        {customers.map((customer) => (
-                          <option key={customer.id} value={customer.name}>
-                            {customer.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) =>
+                          handleInputChange({
+                            target: { name: "businessName", value },
+                          } as any)
+                        }
+                        placeholder="Select Business"
+                        error={!!validationErrors.businessName}
+                      />
                       <ValidationError fieldName="businessName" />
                     </div>
                     {/* Customer Branch */}
@@ -3142,25 +3137,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     </div>
                     {/* Referenced By */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Referenced By
-                      </label>
-                      <select
-                        name="referencedBy"
+                      <SearchableSelect
+                        label="Referenced By"
+                        options={users.map((user) => ({
+                          value: user.name,
+                          label: user.name,
+                        }))}
                         value={formData.referencedBy}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.referencedBy
-                          ? "border-red-500"
-                          : "border-gray-300"
-                          }`}
-                      >
-                        <option value="">Select User</option>
-                        {users.map((user) => (
-                          <option key={user.id} value={user.name}>
-                            {user.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) =>
+                          handleInputChange({
+                            target: { name: "referencedBy", value },
+                          } as any)
+                        }
+                        placeholder="Select User"
+                        error={!!validationErrors.referencedBy}
+                      />
                       <ValidationError fieldName="referencedBy" />
                     </div>
                     {/* Lead Type */}

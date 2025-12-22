@@ -1319,27 +1319,55 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     </div>
                   </div>
 
-                  {/* Involved Associates - Full Width */}
+                  {/* Competitors Section - Full Width */}
                   <div className="md:col-span-2">
-                    <div className="flex items-start space-x-3">
-                      <Users className="h-5 w-5 text-blue-400 mt-1" />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-500 mb-2">Competitors</p>
-                        {leadCompetitors &&
-                          leadCompetitors.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {leadCompetitors.map((a: any, idx: number) => (
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex-shrink-0">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Competitors</h4>
+                        {leadCompetitors && leadCompetitors.length > 0 ? (
+                          <div className="flex flex-wrap gap-2.5">
+                            {leadCompetitors.map((competitor: any, idx: number) => (
                               <div
                                 key={idx}
-                                className="inline-flex items-center px-3 py-1 rounded-half bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
+                                className="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200"
                               >
-                                <span className="mr-1 text-gray-700">{a.competitor_name} ---- </span>
-                                <span className="font-semibold">{a.win_probability} %</span>
+                                {/* Competitor Name */}
+                                <span className="text-sm font-medium text-gray-900">
+                                  {competitor.competitor_name}
+                                </span>
+
+                                {/* Divider */}
+                                <div className="h-4 w-px bg-gray-200"></div>
+
+                                {/* Win Probability Badge */}
+                                <div className="flex items-center gap-1.5">
+                                  <div className={`w-2 h-2 rounded-full ${competitor.win_probability >= 70 ? 'bg-red-500' :
+                                      competitor.win_probability >= 40 ? 'bg-amber-500' :
+                                        'bg-green-500'
+                                    }`}></div>
+                                  <span className={`text-sm font-semibold ${competitor.win_probability >= 70 ? 'text-red-700' :
+                                      competitor.win_probability >= 40 ? 'text-amber-700' :
+                                        'text-green-700'
+                                    }`}>
+                                    {competitor.win_probability}%
+                                  </span>
+                                </div>
+
+                                {/* Hover indicator */}
+                                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-blue-500 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left rounded-full"></div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">-</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-400">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <span>No competitors identified</span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1442,7 +1470,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(displayLead?.uploadedFiles ?? []).map((file: any) => {
                     const Icon = getIconByMime(file.mime, file.original_name);
                     const sizeLabel = formatBytes(file.size);
@@ -1453,30 +1481,55 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                         href={`${import.meta.env.VITE_API_BASE_URL}/lead-file/${displayLead.id}/files/${file.id}/download`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                        className="group relative flex flex-col p-4 bg-white border border-gray-200 rounded-xl hover:shadow-lg hover:border-blue-300 transition-all duration-200 overflow-hidden"
                       >
-                        <Icon className="h-8 w-8 text-blue-600 mr-3" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
-                            {file.original_name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {sizeLabel} • {file.mime ?? "unknown"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-3">
-                            <User className="inline-block h-4 w-4 " /><b>{file.created_by_name || "-"}</b>
-                          </p>
-                          {file.file_note && (
-                            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 italic">
-                              <span className="font-semibold not-italic">Note:</span> {file.file_note}
-                            </div>
-                          )}
+                        {/* Header with Icon and Download Button */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center justify-center w-12 h-12 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                            <Icon className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="flex items-center justify-center w-8 h-8 bg-gray-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Download className="h-4 w-4 text-gray-600" />
+                          </div>
                         </div>
 
-                        <Download className="h-4 w-4 text-gray-400 ml-3" />
+                        {/* File Name */}
+                        <h4
+                          className="text-sm font-semibold text-gray-900 truncate mb-1"
+                          title={file.original_name}
+                        >
+                          {file.original_name}
+                        </h4>
+
+                        {/* File Metadata */}
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                          <span className="font-medium">{sizeLabel}</span>
+                          <span className="text-gray-300">•</span>
+                          <span>{file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}</span>
+                        </div>
+
+                        {/* Uploaded By */}
+                        <div className="flex items-center gap-2 text-xs text-gray-600 pb-3 border-b border-gray-100">
+                          <User className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="font-medium">{file.created_by_name || "Unknown"}</span>
+                        </div>
+
+                        {/* File Note */}
+                        {file.file_note && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <svg className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <p className="text-xs text-gray-700 leading-relaxed">
+                                {file.file_note}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Hover Overlay Effect */}
+                        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
                       </a>
                     );
                   })}
