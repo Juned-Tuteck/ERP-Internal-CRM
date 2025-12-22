@@ -965,8 +965,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                       onClick={handleDesignHelpModalOpen}
                       disabled={designHelpSent}
                       className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${designHelpSent
-                          ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
-                          : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                        ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
+                        : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
                         }`}
                       title={designHelpSent ? 'This lead has already been assigned for design help.' : ''}
                     >
@@ -977,7 +977,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {(displayLead?.uploadedFiles ?? []).map((file) => {
+                  {(displayLead?.uploadedFiles ?? []).map((file: any) => {
                     const Icon = getIconByMime(file.mime, file.original_name);
                     const sizeLabel = formatBytes(file.size);
 
