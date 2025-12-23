@@ -61,7 +61,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'basic' | 'followup'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'followup' | 'assign'>('basic');
+
+  // Assign To state
+  const [selectedAssignee, setSelectedAssignee] = useState("");
+  const [usersWithLeadAccess, setUsersWithLeadAccess] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
 
   // Follow-up comment state
   const [newComment, setNewComment] = useState('');
@@ -302,6 +308,43 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     }
   };
 
+  // Fetch users with Lead menu access for Assign to dropdown
+  const fetchUsersWithLeadAccess = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/by-access-path?module=CRM&menu=Lead`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        }
+      );
+      const usersWithLeadMenu = response.data.data;
+
+      setUsersWithLeadAccess(
+        usersWithLeadMenu.map((user: any) => ({
+          id: user.id || user.user_id,
+          name: user.name || user.full_name || user.username,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching users with lead access:", error);
+      setUsersWithLeadAccess([]);
+    }
+  };
+
+  // Load users when Assign tab is active
+  useEffect(() => {
+    if (activeTab === 'assign') {
+      fetchUsersWithLeadAccess();
+      // Initialize selected assignee from current lead
+      const currentLead = leadDetails || lead;
+      if (currentLead?.assignedTo) {
+        setSelectedAssignee(currentLead.assignedTo);
+      }
+    }
+  }, [activeTab, leadDetails, lead]);
+
   // Handle design help modal open
   const handleDesignHelpModalOpen = () => {
     setShowDesignHelpModal(true);
@@ -339,6 +382,36 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       alert('Failed to send design help request. Please try again.');
     } finally {
       setIsSendingHelp(false);
+    }
+  };
+
+  const handleAssignUser = async () => {
+    const currentLead = leadDetails || lead;
+    if (!selectedAssignee) {
+      alert("Please select a user to assign.");
+      return;
+    }
+
+    if (window.confirm("Are you sure you want to assign this lead to the selected user?")) {
+      try {
+        setIsSubmitting(true);
+        const payload = {
+          assigned_user_id: selectedAssignee,
+        };
+
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/lead/${currentLead.id}`,
+          payload
+        );
+
+        alert("Lead assigned successfully!");
+        setRefreshTrigger(prev => prev + 1); // Refresh lead details
+      } catch (error) {
+        console.error("Error assigning lead:", error);
+        alert("Failed to assign lead. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -708,7 +781,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 >
                   {displayLead.approvalStatus || "pending"}
                 </span>
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <AlertTriangle
                     className={`h-4 w-4 mr-1 ${getCriticalityColor(
                       displayLead.leadCriticality
@@ -721,7 +794,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   >
                     {displayLead.leadCriticality}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
@@ -846,6 +919,15 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             >
               Follow-Up
             </button>
+            <button
+              onClick={() => setActiveTab('assign')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'assign'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Assign To
+            </button>
           </nav>
         </div>
 
@@ -892,7 +974,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <div className="flex items-center space-x-3">
                     <Clock className="h-5 w-5 text-gray-400" />
                     <div>
-                      <p className="text-sm text-gray-500">Days in Pipeline</p>
+                      <p className="text-sm text-gray-500">Lead Ageing </p>
                       <p className="text-sm font-medium text-gray-900">
                         {displayLead.submittedDate
                           ? Math.floor(
@@ -1345,12 +1427,12 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                                 {/* Win Probability Badge */}
                                 <div className="flex items-center gap-1.5">
                                   <div className={`w-2 h-2 rounded-full ${competitor.win_probability >= 70 ? 'bg-red-500' :
-                                      competitor.win_probability >= 40 ? 'bg-amber-500' :
-                                        'bg-green-500'
+                                    competitor.win_probability >= 40 ? 'bg-amber-500' :
+                                      'bg-green-500'
                                     }`}></div>
                                   <span className={`text-sm font-semibold ${competitor.win_probability >= 70 ? 'text-red-700' :
-                                      competitor.win_probability >= 40 ? 'text-amber-700' :
-                                        'text-green-700'
+                                    competitor.win_probability >= 40 ? 'text-amber-700' :
+                                      'text-green-700'
                                     }`}>
                                     {competitor.win_probability}%
                                   </span>
@@ -1537,7 +1619,6 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </div>
             </div>
           )}
-
           {activeTab === 'followup' && (
             <div className="space-y-6">
               {/* Add Comment Section */}
@@ -1626,6 +1707,45 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     </p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+          {activeTab === 'assign' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                  Assign Lead
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assign to
+                    </label>
+                    <select
+                      disabled={displayLead.approvalStatus.toLowerCase() != "approved"}
+                      value={selectedAssignee}
+                      onChange={(e) => setSelectedAssignee(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select User</option>
+                      {usersWithLeadAccess.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleAssignUser}
+                      disabled={isSubmitting || displayLead.approvalStatus.toLowerCase() != "approved"}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? 'Assigning...' : 'Assign User'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
