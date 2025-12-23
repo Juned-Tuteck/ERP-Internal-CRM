@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { useEffect } from "react";
 import {
-  Phone,
-  Mail,
   Building,
   Globe,
   Star,
@@ -13,29 +11,24 @@ import {
   Clock,
   FileText,
   Users,
-  Edit,
   CheckCircle,
   XCircle,
   GitPullRequestArrow,
   Link,
-  History,
-  Edit2,
-  Trash2,
   Image,
   FileSpreadsheet,
   File,
   Download,
-  FileCheck,
-  MessageSquare,
   SquarePen,
   User,
   FileBarChart,
   PauseCircle
 } from "lucide-react";
-import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
+import AddLeadModal from "./AddLeadModal";
 import axios from "axios";
 import { useCRM } from "../../../context/CRMContext";
-import { createProjectFromLead, CreateProjectRequest } from "../../../utils/projectApi";
+import { useToast } from '../../../components/Toast';
+// import { createProjectFromLead, CreateProjectRequest } from "../../../utils/projectApi";
 import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
 
 interface LeadDetailsProps {
@@ -45,11 +38,26 @@ interface LeadDetailsProps {
 
 const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [leadDetails, setLeadDetails] = useState<any>(null);
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showWinLossModal, setShowWinLossModal] = useState(false);
   const [winLossReason, setWinLossReason] = useState("");
   const [selectedOutcome, setSelectedOutcome] = useState<"Won" | "Lost" | "Hold">("Won");
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const [statusModalTab, setStatusModalTab] = useState<'closure' | 'other'>('closure');
+  const [winLossRemark, setWinLossRemark] = useState("");
+  const showHistoryModalHook = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = showHistoryModalHook;
+
+  const winLossReasons = [
+    "Price/Commercials",
+    "Technical Incompatibility",
+    "Competitor",
+    "Delivery Timeline",
+    "Service/Support",
+    "Budget Constraints",
+    "Other"
+  ];
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -274,6 +282,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       // Refresh comments list
       await fetchFollowUpComments(displayLead.id);
       setNewComment('');
+      showToast('Comment added successfully By ' + userData?.name, 'success');
     } catch (error) {
       console.error('Error adding comment:', error);
       alert('Failed to add comment. Please try again.');
@@ -287,7 +296,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     setIsLoadingEngineers(true);
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_AUTH_BASE_URL}/users`,
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/basic`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
         }
@@ -404,11 +413,11 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           payload
         );
 
-        alert("Lead assigned successfully!");
+        showToast("Lead assigned successfully!", "success");
         setRefreshTrigger(prev => prev + 1); // Refresh lead details
       } catch (error) {
         console.error("Error assigning lead:", error);
-        alert("Failed to assign lead. Please try again.");
+        showToast("Failed to assign lead. Please try again.", "error");
       } finally {
         setIsSubmitting(false);
       }
@@ -584,11 +593,30 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   const handleWinLossSubmit = async () => {
     try {
+      // Validation Logic
+      if (statusModalTab === 'closure') {
+        if (!winLossReason) {
+          alert("Reason is mandatory.");
+          return;
+        }
+        if (selectedOutcome === 'Lost' && !winLossRemark.trim()) {
+          alert("Remark is mandatory when status is Lost.");
+          return;
+        }
+      } else {
+        // Hold/Other tab
+        if (!winLossReason.trim()) {
+          alert("Reason is mandatory.");
+          return;
+        }
+      }
+
       setIsSubmitting(true);
 
       const payload: any = {
         reason: winLossReason,
         lead_stage: selectedOutcome,
+        remark: winLossRemark
       };
 
       if (selectedOutcome === "Hold") {
@@ -685,6 +713,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       // Close modal and reset form
       setShowWinLossModal(false);
       setWinLossReason("");
+      setWinLossRemark("");
+      setStatusModalTab('closure');
 
       // Refresh the lead details to show updated data
       setRefreshTrigger(prev => prev + 1);
@@ -1487,7 +1517,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   </div> */}
 
                   {/* Lead Details - Full Width */}
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2 border-t pt-2">
                     <div className="flex items-start space-x-3">
                       <FileText className="h-5 w-5 text-gray-400 mt-1" />
                       <div className="flex-1">
@@ -1768,77 +1798,121 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </button>
             </div>
 
-            <div className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Outcome
-                  </label>
-                  <div className="flex space-x-4">
-                    {displayLead.leadStage === "Quoted" && (
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="Won"
-                          checked={selectedOutcome === "Won"}
-                          onChange={(e) =>
-                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
-                          }
-                          className="mr-2"
-                        />
-                        <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                        <span className="text-sm text-green-600">Won</span>
-                      </label>
-                    )}
-                    {displayLead.leadStage === "Quoted" && (
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="Lost"
-                          checked={selectedOutcome === "Lost"}
-                          onChange={(e) =>
-                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
-                          }
-                          className="mr-2"
-                        />
-                        <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                        <span className="text-sm text-red-600">Lost</span>
-                      </label>
-                    )}
+            <div className="p-0">
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  className={`flex-1 py-3 text-sm font-medium text-center ${statusModalTab === 'closure'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  onClick={() => {
+                    setStatusModalTab('closure');
+                    setSelectedOutcome('Won');
+                    setWinLossReason("");
+                  }}
+                >
+                  Won / Loss
+                </button>
+                <button
+                  className={`flex-1 py-3 text-sm font-medium text-center ${statusModalTab === 'other'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  onClick={() => {
+                    setStatusModalTab('other');
+                    setSelectedOutcome('Hold');
+                    setWinLossReason("");
+                  }}
+                >
+                  Hold / Other
+                </button>
+              </div>
 
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="Hold"
-                        checked={selectedOutcome === "Hold"}
-                        onChange={(e) =>
-                          setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
-                        }
-                        className="mr-2"
+              <div className="p-6 space-y-4">
+                {statusModalTab === 'closure' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Status
+                      </label>
+                      <div className="flex space-x-6">
+                        <label className="flex items-center cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors flex-1 justify-center has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                          <input
+                            type="radio"
+                            value="Won"
+                            checked={selectedOutcome === "Won"}
+                            onChange={() => setSelectedOutcome("Won")}
+                            className="mr-2"
+                          />
+                          <CheckCircle className={`h-4 w-4 mr-1 ${selectedOutcome === "Won" ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className={`${selectedOutcome === "Won" ? 'text-green-700 font-medium' : 'text-gray-600'}`}>Won</span>
+                        </label>
+
+                        <label className="flex items-center cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors flex-1 justify-center has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                          <input
+                            type="radio"
+                            value="Lost"
+                            checked={selectedOutcome === "Lost"}
+                            onChange={() => setSelectedOutcome("Lost")}
+                            className="mr-2"
+                          />
+                          <XCircle className={`h-4 w-4 mr-1 ${selectedOutcome === "Lost" ? 'text-red-600' : 'text-gray-400'}`} />
+                          <span className={`${selectedOutcome === "Lost" ? 'text-red-700 font-medium' : 'text-gray-600'}`}>Lost</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reason <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={winLossReason}
+                        onChange={(e) => setWinLossReason(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Reason</option>
+                        {winLossReasons.map((reason) => (
+                          <option key={reason} value={reason}>{reason}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Remark {selectedOutcome === "Lost" && <span className="text-red-500">*</span>}
+                        {selectedOutcome === "Won" && <span className="text-gray-400 text-xs ml-1">(Optional)</span>}
+                      </label>
+                      <textarea
+                        value={winLossRemark}
+                        onChange={(e) => setWinLossRemark(e.target.value)}
+                        rows={3}
+                        placeholder={selectedOutcome === "Won" ? "Additional remarks about the win..." : "Specific details about the loss..."}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
-                      <PauseCircle className="h-4 w-4 text-yellow-600 mr-1" />
-                      <span className="text-sm text-yellow-600">Hold</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reason *
-                  </label>
-                  <textarea
-                    value={winLossReason}
-                    onChange={(e) => setWinLossReason(e.target.value)}
-                    rows={3}
-                    required
-                    placeholder={
-                      selectedOutcome === "Won"
-                        ? "Why did we win this lead?"
-                        : "Why did we lose this lead?"
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200 text-sm text-yellow-800 mb-2 flex items-center">
+                      <PauseCircle className="h-4 w-4 mr-2" />
+                      Marking lead as <strong>Hold</strong> will preserve the current stage.
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hold Reason <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={winLossReason}
+                        onChange={(e) => setWinLossReason(e.target.value)}
+                        rows={4}
+                        placeholder="Why is this lead being put on hold?"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1851,7 +1925,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </button>
               <button
                 onClick={handleWinLossSubmit}
-                disabled={!winLossReason.trim() || isSubmitting}
+                disabled={isSubmitting} // Validation alerts handle the disabled-like logic better for complex rules
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${selectedOutcome === "Won"
                   ? "bg-green-600 hover:bg-green-700"
                   : selectedOutcome === "Hold"
@@ -1862,26 +1936,14 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 {isSubmitting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {selectedOutcome === "Won"
-                      ? "Marking as Won..."
-                      : "Marking as Lost..."}
-
-                    {selectedOutcome === "Hold" ? ("Marking as Hold...") : ""}
-                  </>
-                ) : selectedOutcome === "Won" ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark as Won
-                  </>
-                ) : selectedOutcome === "Hold" ? (
-                  <>
-                    <PauseCircle className="h-4 w-4 mr-2" />
-                    Mark as Hold
+                    Processing...
                   </>
                 ) : (
                   <>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Mark as Lost
+                    {selectedOutcome === "Won" && <CheckCircle className="h-4 w-4 mr-2" />}
+                    {selectedOutcome === "Lost" && <XCircle className="h-4 w-4 mr-2" />}
+                    {selectedOutcome === "Hold" && <PauseCircle className="h-4 w-4 mr-2" />}
+                    Mark as {selectedOutcome}
                   </>
                 )}
               </button>

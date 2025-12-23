@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
-  MessageSquare,
   Trash2,
   Edit
 } from "lucide-react";
@@ -271,7 +270,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Won",
     "Lost",
   ];
-
   const associateDesignations = [
     "Architect",
     "Consultant",
@@ -280,51 +278,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Contractor",
     "Other",
   ];
-
   const leadTemperatures = ["Hot", "Warm", "Cold"];
-
-  const projectStates = ["West Bengal",
-    "Odisha",
-    "Bihar",
-    "Jharkhand",
-    "Assam",
-    "Arunachal Pradesh",
-    "Nagaland",
-    "Manipur",
-    "Mizoram",
-    "Tripura",
-    "Meghalaya",
-    "Sikkim",
-    "Delhi",
-    "Haryana",
-    "Punjab",
-    "Himachal Pradesh",
-    "Jammu & Kashmir",
-    "Ladakh",
-    "Uttar Pradesh",
-    "Uttarakhand",
-    "Chandigarh",
-    "Maharashtra",
-    "Gujarat",
-    "Rajasthan",
-    "Goa",
-    "Dadra & Nagar Haveli",
-    "Daman & Diu",
-    "Madhya Pradesh",
-    "Chhattisgarh",
-    "Tamil Nadu",
-    "Karnataka",
-    "Kerala",
-    "Andhra Pradesh",
-    "Telangana",
-    "Puducherry",
-    "Lakshadweep",
-    "Andaman & Nicobar Islands"
-  ];
-  const projectDistricts = ["WB", "JG", "KG", "DH", "MB"];
   const projectCities = ["WB", "JG", "KG", "DH", "MB"];
-  const projectZones = ["East Zone", "North-East Zone", "North Zone", "West Zone", "South Zone", "Central Zone", "Islands Zone"];
-
   const projectCurrentStatuses = [
     "Hold",
     "Stalled",
@@ -340,12 +295,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     { id: "3", name: "Engineer C" },
     { id: "4", name: "Designer D" },
   ];
-
-  // Validation functions
-  const validatePhoneNumber = (phone: string): boolean => {
-    const phoneRegex = /^(\+\d{1,3}[- ]?)?\d{10}$/;
-    return phoneRegex.test(phone.replace(/\s+/g, ""));
-  };
 
   const validateProjectValue = (value: string): boolean => {
     const numValue = parseFloat(value);
