@@ -210,6 +210,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<any>(null);
   const [loadingCustomerDetails, setLoadingCustomerDetails] = useState(false);
 
+  // Temporary customers states
+  const [tempCustomers, setTempCustomers] = useState<Array<{ customer_id: string; business_name: string }>>([]);
+  const [selectedTempCustomerId, setSelectedTempCustomerId] = useState<string>("");
+  const [tempCustomerComplianceFiles, setTempCustomerComplianceFiles] = useState<any[]>([]);
+  const [originalTempCustomerData, setOriginalTempCustomerData] = useState<any>(null);
+
   // Clear modal state function
   const clearModalState = () => {
     if (!isEditMode) {
@@ -268,6 +274,10 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     setFileErrors([]);
     setActiveFileTab(0);
     setIsLoading(false);
+    setSelectedTempCustomerId("");
+    setTempCustomerComplianceFiles([]);
+    setOriginalTempCustomerData(null);
+    setOriginalContactPersons([]);
   };
 
   // Enhanced close handler
@@ -573,6 +583,204 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       alert("Failed to fetch customer details. Please try again.");
     } finally {
       setLoadingCustomerDetails(false);
+    }
+  };
+
+  // Fetch temporary customers on mount
+  useEffect(() => {
+    const fetchTempCustomers = async () => {
+      try {
+        const { getTempCustomers } = await import('../../../utils/customerApi');
+        const tempCustomersData = await getTempCustomers();
+        setTempCustomers(tempCustomersData);
+      } catch (error) {
+        console.error('Error fetching temporary customers:', error);
+        setTempCustomers([]);
+      }
+    };
+    fetchTempCustomers();
+  }, []);
+
+  // Handle temporary customer selection
+  const handleTempCustomerSelect = async (customerId: string) => {
+    setSelectedTempCustomerId(customerId);
+
+    if (!customerId) {
+      // Clear compliance files when deselecting
+      setTempCustomerComplianceFiles([]);
+      return;
+    }
+
+    try {
+      // Fetch the full customer details
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/customer/${customerId}`
+      );
+
+      if (response.data.success) {
+        const customerData = response.data.data;
+
+        console.log('Customer Data:', customerData);
+        console.log('Compliance Files:', customerData.compliancefiles);
+
+        // Store compliance files if available - keep only the latest file for each document type
+        if (customerData.compliancefiles && Array.isArray(customerData.compliancefiles)) {
+          console.log('Setting compliance files:', customerData.compliancefiles);
+
+          // Group files by document type and entity level, then get the latest one
+          const latestFiles: any[] = [];
+          const fileGroups: { [key: string]: any[] } = {};
+
+          // Group files by documentType + entityLevel
+          customerData.compliancefiles.forEach((file: any) => {
+            const key = `${file.documentType}_${file.entityLevel}`;
+            if (!fileGroups[key]) {
+              fileGroups[key] = [];
+            }
+            fileGroups[key].push(file);
+          });
+
+          // For each group, get the file with the latest createdAt
+          Object.values(fileGroups).forEach((files: any[]) => {
+            const latestFile = files.reduce((latest, current) => {
+              const latestDate = new Date(latest.createdAt || latest.created_at);
+              const currentDate = new Date(current.createdAt || current.created_at);
+              return currentDate > latestDate ? current : latest;
+            });
+            latestFiles.push(latestFile);
+          });
+
+          console.log('Latest compliance files (filtered):', latestFiles);
+          setTempCustomerComplianceFiles(latestFiles);
+        } else {
+          console.log('No compliance files found or not an array');
+          setTempCustomerComplianceFiles([]);
+        }
+
+        // Store original customer data for comparison
+        setOriginalTempCustomerData({
+          businessName: customerData.business_name || "",
+          contactNo: customerData.contact_number || "",
+          email: customerData.email || "",
+          country: customerData.country || "India",
+          currency: Array.isArray(customerData.currency)
+            ? customerData.currency
+            : (typeof customerData.currency === 'string'
+              ? JSON.parse(customerData.currency)
+              : []),
+          state: customerData.state || "",
+          district: customerData.district || "",
+          city: customerData.city || "",
+          customerType: customerData.customer_type || "",
+          customerPotential: customerData.customer_potential || "",
+          pincode: customerData.pincode || "",
+          street: customerData.street || "",
+          googleLocation: customerData.google_location || "",
+          addressType: customerData.address_type || "HO",
+          zone: customerData.zone || "",
+          nameOfBranchProject: customerData.name_of_branch_project || "",
+          hoContactNumber: customerData.ho_contact_number || "",
+          hoEmailId: customerData.ho_email_id || "",
+          currentStatus: customerData.current_status || "Active",
+          blacklistReason: customerData.blacklist_reason || "",
+          customerCategory: customerData.customer_category || "",
+          riskLevel: customerData.risk_level || "",
+          creditDays: customerData.credit_days || "",
+          tdsApplicability: customerData.tds_applicability || "",
+          active: customerData.is_active !== undefined ? customerData.is_active : true,
+          customerGroup: customerData.customer_group || "",
+          customerSubGroup: customerData.customer_sub_group || "",
+          alternateNumber: customerData.alternate_number || "",
+          customerClassification: customerData.customer_classification || "",
+          msmeRegistered: customerData.msme_registered || "No",
+          udyamRegistrationNumber: customerData.udyam_registration_number || "",
+          panNumber: customerData.pan_number || "",
+          tanNumber: customerData.tan_number || "",
+          gstNumber: customerData.gst_number || "",
+          bankName: customerData.bank_name || "",
+          bankAccountNumber: customerData.bank_account_number || "",
+          branchName: customerData.branch_name || "",
+          ifscCode: customerData.ifsc_code || "",
+        });
+
+        // Populate form data with customer information
+        setFormData((prev: typeof formData) => ({
+          ...prev,
+          businessName: customerData.business_name || "",
+          contactNo: customerData.contact_number || "",
+          email: customerData.email || "",
+          country: customerData.country || "India",
+          currency: Array.isArray(customerData.currency)
+            ? customerData.currency
+            : (typeof customerData.currency === 'string'
+              ? JSON.parse(customerData.currency)
+              : []),
+          state: customerData.state || "",
+          district: customerData.district || "",
+          city: customerData.city || "",
+          customerType: customerData.customer_type || "",
+          customerPotential: customerData.customer_potential || "",
+          pincode: customerData.pincode || "",
+          street: customerData.street || "",
+          googleLocation: customerData.google_location || "",
+          addressType: customerData.address_type || "HO",
+          zone: customerData.zone || "",
+          nameOfBranchProject: customerData.name_of_branch_project || "",
+          hoContactNumber: customerData.ho_contact_number || "",
+          hoEmailId: customerData.ho_email_id || "",
+          currentStatus: customerData.current_status || "Active",
+          blacklistReason: customerData.blacklist_reason || "",
+          customerCategory: customerData.customer_category || "",
+          riskLevel: customerData.risk_level || "",
+          creditDays: customerData.credit_days || "",
+          tdsApplicability: customerData.tds_applicability || "",
+          active: customerData.is_active !== undefined ? customerData.is_active : true,
+          customerGroup: customerData.customer_group || "",
+          customerSubGroup: customerData.customer_sub_group || "",
+          alternateNumber: customerData.alternate_number || "",
+          customerClassification: customerData.customer_classification || "",
+          msmeRegistered: customerData.msme_registered || "No",
+          udyamRegistrationNumber: customerData.udyam_registration_number || "",
+          panNumber: customerData.pan_number || "",
+          tanNumber: customerData.tan_number || "",
+          gstNumber: customerData.gst_number || "",
+          bankName: customerData.bank_name || "",
+          bankAccountNumber: customerData.bank_account_number || "",
+          branchName: customerData.branch_name || "",
+          ifscCode: customerData.ifsc_code || "",
+          contactPersons: customerData.contactpersons ? customerData.contactpersons.map((contact: any) => ({
+            id: contact.contactId || Math.random().toString(36).substr(2, 9),
+            name: contact.name || "",
+            phone: contact.phone || "",
+            email: contact.email || "",
+            designation: contact.designation || "",
+            alternativeNumber: contact.alternative_number || "",
+            dateOfBirth: contact.date_of_birth || "",
+            anniversaryDate: contact.anniversary_date || "",
+            communicationMode: contact.communication_mode || [],
+            isEditing: false,
+          })) : prev.contactPersons,
+        }));
+
+        // Store original contact persons for comparison
+        if (customerData.contactpersons) {
+          setOriginalContactPersons(customerData.contactpersons.map((contact: any) => ({
+            id: contact.contactId || Math.random().toString(36).substr(2, 9),
+            name: contact.name || "",
+            phone: contact.phone || "",
+            email: contact.email || "",
+            designation: contact.designation || "",
+            alternativeNumber: contact.alternative_number || "",
+            dateOfBirth: contact.date_of_birth || "",
+            anniversaryDate: contact.anniversary_date || "",
+            communicationMode: contact.communication_mode || [],
+            isEditing: false,
+          })));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching temporary customer details:", error);
+      alert("Failed to load temporary customer details. Please try again.");
     }
   };
 
@@ -2256,42 +2464,147 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     if (!isEditMode && currentStep === 1) {
       setIsLoading(true);
       try {
-        // Step 1: Create customer with all fields except contact persons
-        const customerPayload: Record<string, any> = {};
+        let customerId: string;
 
-        // Map UI fields to backend fields using keymap (excluding contact persons)
-        Object.keys(keymap).forEach((uiKey) => {
-          if (formData[uiKey as keyof typeof formData] !== undefined) {
-            const backendKey = keymap[uiKey as keyof typeof keymap];
-            customerPayload[backendKey] =
-              formData[uiKey as keyof typeof formData];
+        // Check if this customer is from a temp lead
+        if (selectedTempCustomerId) {
+          // Update existing temp customer - set is_temp_customer to false and include changed fields
+          const updatePayload: Record<string, any> = {
+            is_temp_customer: false
+          };
+
+          // Field mapping from UI to backend
+          const fieldMapping: Record<string, string> = {
+            businessName: 'business_name',
+            contactNo: 'contact_number',
+            email: 'email',
+            country: 'country',
+            currency: 'currency',
+            state: 'state',
+            district: 'district',
+            city: 'city',
+            customerType: 'customer_type',
+            customerPotential: 'customer_potential',
+            pincode: 'pincode',
+            street: 'street',
+            googleLocation: 'google_location',
+            addressType: 'address_type',
+            zone: 'zone',
+            nameOfBranchProject: 'name_of_branch_project',
+            hoContactNumber: 'ho_contact_number',
+            hoEmailId: 'ho_email_id',
+            currentStatus: 'current_status',
+            blacklistReason: 'blacklist_reason',
+            customerCategory: 'customer_category',
+            riskLevel: 'risk_level',
+            creditDays: 'credit_days',
+            tdsApplicability: 'tds_applicability',
+            active: 'is_active',
+            customerGroup: 'customer_group',
+            customerSubGroup: 'customer_sub_group',
+            alternateNumber: 'alternate_number',
+            customerClassification: 'customer_classification',
+            msmeRegistered: 'msme_registered',
+            udyamRegistrationNumber: 'udyam_registration_number',
+            panNumber: 'pan_number',
+            tanNumber: 'tan_number',
+            gstNumber: 'gst_number',
+            bankName: 'bank_name',
+            bankAccountNumber: 'bank_account_number',
+            branchName: 'branch_name',
+            ifscCode: 'ifsc_code',
+          };
+
+          // Compare current form data with original data and add changed fields
+          if (originalTempCustomerData) {
+            Object.keys(fieldMapping).forEach((uiKey) => {
+              const currentValue = formData[uiKey as keyof typeof formData];
+              const originalValue = originalTempCustomerData[uiKey];
+
+              // Compare values (handle arrays separately)
+              let hasChanged = false;
+              if (Array.isArray(currentValue) && Array.isArray(originalValue)) {
+                // For arrays (like currency), compare stringified versions
+                hasChanged = JSON.stringify(currentValue) !== JSON.stringify(originalValue);
+              } else {
+                // For other values, direct comparison
+                hasChanged = currentValue !== originalValue;
+              }
+
+              // If value has changed, add to payload
+              if (hasChanged) {
+                const backendKey = fieldMapping[uiKey as keyof typeof fieldMapping];
+                updatePayload[backendKey] = currentValue;
+              }
+            });
           }
-        });
 
-        // Set approval_status to DRAFT if branches are not completed, otherwise use default (PENDING)
-        // if (formData.branches.length === 0) {
-        //   customerPayload.approval_status = "DRAFT";
-        // }
+          console.log('Update payload for temp customer:', updatePayload);
 
-        // add created_by for audit
-        if (currentUserId) customerPayload.created_by = currentUserId;
+          const updateResponse = await axios.put(
+            `${import.meta.env.VITE_API_BASE_URL}/customer/${selectedTempCustomerId}`,
+            updatePayload,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
 
-        // Call POST API for customer
-        const customerResponse = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/customer`,
-          customerPayload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
+          if (
+            updateResponse.status !== 200 &&
+            updateResponse.status !== 201
+          ) {
+            throw new Error("Failed to update customer");
           }
-        );
 
-        if (
-          customerResponse.status !== 200 &&
-          customerResponse.status !== 201
-        ) {
-          throw new Error("Failed to create customer");
+          console.log("Temp customer updated successfully:", updateResponse.data);
+          customerId = selectedTempCustomerId;
+          setCreatedCustomerId(customerId);
+        } else {
+          // Step 1: Create customer with all fields except contact persons
+          const customerPayload: Record<string, any> = {};
+
+          // Map UI fields to backend fields using keymap (excluding contact persons)
+          Object.keys(keymap).forEach((uiKey) => {
+            if (formData[uiKey as keyof typeof formData] !== undefined) {
+              const backendKey = keymap[uiKey as keyof typeof keymap];
+              customerPayload[backendKey] =
+                formData[uiKey as keyof typeof formData];
+            }
+          });
+
+          // Set approval_status to DRAFT if branches are not completed, otherwise use default (PENDING)
+          // if (formData.branches.length === 0) {
+          //   customerPayload.approval_status = "DRAFT";
+          // }
+
+          // add created_by for audit
+          if (currentUserId) customerPayload.created_by = currentUserId;
+
+          // Call POST API for customer
+          const customerResponse = await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/customer`,
+            customerPayload,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (
+            customerResponse.status !== 200 &&
+            customerResponse.status !== 201
+          ) {
+            throw new Error("Failed to create customer");
+          }
+
+          console.log("Customer created successfully:", customerResponse.data);
+
+          // Store the customer ID from the response
+          customerId = customerResponse.data.data.customer_id;
+          setCreatedCustomerId(customerId);
         }
 
         // ------------------------------------------------------------------------------------------For notifications
@@ -2315,54 +2628,163 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         }
         // ----------------------------------------------------------------------------------------
 
-        console.log("Customer created successfully:", customerResponse.data);
-
-        // Store the customer ID from the response
-        const customerId = customerResponse.data.data.customer_id;
-        setCreatedCustomerId(customerId);
-
         // Update formData with the customer ID
         setFormData((prev: typeof formData) => ({ ...prev, id: customerId }));
 
-        // Step 2: Create contact persons in bulk if any exist
+        // Step 2: Handle contact persons intelligently
         if (formData.contactPersons.length > 0) {
-          const contactPersonsPayload = formData.contactPersons.map(
-            (contact: any) => ({
-              name: contact.name,
-              phone: contact.phone,
-              email: contact.email,
-              designation: contact.designation || "",
-              alternative_number: contact.alternativeNumber || "",
-              date_of_birth: contact.dateOfBirth || "",
-              anniversary_date: contact.anniversaryDate || "",
-              communication_mode: contact.communicationMode || [],
-              customer_id: customerId,
-              created_by: currentUserId
-            })
-          );
-          console.log("Creating contact persons:", contactPersonsPayload);
+          // If this is from a temp customer, compare with original contact persons
+          if (selectedTempCustomerId) {
+            // Separate new and modified contact persons
+            const newContactPersons: any[] = [];
+            const modifiedContactPersons: any[] = [];
 
-          const contactResponse = await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/customer-contact/bulk`,
-            contactPersonsPayload,
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
+            formData.contactPersons.forEach((contact: ContactPerson) => {
+              // Find if this contact existed in original data
+              console.log("Contact Person:", contact);
+              console.log("Original Contact Persons:", originalContactPersons);
+              const originalContact = originalContactPersons.find(
+                (orig) => orig.id === contact.id
+              );
+
+              if (!originalContact) {
+                // This is a new contact person
+                newContactPersons.push(contact);
+              } else {
+                // Check if contact has been modified
+                const hasChanged =
+                  contact.name !== originalContact.name ||
+                  contact.phone !== originalContact.phone ||
+                  contact.email !== originalContact.email ||
+                  contact.designation !== originalContact.designation ||
+                  contact.alternativeNumber !== originalContact.alternativeNumber ||
+                  contact.dateOfBirth !== originalContact.dateOfBirth ||
+                  contact.anniversaryDate !== originalContact.anniversaryDate ||
+                  JSON.stringify(contact.communicationMode) !== JSON.stringify(originalContact.communicationMode);
+
+                if (hasChanged) {
+                  modifiedContactPersons.push(contact);
+                }
+                // If unchanged, we skip it (don't add to any array)
+              }
+            });
+
+            // Create new contact persons via bulk API
+            if (newContactPersons.length > 0) {
+              const newContactsPayload = newContactPersons.map((contact: any) => ({
+                name: contact.name,
+                phone: contact.phone,
+                email: contact.email,
+                designation: contact.designation || "",
+                alternative_number: contact.alternativeNumber || "",
+                date_of_birth: contact.dateOfBirth || "",
+                anniversary_date: contact.anniversaryDate || "",
+                communication_mode: contact.communicationMode || [],
+                customer_id: customerId,
+                created_by: currentUserId
+              }));
+
+              console.log("Creating new contact persons:", newContactsPayload);
+
+              const newContactResponse = await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/customer-contact/bulk`,
+                newContactsPayload,
+                {
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                }
+              );
+
+              if (
+                newContactResponse.status !== 200 &&
+                newContactResponse.status !== 201
+              ) {
+                throw new Error("Failed to create new contact persons");
+              }
+
+              console.log("New contact persons created successfully:", newContactResponse.data);
             }
-          );
 
-          if (
-            contactResponse.status !== 200 &&
-            contactResponse.status !== 201
-          ) {
-            throw new Error("Failed to create contact persons");
+            // Update modified contact persons via PUT API
+            if (modifiedContactPersons.length > 0) {
+              console.log("Updating modified contact persons:", modifiedContactPersons);
+
+              for (const contact of modifiedContactPersons) {
+                const updateContactPayload = {
+                  name: contact.name,
+                  phone: contact.phone,
+                  email: contact.email,
+                  designation: contact.designation || "",
+                  alternative_number: contact.alternativeNumber || "",
+                  date_of_birth: contact.dateOfBirth || "",
+                  anniversary_date: contact.anniversaryDate || "",
+                  communication_mode: contact.communicationMode || [],
+                  updated_by: currentUserId
+                };
+
+                const updateContactResponse = await axios.put(
+                  `${import.meta.env.VITE_API_BASE_URL}/customer-contact/${contact.id}`,
+                  updateContactPayload,
+                  {
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                  }
+                );
+
+                if (
+                  updateContactResponse.status !== 200 &&
+                  updateContactResponse.status !== 201
+                ) {
+                  throw new Error(`Failed to update contact person ${contact.name}`);
+                }
+
+                console.log(`Contact person ${contact.name} updated successfully`);
+              }
+            }
+
+            console.log(`Contact persons processed: ${newContactPersons.length} new, ${modifiedContactPersons.length} modified, ${formData.contactPersons.length - newContactPersons.length - modifiedContactPersons.length} unchanged`);
+          } else {
+            // Normal flow: create all contact persons via bulk API
+            const contactPersonsPayload = formData.contactPersons.map(
+              (contact: any) => ({
+                name: contact.name,
+                phone: contact.phone,
+                email: contact.email,
+                designation: contact.designation || "",
+                alternative_number: contact.alternativeNumber || "",
+                date_of_birth: contact.dateOfBirth || "",
+                anniversary_date: contact.anniversaryDate || "",
+                communication_mode: contact.communicationMode || [],
+                customer_id: customerId,
+                created_by: currentUserId
+              })
+            );
+            console.log("Creating contact persons:", contactPersonsPayload);
+
+            const contactResponse = await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL}/customer-contact/bulk`,
+              contactPersonsPayload,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (
+              contactResponse.status !== 200 &&
+              contactResponse.status !== 201
+            ) {
+              throw new Error("Failed to create contact persons");
+            }
+
+            console.log(
+              "Contact persons created successfully:",
+              contactResponse.data
+            );
           }
-
-          console.log(
-            "Contact persons created successfully:",
-            contactResponse.data
-          );
         }
 
         // Auto-upload pending compliance files (File Queue System)
@@ -2804,6 +3226,25 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 ))}
             </div>
           )}
+        </div>
+
+        {/* Select From Temporary Customer */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Select From Temporary Customer
+          </label>
+          <select
+            value={selectedTempCustomerId}
+            onChange={(e) => handleTempCustomerSelect(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select Temporary Customer</option>
+            {tempCustomers.map((customer) => (
+              <option key={customer.customer_id} value={customer.customer_id}>
+                {customer.business_name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Customer Group */}
@@ -3634,6 +4075,29 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, GST: file }))}
                 queuedFile={pendingFiles.GST}
               />
+
+              {/* Display temp customer's existing GST file */}
+              {tempCustomerComplianceFiles.length > 0 && selectedTempCustomerId && (
+                <div className="mt-2">
+                  {tempCustomerComplianceFiles
+                    .filter(file => file.documentType === 'GST' && file.entityLevel === 'HO')
+                    .map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                        <span className="text-blue-600">📄</span>
+                        <span className="flex-1">{file.originalName}</span>
+                        <a
+                          href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${selectedTempCustomerId}/compliance-files/${file.id}/download`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          View
+                        </a>
+                      </div>
+                    ))}
+                </div>
+              )}
+
             </div>
           )}
           {/* Branch queue mode: Show upload for branches before branch creation */}
@@ -3695,6 +4159,27 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, PAN: file }))}
                 queuedFile={pendingFiles.PAN}
               />
+              {/* Display temp customer's existing PAN file */}
+              {tempCustomerComplianceFiles.length > 0 && (
+                <div className="mt-2">
+                  {tempCustomerComplianceFiles
+                    .filter(file => file.documentType === 'PAN' && file.entityLevel === 'HO')
+                    .map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                        <span className="text-blue-600">📄</span>
+                        <span className="flex-1">{file.originalName}</span>
+                        <a
+                          href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${selectedTempCustomerId}/compliance-files/${file.id}/download`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          View
+                        </a>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           )}
           {/* Branch queue mode: Show upload for branches before branch creation */}
@@ -3756,6 +4241,27 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, TAN: file }))}
                 queuedFile={pendingFiles.TAN}
               />
+              {/* Display temp customer's existing TAN file */}
+              {tempCustomerComplianceFiles.length > 0 && (
+                <div className="mt-2">
+                  {tempCustomerComplianceFiles
+                    .filter(file => file.documentType === 'TAN' && file.entityLevel === 'HO')
+                    .map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                        <span className="text-blue-600">📄</span>
+                        <span className="flex-1">{file.originalName}</span>
+                        <a
+                          href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${selectedTempCustomerId}/compliance-files/${file.id}/download`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          View
+                        </a>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           )}
           {/* Branch queue mode: Show upload for branches before branch creation */}
@@ -3906,7 +4412,30 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               queuedFile={pendingFiles.BANK}
               label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
             />
+
+            {/* Display temp customer's existing BANK file */}
+            {tempCustomerComplianceFiles.length > 0 && (
+              <div className="mt-2">
+                {tempCustomerComplianceFiles
+                  .filter(file => file.documentType === 'BANK' && file.entityLevel === 'HO')
+                  .map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                      <span className="text-blue-600">📄</span>
+                      <span className="flex-1">{file.originalName}</span>
+                      <a
+                        href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${selectedTempCustomerId}/compliance-files/${file.id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        View
+                      </a>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
+
         )}
         {/* Branch queue mode: Show upload for branches before branch creation */}
         {isBranch && !isEditMode && queueCallbacks?.onBANKSelect && (

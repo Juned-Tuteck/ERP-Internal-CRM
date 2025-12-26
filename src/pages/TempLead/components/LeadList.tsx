@@ -12,6 +12,7 @@ import { useCRM } from "../../../context/CRMContext";
 
 interface Lead {
   id: string;
+  assignedTo?: string | null;
   leadNumber?: string;
   customerNumber?: string;
   businessName: string;
@@ -67,14 +68,20 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [assignedLeadIds, setAssignedLeadIds] = useState<string[]>([]);
+  const [assignedOnly, setAssignedOnly] = useState(false);
   const { userData } = useCRM();
 
   // Check if user is a design engineer
-  const isDesignEngineer = userData?.role === 'design engineer' ||
-    (userData?.roles && userData.roles.includes('design engineer'));
+  const isDesignEngineer = userData?.role === 'design engineer';
 
   // Filter leads based on role and search term
   const filteredLeads = leads.filter((lead) => {
+    // If user toggled "Assigned to me", only show leads assigned to current user
+    if (assignedOnly) {
+      if (!userData?.id) return false;
+      if (!lead.assignedTo) return false;
+      if (lead.assignedTo.toString() !== userData.id.toString()) return false;
+    }
     // Role-based filtering for design engineers
     if (isDesignEngineer) {
       if (!assignedLeadIds.includes(lead.id)) {
@@ -142,12 +149,18 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     const fetchLeads = async () => {
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/lead/`
+          `${import.meta.env.VITE_API_BASE_URL}/temp-lead/`
         );
         const apiLeads = response.data.data;
         // Map API response to UI Lead interface
         const mappedLeads: Lead[] = apiLeads.map((apiLead: any) => ({
           id: apiLead.lead_id?.toString() || "",
+          assignedTo:
+            apiLead.assigned_user_id?.toString() ||
+            apiLead.assigned_to?.toString() ||
+            apiLead.assigned_user?.toString() ||
+            apiLead.assigned?.toString() ||
+            null,
           leadNumber: apiLead.lead_number,
           customerNumber: apiLead.customer_number,
           businessName: apiLead.business_name || "",
@@ -329,7 +342,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900">Active Leads</h3>
         <p className="text-sm text-gray-500">
@@ -349,9 +362,20 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <div className="mt-2 flex items-center justify-end">
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+              checked={assignedOnly}
+              onChange={(e) => setAssignedOnly(e.target.checked)}
+            />
+            <span className="ml-2 text-sm text-gray-700">Assigned to me</span>
+          </label>
+        </div>
       </div>
 
-      <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+      <div className="divide-y divide-gray-200 overflow-y-auto flex-1 min-h-0">
         {loading ? (
           <div className="p-4 text-center text-gray-500">Loading leads...</div>
         ) : filteredLeads.length === 0 ? (
@@ -366,8 +390,8 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
               key={lead.id}
               onClick={() => fetchLeadDetails(lead)}
               className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${selectedLead?.id === lead.id
-                  ? "bg-blue-50 border-r-2 border-blue-600"
-                  : ""
+                ? "bg-blue-50 border-r-2 border-blue-600"
+                : ""
                 }`}
             >
               <div className="flex items-center space-x-3">
