@@ -169,6 +169,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           projectCurrentStatus: apiLead.project_current_status || null,
           // Contact persons
           contactPersons: apiLead.contact || [],
+          // IDs for edit mode
+          customer_id: apiLead.customer_id || null,
+          customer_branch_id: apiLead.customer_branch_id || null,
         };
 
         setLeadDetails(mappedLead);

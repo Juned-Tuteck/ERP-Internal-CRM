@@ -191,3 +191,18 @@ export const downloadComplianceFile = async (
   return response.data;
 };
 
+/**
+ * Get all temporary customers
+ * @returns Array of temporary customers
+ */
+export const getTempCustomers = async (): Promise<any[]> => {
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE_URL}/customer/temp-customers`,
+    {
+      headers: { "Cache-Control": "no-cache" },
+    }
+  );
+
+  return response.data.data || [];
+};
+
