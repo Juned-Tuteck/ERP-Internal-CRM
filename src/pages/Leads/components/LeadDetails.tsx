@@ -1569,7 +1569,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   {displayLead.leadStage !== "Information Stage" && (
                     <button
                       onClick={handleDesignHelpModalOpen}
-                      disabled={designHelpSent}
+                      disabled={designHelpSent || userData?.id != displayLead.assignedTo}
                       className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${designHelpSent
                         ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
                         : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
