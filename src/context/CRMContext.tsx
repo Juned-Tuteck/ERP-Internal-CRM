@@ -26,10 +26,10 @@ interface CRMContextType {
 }
 
 interface Notification {
-  id: string;
+  id?: string;
   type: "success" | "error" | "warning" | "info";
   message: string;
-  timestamp: Date;
+  timestamp?: Date;
 }
 
 const CRMContext = createContext<CRMContextType | undefined>(undefined);

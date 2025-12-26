@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
-  MessageSquare,
   Trash2,
   Edit
 } from "lucide-react";
@@ -271,7 +270,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Won",
     "Lost",
   ];
-
   const associateDesignations = [
     "Architect",
     "Consultant",
@@ -280,51 +278,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Contractor",
     "Other",
   ];
-
   const leadTemperatures = ["Hot", "Warm", "Cold"];
-
-  const projectStates = ["West Bengal",
-    "Odisha",
-    "Bihar",
-    "Jharkhand",
-    "Assam",
-    "Arunachal Pradesh",
-    "Nagaland",
-    "Manipur",
-    "Mizoram",
-    "Tripura",
-    "Meghalaya",
-    "Sikkim",
-    "Delhi",
-    "Haryana",
-    "Punjab",
-    "Himachal Pradesh",
-    "Jammu & Kashmir",
-    "Ladakh",
-    "Uttar Pradesh",
-    "Uttarakhand",
-    "Chandigarh",
-    "Maharashtra",
-    "Gujarat",
-    "Rajasthan",
-    "Goa",
-    "Dadra & Nagar Haveli",
-    "Daman & Diu",
-    "Madhya Pradesh",
-    "Chhattisgarh",
-    "Tamil Nadu",
-    "Karnataka",
-    "Kerala",
-    "Andhra Pradesh",
-    "Telangana",
-    "Puducherry",
-    "Lakshadweep",
-    "Andaman & Nicobar Islands"
-  ];
-  const projectDistricts = ["WB", "JG", "KG", "DH", "MB"];
   const projectCities = ["WB", "JG", "KG", "DH", "MB"];
-  const projectZones = ["East Zone", "North-East Zone", "North Zone", "West Zone", "South Zone", "Central Zone", "Islands Zone"];
-
   const projectCurrentStatuses = [
     "Hold",
     "Stalled",
@@ -340,12 +295,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     { id: "3", name: "Engineer C" },
     { id: "4", name: "Designer D" },
   ];
-
-  // Validation functions
-  const validatePhoneNumber = (phone: string): boolean => {
-    const phoneRegex = /^(\+\d{1,3}[- ]?)?\d{10}$/;
-    return phoneRegex.test(phone.replace(/\s+/g, ""));
-  };
 
   const validateProjectValue = (value: string): boolean => {
     const numValue = parseFloat(value);
@@ -3059,26 +3008,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Customer */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Customer *
-                      </label>
-                      <select
-                        name="businessName"
+                      <SearchableSelect
+                        label="Customer *"
+                        options={customers.map((customer) => ({
+                          value: customer.name,
+                          label: customer.name,
+                        }))}
                         value={formData.businessName}
-                        onChange={handleInputChange}
-                        required
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.businessName
-                          ? "border-red-500"
-                          : "border-gray-300"
-                          }`}
-                      >
-                        <option value="">Select Business</option>
-                        {customers.map((customer) => (
-                          <option key={customer.id} value={customer.name}>
-                            {customer.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) =>
+                          handleInputChange({
+                            target: { name: "businessName", value },
+                          } as any)
+                        }
+                        placeholder="Select Business"
+                        error={!!validationErrors.businessName}
+                      />
                       <ValidationError fieldName="businessName" />
                     </div>
                     {/* Customer Branch */}
@@ -3142,25 +3086,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     </div>
                     {/* Referenced By */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Referenced By
-                      </label>
-                      <select
-                        name="referencedBy"
+                      <SearchableSelect
+                        label="Referenced By"
+                        options={users.map((user) => ({
+                          value: user.name,
+                          label: user.name,
+                        }))}
                         value={formData.referencedBy}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${validationErrors.referencedBy
-                          ? "border-red-500"
-                          : "border-gray-300"
-                          }`}
-                      >
-                        <option value="">Select User</option>
-                        {users.map((user) => (
-                          <option key={user.id} value={user.name}>
-                            {user.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) =>
+                          handleInputChange({
+                            target: { name: "referencedBy", value },
+                          } as any)
+                        }
+                        placeholder="Select User"
+                        error={!!validationErrors.referencedBy}
+                      />
                       <ValidationError fieldName="referencedBy" />
                     </div>
                     {/* Lead Type */}

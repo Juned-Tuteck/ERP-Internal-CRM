@@ -13,6 +13,7 @@ interface SearchableSelectProps {
     placeholder?: string;
     disabled?: boolean;
     label?: string;
+    error?: boolean;
 }
 
 export function SearchableSelect({
@@ -21,7 +22,8 @@ export function SearchableSelect({
     onChange,
     placeholder = 'Select option...',
     disabled = false,
-    label
+    label,
+    error
 }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -62,7 +64,7 @@ export function SearchableSelect({
                 className={`
                     w-full px-3 py-2 border rounded-lg flex items-center justify-between cursor-pointer bg-white
                     ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'hover:border-blue-400 focus:ring-2 focus:ring-blue-500'}
-                    ${isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-300'}
+                    ${error ? 'border-red-500' : isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-300'}
                 `}
                 onClick={() => !disabled && setIsOpen(!isOpen)}
             >

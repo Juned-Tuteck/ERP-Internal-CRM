@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { useEffect } from "react";
 import {
-  Phone,
-  Mail,
   Building,
   Globe,
   Star,
@@ -13,29 +11,24 @@ import {
   Clock,
   FileText,
   Users,
-  Edit,
   CheckCircle,
   XCircle,
   GitPullRequestArrow,
   Link,
-  History,
-  Edit2,
-  Trash2,
   Image,
   FileSpreadsheet,
   File,
   Download,
-  FileCheck,
-  MessageSquare,
   SquarePen,
   User,
   FileBarChart,
   PauseCircle
 } from "lucide-react";
-import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
+import AddLeadModal from "./AddLeadModal";
 import axios from "axios";
 import { useCRM } from "../../../context/CRMContext";
-import { createProjectFromLead, CreateProjectRequest } from "../../../utils/projectApi";
+import { useToast } from '../../../components/Toast';
+// import { createProjectFromLead, CreateProjectRequest } from "../../../utils/projectApi";
 import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
 
 interface LeadDetailsProps {
@@ -45,11 +38,26 @@ interface LeadDetailsProps {
 
 const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [leadDetails, setLeadDetails] = useState<any>(null);
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showWinLossModal, setShowWinLossModal] = useState(false);
   const [winLossReason, setWinLossReason] = useState("");
   const [selectedOutcome, setSelectedOutcome] = useState<"Won" | "Lost" | "Hold">("Won");
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const [statusModalTab, setStatusModalTab] = useState<'closure' | 'other'>('closure');
+  const [winLossRemark, setWinLossRemark] = useState("");
+  const showHistoryModalHook = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = showHistoryModalHook;
+
+  const winLossReasons = [
+    "Price/Commercials",
+    "Technical Incompatibility",
+    "Competitor",
+    "Delivery Timeline",
+    "Service/Support",
+    "Budget Constraints",
+    "Other"
+  ];
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -61,7 +69,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'basic' | 'followup'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'followup' | 'assign'>('basic');
+
+  // Assign To state
+  const [selectedAssignee, setSelectedAssignee] = useState("");
+  const [usersWithLeadAccess, setUsersWithLeadAccess] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
 
   // Follow-up comment state
   const [newComment, setNewComment] = useState('');
@@ -268,6 +282,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       // Refresh comments list
       await fetchFollowUpComments(displayLead.id);
       setNewComment('');
+      showToast('Comment added successfully By ' + userData?.name, 'success');
     } catch (error) {
       console.error('Error adding comment:', error);
       alert('Failed to add comment. Please try again.');
@@ -281,7 +296,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     setIsLoadingEngineers(true);
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_AUTH_BASE_URL}/users`,
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/basic`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
         }
@@ -301,6 +316,43 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       setIsLoadingEngineers(false);
     }
   };
+
+  // Fetch users with Lead menu access for Assign to dropdown
+  const fetchUsersWithLeadAccess = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/by-access-path?module=CRM&menu=Lead`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+          }
+        }
+      );
+      const usersWithLeadMenu = response.data.data;
+
+      setUsersWithLeadAccess(
+        usersWithLeadMenu.map((user: any) => ({
+          id: user.id || user.user_id,
+          name: user.name || user.full_name || user.username,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching users with lead access:", error);
+      setUsersWithLeadAccess([]);
+    }
+  };
+
+  // Load users when Assign tab is active
+  useEffect(() => {
+    if (activeTab === 'assign') {
+      fetchUsersWithLeadAccess();
+      // Initialize selected assignee from current lead
+      const currentLead = leadDetails || lead;
+      if (currentLead?.assignedTo) {
+        setSelectedAssignee(currentLead.assignedTo);
+      }
+    }
+  }, [activeTab, leadDetails, lead]);
 
   // Handle design help modal open
   const handleDesignHelpModalOpen = () => {
@@ -339,6 +391,36 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       alert('Failed to send design help request. Please try again.');
     } finally {
       setIsSendingHelp(false);
+    }
+  };
+
+  const handleAssignUser = async () => {
+    const currentLead = leadDetails || lead;
+    if (!selectedAssignee) {
+      alert("Please select a user to assign.");
+      return;
+    }
+
+    if (window.confirm("Are you sure you want to assign this lead to the selected user?")) {
+      try {
+        setIsSubmitting(true);
+        const payload = {
+          assigned_user_id: selectedAssignee,
+        };
+
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/lead/${currentLead.id}`,
+          payload
+        );
+
+        showToast("Lead assigned successfully!", "success");
+        setRefreshTrigger(prev => prev + 1); // Refresh lead details
+      } catch (error) {
+        console.error("Error assigning lead:", error);
+        showToast("Failed to assign lead. Please try again.", "error");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -511,11 +593,30 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   const handleWinLossSubmit = async () => {
     try {
+      // Validation Logic
+      if (statusModalTab === 'closure') {
+        if (!winLossReason) {
+          alert("Reason is mandatory.");
+          return;
+        }
+        if (selectedOutcome === 'Lost' && !winLossRemark.trim()) {
+          alert("Remark is mandatory when status is Lost.");
+          return;
+        }
+      } else {
+        // Hold/Other tab
+        if (!winLossReason.trim()) {
+          alert("Reason is mandatory.");
+          return;
+        }
+      }
+
       setIsSubmitting(true);
 
       const payload: any = {
         reason: winLossReason,
         lead_stage: selectedOutcome,
+        remark: winLossRemark
       };
 
       if (selectedOutcome === "Hold") {
@@ -612,6 +713,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       // Close modal and reset form
       setShowWinLossModal(false);
       setWinLossReason("");
+      setWinLossRemark("");
+      setStatusModalTab('closure');
 
       // Refresh the lead details to show updated data
       setRefreshTrigger(prev => prev + 1);
@@ -708,7 +811,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 >
                   {displayLead.approvalStatus || "pending"}
                 </span>
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <AlertTriangle
                     className={`h-4 w-4 mr-1 ${getCriticalityColor(
                       displayLead.leadCriticality
@@ -721,7 +824,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   >
                     {displayLead.leadCriticality}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
@@ -846,6 +949,15 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             >
               Follow-Up
             </button>
+            <button
+              onClick={() => setActiveTab('assign')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'assign'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Assign To
+            </button>
           </nav>
         </div>
 
@@ -892,7 +1004,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <div className="flex items-center space-x-3">
                     <Clock className="h-5 w-5 text-gray-400" />
                     <div>
-                      <p className="text-sm text-gray-500">Days in Pipeline</p>
+                      <p className="text-sm text-gray-500">Lead Ageing </p>
                       <p className="text-sm font-medium text-gray-900">
                         {displayLead.submittedDate
                           ? Math.floor(
@@ -1319,27 +1431,55 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     </div>
                   </div>
 
-                  {/* Involved Associates - Full Width */}
+                  {/* Competitors Section - Full Width */}
                   <div className="md:col-span-2">
-                    <div className="flex items-start space-x-3">
-                      <Users className="h-5 w-5 text-blue-400 mt-1" />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-500 mb-2">Competitors</p>
-                        {leadCompetitors &&
-                          leadCompetitors.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {leadCompetitors.map((a: any, idx: number) => (
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex-shrink-0">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Competitors</h4>
+                        {leadCompetitors && leadCompetitors.length > 0 ? (
+                          <div className="flex flex-wrap gap-2.5">
+                            {leadCompetitors.map((competitor: any, idx: number) => (
                               <div
                                 key={idx}
-                                className="inline-flex items-center px-3 py-1 rounded-half bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
+                                className="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all duration-200"
                               >
-                                <span className="mr-1 text-gray-700">{a.competitor_name} ---- </span>
-                                <span className="font-semibold">{a.win_probability} %</span>
+                                {/* Competitor Name */}
+                                <span className="text-sm font-medium text-gray-900">
+                                  {competitor.competitor_name}
+                                </span>
+
+                                {/* Divider */}
+                                <div className="h-4 w-px bg-gray-200"></div>
+
+                                {/* Win Probability Badge */}
+                                <div className="flex items-center gap-1.5">
+                                  <div className={`w-2 h-2 rounded-full ${competitor.win_probability >= 70 ? 'bg-red-500' :
+                                    competitor.win_probability >= 40 ? 'bg-amber-500' :
+                                      'bg-green-500'
+                                    }`}></div>
+                                  <span className={`text-sm font-semibold ${competitor.win_probability >= 70 ? 'text-red-700' :
+                                    competitor.win_probability >= 40 ? 'text-amber-700' :
+                                      'text-green-700'
+                                    }`}>
+                                    {competitor.win_probability}%
+                                  </span>
+                                </div>
+
+                                {/* Hover indicator */}
+                                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-blue-500 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left rounded-full"></div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">-</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-400">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <span>No competitors identified</span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1377,7 +1517,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   </div> */}
 
                   {/* Lead Details - Full Width */}
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2 border-t pt-2">
                     <div className="flex items-start space-x-3">
                       <FileText className="h-5 w-5 text-gray-400 mt-1" />
                       <div className="flex-1">
@@ -1429,7 +1569,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   {displayLead.leadStage !== "Information Stage" && (
                     <button
                       onClick={handleDesignHelpModalOpen}
-                      disabled={designHelpSent}
+                      disabled={designHelpSent || userData?.id != displayLead.assignedTo}
                       className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${designHelpSent
                         ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
                         : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
@@ -1442,7 +1582,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(displayLead?.uploadedFiles ?? []).map((file: any) => {
                     const Icon = getIconByMime(file.mime, file.original_name);
                     const sizeLabel = formatBytes(file.size);
@@ -1453,30 +1593,55 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                         href={`${import.meta.env.VITE_API_BASE_URL}/lead-file/${displayLead.id}/files/${file.id}/download`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                        className="group relative flex flex-col p-4 bg-white border border-gray-200 rounded-xl hover:shadow-lg hover:border-blue-300 transition-all duration-200 overflow-hidden"
                       >
-                        <Icon className="h-8 w-8 text-blue-600 mr-3" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
-                            {file.original_name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {sizeLabel} • {file.mime ?? "unknown"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-3">
-                            <User className="inline-block h-4 w-4 " /><b>{file.created_by_name || "-"}</b>
-                          </p>
-                          {file.file_note && (
-                            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 italic">
-                              <span className="font-semibold not-italic">Note:</span> {file.file_note}
-                            </div>
-                          )}
+                        {/* Header with Icon and Download Button */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center justify-center w-12 h-12 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                            <Icon className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="flex items-center justify-center w-8 h-8 bg-gray-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Download className="h-4 w-4 text-gray-600" />
+                          </div>
                         </div>
 
-                        <Download className="h-4 w-4 text-gray-400 ml-3" />
+                        {/* File Name */}
+                        <h4
+                          className="text-sm font-semibold text-gray-900 truncate mb-1"
+                          title={file.original_name}
+                        >
+                          {file.original_name}
+                        </h4>
+
+                        {/* File Metadata */}
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                          <span className="font-medium">{sizeLabel}</span>
+                          <span className="text-gray-300">•</span>
+                          <span>{file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}</span>
+                        </div>
+
+                        {/* Uploaded By */}
+                        <div className="flex items-center gap-2 text-xs text-gray-600 pb-3 border-b border-gray-100">
+                          <User className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="font-medium">{file.created_by_name || "Unknown"}</span>
+                        </div>
+
+                        {/* File Note */}
+                        {file.file_note && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <svg className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <p className="text-xs text-gray-700 leading-relaxed">
+                                {file.file_note}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Hover Overlay Effect */}
+                        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-blue-500 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
                       </a>
                     );
                   })}
@@ -1484,7 +1649,6 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </div>
             </div>
           )}
-
           {activeTab === 'followup' && (
             <div className="space-y-6">
               {/* Add Comment Section */}
@@ -1576,6 +1740,45 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </div>
             </div>
           )}
+          {activeTab === 'assign' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                  Assign Lead
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assign to
+                    </label>
+                    <select
+                      disabled={displayLead.approvalStatus.toLowerCase() != "approved"}
+                      value={selectedAssignee}
+                      onChange={(e) => setSelectedAssignee(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select User</option>
+                      {usersWithLeadAccess.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleAssignUser}
+                      disabled={isSubmitting || displayLead.approvalStatus.toLowerCase() != "approved"}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? 'Assigning...' : 'Assign User'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1595,77 +1798,121 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </button>
             </div>
 
-            <div className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Outcome
-                  </label>
-                  <div className="flex space-x-4">
-                    {displayLead.leadStage === "Quoted" && (
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="Won"
-                          checked={selectedOutcome === "Won"}
-                          onChange={(e) =>
-                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
-                          }
-                          className="mr-2"
-                        />
-                        <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                        <span className="text-sm text-green-600">Won</span>
-                      </label>
-                    )}
-                    {displayLead.leadStage === "Quoted" && (
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          value="Lost"
-                          checked={selectedOutcome === "Lost"}
-                          onChange={(e) =>
-                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
-                          }
-                          className="mr-2"
-                        />
-                        <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                        <span className="text-sm text-red-600">Lost</span>
-                      </label>
-                    )}
+            <div className="p-0">
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  className={`flex-1 py-3 text-sm font-medium text-center ${statusModalTab === 'closure'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  onClick={() => {
+                    setStatusModalTab('closure');
+                    setSelectedOutcome('Won');
+                    setWinLossReason("");
+                  }}
+                >
+                  Won / Loss
+                </button>
+                <button
+                  className={`flex-1 py-3 text-sm font-medium text-center ${statusModalTab === 'other'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  onClick={() => {
+                    setStatusModalTab('other');
+                    setSelectedOutcome('Hold');
+                    setWinLossReason("");
+                  }}
+                >
+                  Hold / Other
+                </button>
+              </div>
 
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="Hold"
-                        checked={selectedOutcome === "Hold"}
-                        onChange={(e) =>
-                          setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
-                        }
-                        className="mr-2"
+              <div className="p-6 space-y-4">
+                {statusModalTab === 'closure' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Status
+                      </label>
+                      <div className="flex space-x-6">
+                        <label className="flex items-center cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors flex-1 justify-center has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                          <input
+                            type="radio"
+                            value="Won"
+                            checked={selectedOutcome === "Won"}
+                            onChange={() => setSelectedOutcome("Won")}
+                            className="mr-2"
+                          />
+                          <CheckCircle className={`h-4 w-4 mr-1 ${selectedOutcome === "Won" ? 'text-green-600' : 'text-gray-400'}`} />
+                          <span className={`${selectedOutcome === "Won" ? 'text-green-700 font-medium' : 'text-gray-600'}`}>Won</span>
+                        </label>
+
+                        <label className="flex items-center cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors flex-1 justify-center has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                          <input
+                            type="radio"
+                            value="Lost"
+                            checked={selectedOutcome === "Lost"}
+                            onChange={() => setSelectedOutcome("Lost")}
+                            className="mr-2"
+                          />
+                          <XCircle className={`h-4 w-4 mr-1 ${selectedOutcome === "Lost" ? 'text-red-600' : 'text-gray-400'}`} />
+                          <span className={`${selectedOutcome === "Lost" ? 'text-red-700 font-medium' : 'text-gray-600'}`}>Lost</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Reason <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={winLossReason}
+                        onChange={(e) => setWinLossReason(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select Reason</option>
+                        {winLossReasons.map((reason) => (
+                          <option key={reason} value={reason}>{reason}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Remark {selectedOutcome === "Lost" && <span className="text-red-500">*</span>}
+                        {selectedOutcome === "Won" && <span className="text-gray-400 text-xs ml-1">(Optional)</span>}
+                      </label>
+                      <textarea
+                        value={winLossRemark}
+                        onChange={(e) => setWinLossRemark(e.target.value)}
+                        rows={3}
+                        placeholder={selectedOutcome === "Won" ? "Additional remarks about the win..." : "Specific details about the loss..."}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
-                      <PauseCircle className="h-4 w-4 text-yellow-600 mr-1" />
-                      <span className="text-sm text-yellow-600">Hold</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reason *
-                  </label>
-                  <textarea
-                    value={winLossReason}
-                    onChange={(e) => setWinLossReason(e.target.value)}
-                    rows={3}
-                    required
-                    placeholder={
-                      selectedOutcome === "Won"
-                        ? "Why did we win this lead?"
-                        : "Why did we lose this lead?"
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200 text-sm text-yellow-800 mb-2 flex items-center">
+                      <PauseCircle className="h-4 w-4 mr-2" />
+                      Marking lead as <strong>Hold</strong> will preserve the current stage.
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hold Reason <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={winLossReason}
+                        onChange={(e) => setWinLossReason(e.target.value)}
+                        rows={4}
+                        placeholder="Why is this lead being put on hold?"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1678,7 +1925,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </button>
               <button
                 onClick={handleWinLossSubmit}
-                disabled={!winLossReason.trim() || isSubmitting}
+                disabled={isSubmitting} // Validation alerts handle the disabled-like logic better for complex rules
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${selectedOutcome === "Won"
                   ? "bg-green-600 hover:bg-green-700"
                   : selectedOutcome === "Hold"
@@ -1689,26 +1936,14 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 {isSubmitting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {selectedOutcome === "Won"
-                      ? "Marking as Won..."
-                      : "Marking as Lost..."}
-
-                    {selectedOutcome === "Hold" ? ("Marking as Hold...") : ""}
-                  </>
-                ) : selectedOutcome === "Won" ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark as Won
-                  </>
-                ) : selectedOutcome === "Hold" ? (
-                  <>
-                    <PauseCircle className="h-4 w-4 mr-2" />
-                    Mark as Hold
+                    Processing...
                   </>
                 ) : (
                   <>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Mark as Lost
+                    {selectedOutcome === "Won" && <CheckCircle className="h-4 w-4 mr-2" />}
+                    {selectedOutcome === "Lost" && <XCircle className="h-4 w-4 mr-2" />}
+                    {selectedOutcome === "Hold" && <PauseCircle className="h-4 w-4 mr-2" />}
+                    Mark as {selectedOutcome}
                   </>
                 )}
               </button>
