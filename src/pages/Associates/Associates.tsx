@@ -10,6 +10,8 @@ const Associates: React.FC = () => {
   const [selectedAssociate, setSelectedAssociate] = useState<any>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('associates');
+  const [screenRefresh, setScreenRefresh] = useState(0);
+  const [associateInitialData, setAssociateInitialData] = useState<any>(null);
   const { addNotification } = useCRM();
 
   const handleAddAssociate = (associateData: any) => {
@@ -19,6 +21,7 @@ const Associates: React.FC = () => {
       message: `Associate ${associateData.businessName} registered successfully and sent for approval!`,
     });
     setIsAddModalOpen(false);
+    setScreenRefresh(prev => prev + 1);
   };
 
   const handleApprovalAction = (associateId: string, action: 'approve' | 'reject', reason?: string) => {
@@ -27,6 +30,7 @@ const Associates: React.FC = () => {
       type: action === 'approve' ? 'success' : 'warning',
       message: `Associate ${action}d successfully!`,
     });
+    setScreenRefresh(prev => prev + 1);
   };
 
   const handleExportAssociates = () => {
@@ -61,7 +65,7 @@ const Associates: React.FC = () => {
           {activeTab === 'associates' && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
             >
               <Plus className="h-4 w-4 mr-2" />
               Register Associate
@@ -77,11 +81,10 @@ const Associates: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                  ? 'border-teal-500 text-teal-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <tab.icon className="h-5 w-5" />
@@ -99,10 +102,14 @@ const Associates: React.FC = () => {
             <AssociateList
               selectedAssociate={selectedAssociate}
               onSelectAssociate={setSelectedAssociate}
+              screenRefresh={screenRefresh}
             />
           </div>
           <div className="lg:col-span-2">
-            <AssociateDetails associate={selectedAssociate} />
+            <AssociateDetails
+              associate={selectedAssociate}
+              setAssociateInitialData={setAssociateInitialData}
+            />
           </div>
         </div>
       ) : (
@@ -113,6 +120,7 @@ const Associates: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddAssociate}
+        initialData={associateInitialData}
       />
     </div>
   );

@@ -12,7 +12,7 @@ import {
   ShoppingCart,
   BarChart3,
   Settings,
-  FileClock ,
+  FileClock,
   X,
 } from "lucide-react";
 import { useCRM } from "../../context/CRMContext";
@@ -68,9 +68,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: BarChart3,
       accessKey: "Reports",
     },
-    { name: 'Audit Logs',
+    {
+      name: 'Audit Logs',
       href: '/audit',
-      icon: FileClock ,
+      icon: FileClock,
       accessKey: 'Audit Logs'
     },
     {
@@ -78,7 +79,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       href: "/temp-lead",
       icon: UserPlus,
       accessKey: "Temp Lead",
-    }
+    },
+    {
+      name: "Associates",
+      href: "/associates",
+      icon: UserPlus,
+      accessKey: "Associates",
+    },
     // { name: 'Settings', href: '/settings', icon: Settings, accessKey: 'Settings' },
   ];
 
@@ -106,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       `}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          
+
           <h1 className="flex text-xl font-bold text-gray-900"><img src={logo} alt="Contromoist logo" className="h-6 object-contain" />CRM Pro</h1>
           <button
             onClick={onClose}
@@ -142,7 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       }
                     `}
                   />
-                  {item.name=='BOM' ? 'CRM BOM' : item.name}
+                  {item.name == 'BOM' ? 'CRM BOM' : item.name}
                 </Link>
               );
             })}

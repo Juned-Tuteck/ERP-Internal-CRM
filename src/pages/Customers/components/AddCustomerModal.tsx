@@ -2341,6 +2341,12 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const isEditMode = Boolean(initialData);
 
   const handleNext = async () => {
+    // In create mode, ensure Step 1 is completed before allowing submission of Step 2 or 3
+    if (!isEditMode && currentStep > 1 && !isStep1Completed()) {
+      alert("Please complete Step 1 (General Information) before proceeding. Click on Step 1 in the breadcrumb to go back.");
+      return;
+    }
+
     // Validate current step before proceeding
     if (currentStep === 1) {
       // Validate main form fields
@@ -3007,6 +3013,45 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  // Validate if Step 1 is completed
+  const isStep1Completed = (): boolean => {
+    // In edit mode, step 1 is always considered completed
+    if (isEditMode) return true;
+
+    // Check if customer has been created (createdCustomerId exists)
+    if (createdCustomerId) return true;
+
+    // Validate required fields for step 1
+    const step1Fields = [
+      "businessName",
+      "contactNo",
+      "email",
+      "country",
+      "currency",
+      "state",
+      "district",
+      "city",
+      "customerType",
+      "customerPotential",
+      "pincode",
+    ];
+
+    // Check if all required fields are filled
+    for (const fieldName of step1Fields) {
+      const value = formData[fieldName as keyof typeof formData];
+      if (!value || (Array.isArray(value) && value.length === 0)) {
+        return false;
+      }
+    }
+
+    // Check if at least one contact person exists
+    if (formData.contactPersons.length === 0) {
+      return false;
+    }
+
+    return true;
   };
 
   // Breadcrumb navigation handler
@@ -4728,9 +4773,8 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <div key={step.id} className="flex items-center">
                 <button
                   type="button"
-                  disabled={!isEditMode}
-                  onClick={() => isEditMode && handleBreadcrumbClick(step.id)}
-                  className={`flex items-center space-x-2 focus:outline-none ${currentStep === step.id
+                  onClick={() => handleBreadcrumbClick(step.id)}
+                  className={`flex items-center space-x-2 focus:outline-none cursor-pointer hover:opacity-80 transition-opacity ${currentStep === step.id
                     ? "text-blue-600"
                     : currentStep > step.id
                       ? "text-green-600"

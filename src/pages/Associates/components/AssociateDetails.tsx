@@ -1,122 +1,325 @@
-import React, { useState } from 'react';
-import { HardHat, MapPin, DollarSign, Calendar, Tag, Phone, Mail, FileText, CreditCard, Globe, Building2, Trash2, Power, SquarePen } from 'lucide-react';
-import AddAssociateModal from './AddAssociateModal';
+import React from "react";
+import { useState, useEffect } from "react";
+import { useCRM } from "../../../context/CRMContext";
+
+import {
+  HardHat,
+  MapPin,
+  DollarSign,
+  Calendar,
+  Users,
+  Phone,
+  Mail,
+  Globe,
+  FileText,
+  CreditCard,
+  SquarePen,
+  Trash2,
+  Power,
+  Image, FileSpreadsheet, File, Download, FileCheck,
+  User
+} from "lucide-react";
+import { getAssociateById } from "../../../utils/associateApi";
+import AddAssociateModal from "./AddAssociateModal";
+
 
 interface AssociateDetailsProps {
   associate: any;
+  setAssociateInitialData: (data: any) => void;
 }
 
-const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
+const AssociateDetails: React.FC<AssociateDetailsProps> = ({
+  associate,
+  setAssociateInitialData,
+}) => {
+  const { hasActionAccess, userData } = useCRM();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [mappedApiData, setMappedApiData] = useState<any>({
+    ...associate,
+    panNumber: "ABCDE1234F",
+    gstNumber: "27ABCDE1234F1Z5",
+    bankName: "State Bank of India",
+    bankAccountNumber: "1234567890123456",
+    ifscCode: "SBIN0001234",
+    contactPersons: [],
+    branches: [],
+    uploadedFiles: [],
+  });
+
+  const transformToFormData = (associate: any) => {
+    return {
+      businessName: associate.name || "",
+      contactNo: associate.phone || "",
+      email: associate.email || "",
+      country: associate.country || "India",
+      currency: associate.currency || "INR",
+      state: associate.state || "",
+      district: associate.district || "",
+      city: associate.city || "",
+      associateType: associate.type || "",
+      associatePotential: associate.potential || "",
+      pincode: associate.pincode || "",
+      active: associate.status === "active",
+      panNumber: associate.panNumber || "",
+      tanNumber: associate.tanNumber || "",
+      gstNumber: associate.gstNumber || "",
+      bankName: associate.bankName || "",
+      bankAccountNumber: associate.bankAccountNumber || "",
+      branchName: associate.branchName || "",
+      ifscCode: associate.ifscCode || "",
+      contactPersons: associate.contactPersons || [],
+      branches: associate.branches || [],
+      uploadedFiles: associate.uploadedFiles || [],
+    };
+  };
+
+  useEffect(() => {
+    if (associate?.id) {
+      console.log("Fetching associate details for ID:", associate);
+      getAssociateById(associate.id)
+        .then((response) => {
+          console.log("Fetched associate details:", response.data);
+          const apiData = response.data;
+          const mappedEnhancedAssociate = {
+            businessName: apiData.business_name || "",
+            contactNo: apiData.contact_number || "",
+            email: apiData.email || "",
+            country: apiData.country || "",
+            currency: typeof apiData.currency === 'string'
+              ? apiData.currency.replace(/["{}[\]]/g, '').split(',').map((c: string) => c.trim())
+              : [],
+            state: apiData.state || "",
+            district: apiData.district || "",
+            city: apiData.city || "",
+            associateType: apiData.associate_type || "",
+            associatePotential: apiData.associate_potential || "",
+            pincode: apiData.pincode || "",
+            active: apiData.active || "",
+            panNumber: apiData.pan_number || "",
+            tanNumber: apiData.tan_number || "",
+            gstNumber: apiData.gst_number || "",
+            bankName: apiData.bank_name || "",
+            bankAccountNumber: apiData.bank_account_number || "",
+            branchName: apiData.branch_name || "",
+            ifscCode: apiData.ifsc_code || "",
+            status: apiData.approval_status || associate.status || "",
+            associateGroup: apiData.associate_group || "",
+            associateSubGroup: apiData.associate_sub_group || "",
+            alternateNumber: apiData.alternate_number || "",
+            associateClassification: apiData.associate_classification || "",
+            msmeRegistered: apiData.msme_registered || "",
+            udyamRegistrationNumber: apiData.udyam_registration_number || "",
+            tdsApplicability: apiData.tds_applicability || "",
+            addressType: apiData.address_type || "",
+            street: apiData.street || "",
+            googleLocation: apiData.google_location || "",
+            zone: apiData.zone || "",
+            nameOfBranchProject: apiData.name_of_branch_project || "",
+            hoContactNumber: apiData.ho_contact_number || "",
+            hoEmailId: apiData.ho_email_id || "",
+            currentStatus: apiData.current_status || "",
+            blacklistReason: apiData.blacklist_reason || "",
+            associateCategory: apiData.associate_category || "",
+            riskLevel: apiData.risk_level || "",
+            creditDays: apiData.credit_days || "",
+            contactPersons:
+              apiData.contactpersons?.map((person: any) => ({
+                id: person.contactId,
+                name: person.name,
+                designation: person.designation,
+                phone: person.phone,
+                email: person.email,
+                alternativeNumber: person.alternative_number,
+                dateOfBirth: person.date_of_birth,
+                anniversaryDate: person.anniversary_date,
+                communicationMode: person.communication_mode,
+              })) || [],
+            branches:
+              apiData.branches?.map((branch: any) => ({
+                id: branch.branchId,
+                branchName: branch.branchName,
+                contactNumber: branch.contactNumber,
+                email: branch.emailId,
+                country: branch.country || "India",
+                currency: typeof branch.currency === 'string'
+                  ? branch.currency.replace(/["{}[\]]/g, '').split(',').map((c: string) => c.trim())
+                  : [],
+                state: branch.state || "",
+                district: branch.district || "",
+                city: branch.city || "",
+                pincode: branch.pincode || "",
+                address: `${branch.city}, ${branch.district}, ${branch.state} - ${branch.pincode}`,
+                gstNumber: branch.gstNumber || "",
+                panNumber: branch.panNumber || "",
+                tanNumber: branch.tanNumber || "",
+                bankName: branch.bankName || "",
+                bankAccountNumber: branch.bankAccountNumber || "",
+                ifscCode: branch.ifscCode || "",
+                addressType: branch.addressType || "",
+                street: branch.street || "",
+                googleLocation: branch.google_location || "",
+                zone: branch.zone || "",
+                nameOfBranchProject: branch.name_of_branch_project || "",
+                currentStatus: branch.current_status || "",
+                blacklistReason: branch.blacklist_reason || "",
+                associateCategory: branch.associate_category || "",
+                riskLevel: branch.risk_level || "",
+                creditDays: branch.credit_days || "",
+                contactPersons:
+                  branch.contactPersons?.map((person: any) => ({
+                    id: person.contactId,
+                    name: person.name,
+                    designation: person.designation,
+                    phone: person.phone,
+                    email: person.email,
+                    alternativeNumber: person.alternative_number,
+                    dateOfBirth: person.date_of_birth,
+                    anniversaryDate: person.anniversary_date,
+                    communicationMode: person.communication_mode,
+
+                  })) || [],
+                complianceFiles: branch.complianceFiles || [],
+              })) || [],
+            uploadedFiles:
+              apiData.uploadedfiles || associate.uploadedFiles || [],
+            complianceFiles: apiData.compliancefiles || [],
+          };
+          console.log("Mapped enhanced associate:", mappedEnhancedAssociate);
+          setMappedApiData(mappedEnhancedAssociate);
+          setAssociateInitialData({ ...associate, ...mappedEnhancedAssociate });
+        })
+        .catch((error) => {
+          console.error("Error fetching associate details:", error);
+        });
+    }
+  }, [associate?.id, refreshTrigger]);
+
+  useEffect(() => {
+    console.log("API Data:", mappedApiData);
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "inactive":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "REVISIT":
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  function formatBytes(bytes?: string | number | null) {
+    if (bytes == null || isNaN(Number(bytes))) return "-";
+    const b = Number(bytes);
+    if (b === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  function getIconByMime(mime?: string | null, filename?: string) {
+    const ext = filename?.split(".").pop()?.toLowerCase() ?? "";
+    if (!mime && !ext) return File;
+    if (mime?.includes("pdf") || ext === "pdf") return FileText;
+    if (mime?.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(ext))
+      return Image;
+    if (
+      mime?.includes("spreadsheet") ||
+      ["xls", "xlsx", "csv"].includes(ext) ||
+      mime === "application/vnd.ms-excel" ||
+      mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+      return FileSpreadsheet;
+    if (
+      ["doc", "docx", "rtf", "msword"].some((t) => mime?.includes(t)) ||
+      ["doc", "docx"].includes(ext)
+    )
+      return FileText;
+    // fallback
+    return File;
+  }
+
+  // Helper function to render HO level compliance file
+  const renderComplianceFile = (files: any[], documentType: string) => {
+    const file = files?.find(f => f.documentType === documentType && f.entityLevel === 'HO');
+    console.log("file", file);
+    if (!file) return null;
+
+    const Icon = getIconByMime(file.mime, file.originalName);
+    const sizeLabel = formatBytes(file.size);
+
+    return (
+      <a
+        href={`${import.meta.env.VITE_API_BASE_URL}/associate-compliance-file/${file.associateId}/compliance-files/${file.id}/download`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-xs"
+      >
+        <Icon className="h-4 w-4 text-teal-600 mr-2" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 truncate" title={file.originalName}>{file.originalName}</p>
+          <p className="text-gray-500">{sizeLabel}</p>
+        </div>
+        <Download className="h-3 w-3 text-gray-400 ml-2" />
+      </a>
+    );
+  };
+
+  // Helper function to render branch level compliance file
+  const renderBranchComplianceFile = (files: any[], documentType: string) => {
+    const file = files?.find(f => f.documentType === documentType && f.entityLevel === 'BRANCH');
+    if (!file) return null;
+
+    const Icon = getIconByMime(file.mime, file.originalName);
+    const sizeLabel = formatBytes(file.size);
+
+    return (
+      <a
+        href={`${import.meta.env.VITE_API_BASE_URL}/associate-compliance-file/${file.associateId}/compliance-files/${file.id}/download`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-xs"
+      >
+        <Icon className="h-4 w-4 text-teal-600 mr-2" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 truncate" title={file.originalName}>{file.originalName}</p>
+          <p className="text-gray-500">{sizeLabel}</p>
+        </div>
+        <Download className="h-3 w-3 text-gray-400 ml-2" />
+      </a>
+    );
+  };
+
+  const [activeTab, setActiveTab] = useState("general");
+
+  const tabs = [
+    { id: "general", name: "General Information", icon: HardHat },
+    { id: "branches", name: "Branch Information", icon: MapPin },
+    { id: "documents", name: "Documents", icon: FileText },
+  ];
+
   if (!associate) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
         <div className="text-gray-400">
           <HardHat className="h-12 w-12 mx-auto mb-4" />
           <h3 className="text-lg font-medium">Select an associate</h3>
-          <p className="text-sm">Choose an associate from the list to view their details</p>
+          <p className="text-sm">
+            Choose an associate from the list to view their details
+          </p>
         </div>
       </div>
     );
   }
-
-  // State for modals
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  // Transform associate data for edit modal (if needed)
-  const transformToFormData = (associate: any) => ({
-    // Step 1: General Information
-    associateCategory: associate.associateCategory || associate.category || '',
-    associateType: associate.associateType || associate.type || '',
-    businessName: associate.businessName || associate.name || '',
-    name: associate.name || '',
-    contactNo: associate.contactNo || associate.phone || '',
-    email: associate.email || '',
-    country: associate.country || 'India',
-    currency: associate.currency || 'INR',
-    state: associate.state || '',
-    district: associate.district || '',
-    city: associate.city || '',
-    pincode: associate.pincode || '',
-    active: typeof associate.active === 'boolean' ? associate.active : (associate.status ? associate.status === 'active' : true),
-    // Bank Details
-    panNumber: associate.panNumber || '',
-    tanNumber: associate.tanNumber || '',
-    gstNumber: associate.gstNumber || '',
-    bankName: associate.bankName || '',
-    bankAccountNumber: associate.bankAccountNumber || '',
-    branchName: associate.branchName || '',
-    ifscCode: associate.ifscCode || '',
-    // Contact Persons
-    contactPersons: associate.contactPersons || [],
-    // Step 2: Branch Information
-    branches: associate.branches || [],
-    // Step 3: Upload Files
-    uploadedFiles: associate.uploadedFiles || [],
-  });
-
-  // Enhanced associate data with additional details
-  const enhancedAssociate = {
-    ...associate,
-    panNumber: 'ABCDE1234F',
-    tanNumber: 'ABCD12345E',
-    gstNumber: '27ABCDE1234F1Z5',
-    bankName: 'HDFC Bank',
-    bankAccountNumber: '1234567890123456',
-    branchName: 'Mumbai Main Branch',
-    ifscCode: 'HDFC0001234',
-    contactPersons: [
-      { name: 'Rajesh Sharma', phone: '+91 98765 43210', email: 'rajesh@example.com', designation: 'Principal Architect' },
-      { name: 'Priya Patel', phone: '+91 87654 32109', email: 'priya@example.com', designation: 'Project Manager' }
-    ],
-    branches: [
-      {
-        branchName: 'Head Office',
-        contactNumber: '+91 98765 43210',
-        email: 'info@example.com',
-        address: 'Andheri East, Mumbai, Maharashtra - 400069',
-        contactPersons: [
-          { name: 'Vikram Singh', phone: '+91 76543 21098', email: 'vikram@example.com' }
-        ]
-      },
-      {
-        branchName: 'Design Studio',
-        contactNumber: '+91 65432 10987',
-        email: 'studio@example.com',
-        address: 'Bandra West, Mumbai, Maharashtra - 400050',
-        contactPersons: [
-          { name: 'Amit Patel', phone: '+91 54321 09876', email: 'amit@example.com' }
-        ]
-      }
-    ],
-    uploadedFiles: [
-      { name: 'Portfolio_2023.pdf', size: '8.2 MB', uploadDate: '2023-09-15' },
-      { name: 'Architecture_License.pdf', size: '1.5 MB', uploadDate: '2023-09-15' },
-      { name: 'Professional_Certificates.pdf', size: '3.8 MB', uploadDate: '2023-09-15' }
-    ]
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const [activeTab, setActiveTab] = useState('general');
-
-  const tabs = [
-    { id: 'general', name: 'General Information', icon: HardHat },
-    { id: 'branches', name: 'Branch Information', icon: Building2 },
-    { id: 'documents', name: 'Documents', icon: FileText },
-  ];
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -124,136 +327,52 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
       <div className="p-6 border-b border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-teal-600 rounded-lg flex items-center justify-center">
-              <span className="text-xl font-medium text-white">{associate.avatar}</span>
+            <div className="h-16 w-16 bg-teal-600 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-2xl font-bold text-white">
+                {associate.avatar}
+              </span>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">{associate.name}</h2>
-              <div className="flex items-center mt-1">
-                <span className="text-sm text-gray-600 mr-2">{associate.type}</span>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(associate.status)}`}>
-                  {associate.status}
-                </span>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                {associate.name}
+              </h2>
+              <div>
+                <p className="text-sm text-gray-600">{associate.industry}</p>
+                <p className="text-sm font-bold text-teal-600">
+                  Associate : {associate.associateNumber || "-"}
+                </p>
               </div>
             </div>
           </div>
-          <div className="flex flex-col md:items-end gap-2 w-full md:w-auto">
-            <div className="flex flex-col items-right">
-              <p className="text-sm text-gray-500">Associate since</p>
-              <span className="text-sm font-medium text-gray-900">
-                {new Date(associate.joinDate).toLocaleDateString('en-IN', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </span>
+          <div className="flex flex-col md:items-end gap-1 w-full md:w-auto">
+            <div className="flex flex-col items-end">
+              <div className={`text-2xl font-bold px-6 py-1 rounded-full text-green-600 capitalize ${getStatusColor(mappedApiData.status)}`}>
+                {mappedApiData.status}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
-                title="Edit Associate"
-              >
-                <SquarePen className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setIsDeactivateModalOpen(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
-                title="Deactivate Associate"
-              >
-                <Power className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
-                title="Delete Associate"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
+            <div className="flex items-center gap-2 mt-1">
+              {hasActionAccess('edit', 'All associates', 'Associates') && (
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="rounded-full p-2 text-gray-500 hover:text-teal-600 hover:bg-teal-50 transition"
+                  title="Edit Associate"
+                >
+                  <SquarePen className="h-5 w-5" /> {((associate.status === "approved" || associate.status === "revisit")) && "EDIT after approval"}
+                </button>
+              )}
+              {(associate.status === "pending" || associate.status === "draft") && hasActionAccess('Deactivate', 'All associates', 'Associates') && (
+                <button
+                  onClick={() => setIsDeactivateModalOpen(true)}
+                  className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
+                  title="Deactivate Associate"
+                >
+                  <Power className="h-5 w-5" />
+                </button>
+              )}
             </div>
-            {/* Edit Associate Modal (AddAssociateModal in edit mode) */}
-            {isEditModalOpen && (
-              <AddAssociateModal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                onSubmit={(updatedAssociateData) => {
-                  // Replace with actual update logic, e.g., API call or state update
-                  console.log('Updated Associate:', updatedAssociateData);
-                  setIsEditModalOpen(false);
-                }}
-                initialData={transformToFormData(enhancedAssociate)}
-              />
-            )}
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
-            <div className="flex items-center mb-4">
-              <Trash2 className="h-6 w-6 text-red-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Delete Associate</h3>
-            </div>
-            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-red-600">permanently delete</span> this associate? This action cannot be undone.</p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
-                onClick={() => setIsDeleteModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                onClick={() => {
-                  // TODO: Replace with actual delete logic
-                  alert('Associate deleted!');
-                  setIsDeleteModalOpen(false);
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Deactivate Confirmation Modal */}
-      {isDeactivateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
-            <div className="flex items-center mb-4">
-              <Power className="h-6 w-6 text-yellow-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Deactivate Associate</h3>
-            </div>
-            <p className="text-gray-700 mb-6">Are you sure you want to <span className="font-semibold text-yellow-600">deactivate</span> this associate? You can reactivate them later.</p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
-                onClick={() => setIsDeactivateModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700"
-                onClick={() => {
-                  // TODO: Replace with actual deactivate logic
-                  alert('Associate deactivated!');
-                  setIsDeactivateModalOpen(false);
-                }}
-              >
-                Deactivate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal Placeholder (implement your own edit modal if needed) */}
-      {/* {isEditModalOpen && (
-        <YourEditAssociateModal ... />
-      )} */}
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
@@ -262,11 +381,10 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                ? "border-teal-500 text-teal-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <tab.icon className="h-5 w-5" />
@@ -279,244 +397,370 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({ associate }) => {
 
       {/* Tab Content */}
       <div className="p-6">
-        {activeTab === 'general' && (
+        {activeTab === "general" && (
           <div className="space-y-8">
-            {/* Associate Information */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Associate Information</h3>
+            {/* Basic Details Section */}
+            <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                Basic Details
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-3">
-                  <Tag className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <HardHat className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Category</p>
-                    <p className="text-sm font-medium text-gray-900">{associate.category}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <HardHat className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Type</p>
-                    <p className="text-sm font-medium text-gray-900">{associate.type}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Location</p>
-                    <p className="text-sm font-medium text-gray-900">{associate.location}</p>
+                    <p className="text-sm text-gray-500">Business Name</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.businessName}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <HardHat className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Phone</p>
-                    <p className="text-sm font-medium text-gray-900">{associate.phone}</p>
+                    <p className="text-sm text-gray-500">Associate Type</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.associateType}
+                    </p>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-gray-400" />
+
+                <div className="flex items-start space-x-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Associate Potential</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.associatePotential}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Contact Number</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.contactNo}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="text-sm font-medium text-gray-900">{associate.email}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.email}
+                    </p>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Globe className="h-5 w-5 text-gray-400" />
+
+                <div className="flex items-start space-x-3">
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-500">Website</p>
-                    <p className="text-sm font-medium text-gray-900">www.{associate.name.toLowerCase().replace(/\s+/g, '')}.com</p>
+                    <p className="text-sm text-gray-500">Associate Since</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {new Date(associate.joinDate).toLocaleDateString("en-IN", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bank Details */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bank Details</h3>
+            {/* Address Section */}
+            <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                Address Information
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
+                    <p className="text-sm text-gray-500">Country</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.country}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">State</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.state}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">District</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.district}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">City</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.city}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Pincode</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.pincode}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Compliance Details Section */}
+            <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                Compliance & Bank Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div className="flex-1">
                     <p className="text-sm text-gray-500">PAN Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedAssociate.panNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.panNumber}
+                    </p>
+                    {renderComplianceFile(mappedApiData.complianceFiles, 'PAN')}
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">TAN Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedAssociate.tanNumber}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
-                  <div>
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div className="flex-1">
                     <p className="text-sm text-gray-500">GST Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedAssociate.gstNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.gstNumber}
+                    </p>
+                    {renderComplianceFile(mappedApiData.complianceFiles, 'GST')}
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Building2 className="h-5 w-5 text-gray-400" />
-                  <div>
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">TAN Number</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.tanNumber || "-"}
+                    </p>
+                    {renderComplianceFile(mappedApiData.complianceFiles, 'TAN')}
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div className="flex-1">
                     <p className="text-sm text-gray-500">Bank Name</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedAssociate.bankName}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.bankName}
+                    </p>
+                    {renderComplianceFile(mappedApiData.complianceFiles, 'BANK')}
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Account Number</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedAssociate.bankAccountNumber}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.bankAccountNumber || "-"}
+                    </p>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Building2 className="h-5 w-5 text-gray-400" />
+
+                <div className="flex items-start space-x-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">IFSC Code</p>
-                    <p className="text-sm font-medium text-gray-900">{enhancedAssociate.ifscCode}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {mappedApiData.ifscCode || "-"}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Contact Persons */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Persons</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {enhancedAssociate.contactPersons.map((person: any, index: number) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="h-10 w-10 bg-teal-600 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-white">
-                          {person.name.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
+            {/* Contact Persons Section */}
+            {mappedApiData.contactPersons && mappedApiData.contactPersons.length > 0 && (
+              <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                  Contact Persons
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {mappedApiData.contactPersons.map((person: any, index: number) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <User className="h-5 w-5 text-teal-600" />
+                        <h4 className="font-medium text-gray-900">{person.name}</h4>
                       </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center text-gray-600">
+                          <Phone className="h-4 w-4 mr-2" />
+                          {person.phone}
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <Mail className="h-4 w-4 mr-2" />
+                          {person.email}
+                        </div>
+                        {person.designation && (
+                          <p className="text-gray-600">
+                            <span className="font-medium">Designation:</span> {person.designation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "branches" && (
+          <div className="space-y-6">
+            {mappedApiData.branches && mappedApiData.branches.length > 0 ? (
+              mappedApiData.branches.map((branch: any, index: number) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <MapPin className="h-5 w-5 mr-2 text-teal-600" />
+                      {branch.branchName}
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="flex items-start space-x-3">
+                      <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{person.name}</p>
-                        <p className="text-xs text-gray-500">{person.designation}</p>
+                        <p className="text-sm text-gray-500">Contact Number</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {branch.contactNumber}
+                        </p>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                        {person.phone}
+                    <div className="flex items-start space-x-3">
+                      <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {branch.email}
+                        </p>
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                        {person.email}
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500">Address</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {branch.address}
+                        </p>
                       </div>
                     </div>
                   </div>
-                ))}
+
+                  {/* Branch Contact Persons */}
+                  {branch.contactPersons && branch.contactPersons.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Branch Contact Persons</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {branch.contactPersons.map((person: any, pIndex: number) => (
+                          <div key={pIndex} className="bg-gray-50 rounded-lg p-3">
+                            <p className="font-medium text-gray-900 text-sm">{person.name}</p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              <Phone className="h-3 w-3 inline mr-1" />
+                              {person.phone}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              <Mail className="h-3 w-3 inline mr-1" />
+                              {person.email}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p>No branches registered</p>
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {activeTab === 'branches' && (
+        {activeTab === "documents" && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Branch Information</h3>
-            
-            {enhancedAssociate.branches.map((branch: any, index: number) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-6 mb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-medium text-gray-900">{branch.branchName}</h4>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Contact Number</p>
-                      <p className="text-sm font-medium text-gray-900">{branch.contactNumber}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{branch.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Address</p>
-                      <p className="text-sm font-medium text-gray-900">{branch.address}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="border-t border-gray-200 pt-4">
-                  <h5 className="text-sm font-medium text-gray-900 mb-3">Branch Contact Persons</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {branch.contactPersons.map((person: any, personIndex: number) => (
-                      <div key={personIndex} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="h-8 w-8 bg-teal-600 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-medium text-white">
-                            {person.name.split(' ').map((n: string) => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{person.name}</p>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {person.phone}
-                          </div>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {person.email}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+            {mappedApiData.uploadedFiles && mappedApiData.uploadedFiles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {mappedApiData.uploadedFiles.map((file: any, index: number) => {
+                  const Icon = getIconByMime(file.mime, file.originalName);
+                  const sizeLabel = formatBytes(file.size);
 
-        {activeTab === 'documents' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Associate Documents</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {enhancedAssociate.uploadedFiles.map((file: any, index: number) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <FileText className="h-8 w-8 text-teal-600" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                      <p className="text-xs text-gray-500">{file.size}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-500">
-                      Uploaded: {new Date(file.uploadDate).toLocaleDateString('en-IN')}
-                    </span>
-                    <button className="text-xs text-blue-600 hover:text-blue-800">
-                      View
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  return (
+                    <a
+                      key={index}
+                      href={`${import.meta.env.VITE_API_BASE_URL}/associate-file/${file.associateId}/files/${file.id}/download`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                    >
+                      <Icon className="h-8 w-8 text-teal-600 mr-3" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate" title={file.originalName}>
+                          {file.originalName}
+                        </p>
+                        <p className="text-xs text-gray-500">{sizeLabel}</p>
+                      </div>
+                      <Download className="h-4 w-4 text-gray-400 ml-2" />
+                    </a>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p>No documents uploaded</p>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && (
+        <AddAssociateModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSubmit={(data) => {
+            console.log("Updated associate:", data);
+            setIsEditModalOpen(false);
+            setRefreshTrigger(prev => prev + 1);
+          }}
+          initialData={mappedApiData}
+        />
+      )}
     </div>
   );
 };
