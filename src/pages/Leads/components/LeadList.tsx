@@ -73,7 +73,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
 
   // Check if user is a design engineer
   const isDesignEngineer = userData?.role === 'design engineer';
-
+  const isDesignHead = userData?.role === 'design head';
   // Filter leads based on role and search term
   const filteredLeads = leads.filter((lead) => {
     // If user toggled "Assigned to me", only show leads assigned to current user
@@ -83,7 +83,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
       if (lead.assignedTo.toString() !== userData.id.toString()) return false;
     }
     // Role-based filtering for design engineers
-    if (isDesignEngineer) {
+    if (isDesignEngineer || isDesignHead) {
       if (!assignedLeadIds.includes(lead.id)) {
         return false;
       }
@@ -124,7 +124,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
   // Fetch assigned leads for design engineers
   useEffect(() => {
     const fetchAssignedLeads = async () => {
-      if (!isDesignEngineer || !userData?.id) {
+      if (!isDesignEngineer && !isDesignHead || !userData?.id) {
         return;
       }
 
@@ -142,7 +142,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
     };
 
     fetchAssignedLeads();
-  }, [isDesignEngineer, userData?.id]);
+  }, [isDesignEngineer, isDesignHead, userData?.id]);
 
   // Fetch leads from API
   useEffect(() => {
