@@ -19,7 +19,7 @@ interface LeadApprovalProps {
 }
 
 const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
-  
+
   //----------------------------------------------------------------------------------- For Notification
   const token = localStorage.getItem('auth_token') || '';
   const { userData } = useCRM();
@@ -153,7 +153,11 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
         const approved = actionType === "approved" ? "approved" : "rejected";
         const response = await axios.patch(
           `${import.meta.env.VITE_API_BASE_URL}/lead/decision/${selectedLead.id
-          }?status=${approved}`
+          }?status=${approved}`,
+          {
+            'approved_by': userData?.id,
+            'reason': reason
+          }
         );
 
         console.log("Lead decision updated successfully:", response.data);
@@ -168,23 +172,23 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
 
         // ------------------------------------------------------------------------------------------For notifications
         try {
-              await sendNotification({
-                receiver_ids: ['admin'],
-                title: `Lead ${actionType === "approved" ? "approved" : "rejected"} : ${selectedLead.businessName || 'Lead'}`,
-                message: `Lead ${selectedLead.businessName || 'Lead'} has been ${actionType === "approved" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
-                service_type: 'CRM',
-                link: '/leads',
-                sender_id: userRole || 'user',
-                access: {
-                  module: "CRM",
-                  menu: "Lead",
-                }
-              });
-              console.log(`Notification sent for CRM Lead ${selectedLead.businessName || 'Lead'}`);
-          } catch (notifError) {
-            console.error('Failed to send notification:', notifError);
-            // Continue with the flow even if notification fails
-          }
+          await sendNotification({
+            receiver_ids: ['admin'],
+            title: `Lead ${actionType === "approved" ? "approved" : "rejected"} : ${selectedLead.businessName || 'Lead'}`,
+            message: `Lead ${selectedLead.businessName || 'Lead'} has been ${actionType === "approved" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
+            service_type: 'CRM',
+            link: '/leads',
+            sender_id: userRole || 'user',
+            access: {
+              module: "CRM",
+              menu: "Lead",
+            }
+          });
+          console.log(`Notification sent for CRM Lead ${selectedLead.businessName || 'Lead'}`);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Continue with the flow even if notification fails
+        }
         // ----------------------------------------------------------------------------------------
 
         // Refresh the leads list to show updated data

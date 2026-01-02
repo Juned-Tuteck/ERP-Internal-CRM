@@ -29,12 +29,14 @@ import {
   MessageSquare,
   SquarePen,
   User,
-  FileBarChart
+  FileBarChart,
+  PauseCircle
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal"; // Make sure this import exists
 import axios from "axios";
 import { useCRM } from "../../../context/CRMContext";
 import { createProjectFromLead, CreateProjectRequest } from "../../../utils/projectApi";
+import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
 
 interface LeadDetailsProps {
   lead: any;
@@ -46,7 +48,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [loading, setLoading] = useState(false);
   const [showWinLossModal, setShowWinLossModal] = useState(false);
   const [winLossReason, setWinLossReason] = useState("");
-  const [selectedOutcome, setSelectedOutcome] = useState<"Won" | "Lost">("Won");
+  const [selectedOutcome, setSelectedOutcome] = useState<"Won" | "Lost" | "Hold">("Won");
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,6 +76,14 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [isSendingHelp, setIsSendingHelp] = useState(false);
   const [designHelpSent, setDesignHelpSent] = useState(false);
 
+  // Lead competitors state
+  const [leadCompetitors, setLeadCompetitors] = useState<any[]>([]);
+
+  // Location Data State
+  const [zones, setZones] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+
   // Fetch detailed lead information when lead is selected
 
   useEffect(() => {
@@ -83,9 +93,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       setLoading(true);
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/lead/${lead.id}`
+          `${import.meta.env.VITE_API_BASE_URL}/temp-lead/${lead.id}`
         );
         const apiLead = response.data.data;
+        console.log("apiLead", apiLead);
 
         let branchName = null;
         let branchCurrency = apiLead.currency || "INR";
@@ -143,12 +154,43 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           customerNumber: apiLead.customer_number || lead.customerNumber,
           created_by_name: apiLead.created_by_name || null,
           temp_quotation_number: apiLead.temp_quotation_number || lead.temp_quotation_number || null,
+          assignedTo: apiLead.assigned_user_id || null,
+          nextFollowUpDate: apiLead.next_followup_date || null,
+          assigned_user_name: apiLead.assigned_user_name || null,
+          // New fields for edit mode
+          leadTemperature: apiLead.lead_temperature || null,
+          ownProbability: apiLead.own_probability || null,
+          projectState: apiLead.project_state || null,
+          projectDistrict: apiLead.project_district || null,
+          projectCity: apiLead.project_city || null,
+          projectPincode: apiLead.project_pincode || null,
+          projectStreet: apiLead.project_street || null,
+          projectLocation: apiLead.project_location || null,
+          projectZone: apiLead.project_zone || null,
+          projectCurrentStatus: apiLead.project_current_status || null,
+          nameOfBranchProject: apiLead.name_of_branch_project || null,
+          competitor: apiLead.competitors || [],
+          // Contact persons
+          contactPersons: apiLead.contact || [],
+          // Customer data (for edit mode)
+          customer: apiLead.customer || null,
         };
 
         setLeadDetails(mappedLead);
 
         // Fetch follow-up comments
         fetchFollowUpComments(lead.id);
+
+        // Fetch lead competitors
+        try {
+          const competitorsResponse = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/lead-competitor?lead_id=${lead.id}`
+          );
+          setLeadCompetitors(competitorsResponse.data.data || []);
+        } catch (competitorError) {
+          console.error("Error fetching lead competitors:", competitorError);
+          setLeadCompetitors([]);
+        }
 
         // Check if design help was sent
         checkDesignHelpStatus(lead.id);
@@ -161,6 +203,22 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       }
     };
 
+    const fetchLocationData = async () => {
+      try {
+        const [zonesData, statesData, districtsData] = await Promise.all([
+          zoneApi.getAll(),
+          stateApi.getAll(),
+          districtApi.getAll()
+        ]);
+        setZones(zonesData);
+        setStates(statesData);
+        setDistricts(districtsData);
+      } catch (error) {
+        console.error("Failed to fetch location data", error);
+      }
+    };
+
+    fetchLocationData();
     fetchLeadDetails();
   }, [lead, refreshTrigger]);
 
@@ -374,6 +432,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   // Use detailed lead data if available, otherwise fallback to prop data
   const displayLead = leadDetails || lead;
+  console.log("displayLead", displayLead);
 
   function formatBytes(bytes?: string | number | null) {
     if (bytes == null || isNaN(Number(bytes))) return "-";
@@ -414,13 +473,15 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       case "Enquiry":
         return "bg-blue-100 text-blue-800";
       case "Quoted":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-purple-100 text-purple-800";
       case "Quotation Submitted":
         return "bg-purple-100 text-purple-800";
       case "Won":
         return "bg-green-100 text-green-800";
       case "Lost":
         return "bg-red-100 text-red-800";
+      case "Hold":
+        return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -428,13 +489,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   const getCriticalityColor = (criticality: string) => {
     switch (criticality) {
-      case "Critical":
+      case "Urgent & Important":
         return "text-red-600";
-      case "High":
+      case "Urgent & Non-important":
         return "text-orange-600";
-      case "Medium":
+      case "Non Urgent & Important":
         return "text-yellow-600";
-      case "Normal":
+      case "Non Urgent & Non Importaint":
         return "text-green-600";
       default:
         return "text-gray-600";
@@ -458,13 +519,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     try {
       setIsSubmitting(true);
 
+      const payload: any = {
+        reason: winLossReason,
+        lead_stage: selectedOutcome,
+      };
+
+      if (selectedOutcome === "Hold") {
+        payload.hold_stage = displayLead.leadStage;
+      }
+
       // Call PUT API to update lead status with lead ID in path params
       const response = await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/lead/${displayLead.id}`,
-        {
-          reason: winLossReason,
-          lead_stage: selectedOutcome,
-        }
+        payload
       );
 
       console.log("Lead status updated successfully:", response.data);
@@ -674,7 +741,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               {displayLead.approvalStatus === "approved" &&
                 displayLead.leadStage !== "Quoted" &&
                 displayLead.leadStage !== "Won" &&
-                displayLead.leadStage !== "Lost" && (
+                displayLead.leadStage !== "Lost" &&
+                displayLead.leadStage !== "Hold" && (
                   <button
                     onClick={() => setShowGenerateQuotationModal(true)}
                     disabled={isGeneratingQuotation}
@@ -692,7 +760,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 )}
               {/* Update Status: Only visible when lead is approved */}
               {displayLead.approvalStatus === "approved" &&
-                displayLead.leadStage === "Quoted" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
+                displayLead.leadStage !== "Won" && displayLead.leadStage !== "Lost" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
                   <button
                     onClick={() => setShowWinLossModal(true)}
                     className="rounded-full p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition"
@@ -791,162 +859,865 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         <div className="p-6">
           {activeTab === 'basic' && (
             <div className="space-y-6">
-              {/* Lead Information Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Basic Information */}
+              {/* ===== SECTION 0: Customer General Information ===== */}
+              {displayLead.customer && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Lead Information
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                    Customer General Information
                   </h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-3">
-                        <Mail className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-500">Contact Person</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {displayLead.contactPerson}
-                          </p>
-                        </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                    {/* Business Name */}
+                    <div>
+                      <p className="text-sm text-gray-500">Business Name</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.business_name || "-"}</p>
+                    </div>
+                    {/* Customer Number */}
+                    <div>
+                      <p className="text-sm text-gray-500">Customer Number</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.customer_number || "-"}</p>
+                    </div>
+                    {/* Customer Group */}
+                    {displayLead.customer.customer_group && (
+                      <div>
+                        <p className="text-sm text-gray-500">Customer Group</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.customer_group}</p>
                       </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Phone className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-500">Phone</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {displayLead.phone || displayLead.contactNo}
-                          </p>
-                        </div>
+                    )}
+                    {/* Customer Sub Group */}
+                    {displayLead.customer.customer_sub_group && (
+                      <div>
+                        <p className="text-sm text-gray-500">Customer Sub Group</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.customer_sub_group}</p>
                       </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Building className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-500">Lead Type</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {displayLead.leadType}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Globe className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-500">Lead Source</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {displayLead.leadSource}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-500">ETA</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {displayLead?.projectName}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Clock className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-500">Response Time</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {displayLead.approximateResponseTime} days
-                          </p>
-                        </div>
+                    )}
+                    {/* Industry Type */}
+                    <div>
+                      <p className="text-sm text-gray-500">Industry Type</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.customer_type || "-"}</p>
+                    </div>
+                    {/* Contact Number */}
+                    <div className="flex items-center space-x-2">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Contact Number</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.contact_number || "-"}</p>
                       </div>
                     </div>
-
-                    <div className="flex items-center space-x-3">
-                      <FileBarChart className="h-5 w-5 text-gray-400" />
+                    {/* Alternate Number */}
+                    {displayLead.customer.alternate_number && (
                       <div>
-                        <p className="text-sm text-gray-500">Quotation Number</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {displayLead.temp_quotation_number || "-"}
-                        </p>
+                        <p className="text-sm text-gray-500">Alternate Number</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.alternate_number}</p>
+                      </div>
+                    )}
+                    {/* Email */}
+                    <div className="flex items-center space-x-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Email</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.email || "-"}</p>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Currency */}
+                    <div>
+                      <p className="text-sm text-gray-500">Currency</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.customer.currency ? (typeof displayLead.customer.currency === 'string' ? displayLead.customer.currency : JSON.stringify(displayLead.customer.currency)) : "-"}
+                      </p>
+                    </div>
+                    {/* Customer Classification */}
+                    {displayLead.customer.customer_classification && (
                       <div>
-                        <p className="text-sm text-gray-500">Work Type</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {displayLead.workType || "N/A"}
-                        </p>
+                        <p className="text-sm text-gray-500">Classification</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.customer_classification}</p>
                       </div>
-
-                      <div className="flex items-center space-x-3">
-                        <User className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm text-gray-500"> created by : </p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {displayLead.created_by_name || "-"}
-                          </p>
+                    )}
+                    {/* MSME Registered */}
+                    {displayLead.customer.msme_registered && (
+                      <div>
+                        <p className="text-sm text-gray-500">MSME Registered</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.msme_registered}</p>
+                      </div>
+                    )}
+                    {/* Udyam Registration Number */}
+                    {displayLead.customer.udyam_registration_number && (
+                      <div>
+                        <p className="text-sm text-gray-500">Udyam Registration No.</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.udyam_registration_number}</p>
+                      </div>
+                    )}
+                    {/* Address Section */}
+                    <div className="md:col-span-2 lg:col-span-3 border-t pt-3 mt-2">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Address Information</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Country</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.country || "-"}</p>
+                    </div>
+                    {displayLead.customer.zone && (
+                      <div>
+                        <p className="text-sm text-gray-500">Zone</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.zone}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-gray-500">State</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.state || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">District</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.district || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">City</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.city || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Pincode</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.pincode || "-"}</p>
+                    </div>
+                    {displayLead.customer.street && (
+                      <div className="md:col-span-2">
+                        <p className="text-sm text-gray-500">Street</p>
+                        <p className="text-sm font-medium text-gray-900">{displayLead.customer.street}</p>
+                      </div>
+                    )}
+                    {/* Customer Potential */}
+                    <div>
+                      <p className="text-sm text-gray-500">Customer Potential</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.customer_potential || "-"}</p>
+                    </div>
+                    {/* Current Status */}
+                    <div>
+                      <p className="text-sm text-gray-500">Current Status</p>
+                      <p className="text-sm font-medium text-gray-900">{displayLead.customer.current_status || "-"}</p>
+                    </div>
+                    {/* Compliance Section */}
+                    {(displayLead.customer.gst_number || displayLead.customer.pan_number || displayLead.customer.tan_number) && (
+                      <>
+                        <div className="md:col-span-2 lg:col-span-3 border-t pt-3 mt-2">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Compliance Information</p>
                         </div>
-                      </div>
+                        {displayLead.customer.gst_number && (
+                          <div className="md:col-span-2 lg:col-span-3">
+                            <p className="text-sm text-gray-500">GST Number</p>
+                            <p className="text-sm font-medium text-gray-900 mb-2">{displayLead.customer.gst_number}</p>
+                            {displayLead.customer.complianceFiles && displayLead.customer.complianceFiles.filter((f: any) => f.document_type === 'GST').map((file: any, idx: number) => (
+                              <div key={idx} className="flex items-center space-x-2 mt-1 bg-gray-50 p-2 rounded border border-gray-200">
+                                <FileText className="h-4 w-4 text-blue-500" />
+                                <span className="text-xs text-gray-700 flex-1">{file.original_name}</span>
+                                <a
+                                  href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${file.customer_id}/compliance-files/${file.id}/download`}
+                                  download
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="Download"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {displayLead.customer.pan_number && (
+                          <div className="md:col-span-2 lg:col-span-3">
+                            <p className="text-sm text-gray-500">PAN Number</p>
+                            <p className="text-sm font-medium text-gray-900 mb-2">{displayLead.customer.pan_number}</p>
+                            {displayLead.customer.complianceFiles && displayLead.customer.complianceFiles.filter((f: any) => f.document_type === 'PAN').map((file: any, idx: number) => (
+                              <div key={idx} className="flex items-center space-x-2 mt-1 bg-gray-50 p-2 rounded border border-gray-200">
+                                <FileText className="h-4 w-4 text-blue-500" />
+                                <span className="text-xs text-gray-700 flex-1">{file.original_name}</span>
+                                <a
+                                  href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${file.customer_id}/compliance-files/${file.id}/download`}
+                                  download
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="Download"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {displayLead.customer.tan_number && (
+                          <div className="md:col-span-2 lg:col-span-3">
+                            <p className="text-sm text-gray-500">TAN Number</p>
+                            <p className="text-sm font-medium text-gray-900 mb-2">{displayLead.customer.tan_number}</p>
+                            {displayLead.customer.complianceFiles && displayLead.customer.complianceFiles.filter((f: any) => f.document_type === 'TAN').map((file: any, idx: number) => (
+                              <div key={idx} className="flex items-center space-x-2 mt-1 bg-gray-50 p-2 rounded border border-gray-200">
+                                <FileText className="h-4 w-4 text-blue-500" />
+                                <span className="text-xs text-gray-700 flex-1">{file.original_name}</span>
+                                <a
+                                  href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${file.customer_id}/compliance-files/${file.id}/download`}
+                                  download
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="Download"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {/* Bank Details Section */}
+                    {(displayLead.customer.bank_name || displayLead.customer.bank_account_number || displayLead.customer.ifsc_code) && (
+                      <>
+                        <div className="md:col-span-2 lg:col-span-3 border-t pt-3 mt-2">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Bank Details</p>
+                        </div>
+                        {displayLead.customer.bank_name && (
+                          <div>
+                            <p className="text-sm text-gray-500">Bank Name</p>
+                            <p className="text-sm font-medium text-gray-900">{displayLead.customer.bank_name}</p>
+                          </div>
+                        )}
+                        {displayLead.customer.bank_account_number && (
+                          <div>
+                            <p className="text-sm text-gray-500">Account Number</p>
+                            <p className="text-sm font-medium text-gray-900">{displayLead.customer.bank_account_number}</p>
+                          </div>
+                        )}
+                        {displayLead.customer.ifsc_code && (
+                          <div>
+                            <p className="text-sm text-gray-500">IFSC Code</p>
+                            <p className="text-sm font-medium text-gray-900">{displayLead.customer.ifsc_code}</p>
+                          </div>
+                        )}
+                        {displayLead.customer.branch_name && (
+                          <div>
+                            <p className="text-sm text-gray-500">Branch Name</p>
+                            <p className="text-sm font-medium text-gray-900">{displayLead.customer.branch_name}</p>
+                          </div>
+                        )}
+                        {/* Bank Document */}
+                        {displayLead.customer.complianceFiles && displayLead.customer.complianceFiles.filter((f: any) => f.document_type === 'BANK').length > 0 && (
+                          <div className="md:col-span-2 lg:col-span-3">
+                            <p className="text-sm text-gray-500 mb-2">Bank Document</p>
+                            {displayLead.customer.complianceFiles.filter((f: any) => f.document_type === 'BANK').map((file: any, idx: number) => (
+                              <div key={idx} className="flex items-center space-x-2 mt-1 bg-gray-50 p-2 rounded border border-gray-200">
+                                <FileText className="h-4 w-4 text-blue-500" />
+                                <span className="text-xs text-gray-700 flex-1">{file.original_name}</span>
+                                <a
+                                  href={`${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${file.customer_id}/compliance-files/${file.id}/download`}
+                                  download
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="Download"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {/* Contact Persons */}
+                    {displayLead.customer.contactPersons && displayLead.customer.contactPersons.length > 0 && (
+                      <>
+                        <div className="md:col-span-2 lg:col-span-3 border-t pt-3 mt-2">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Contact Persons ({displayLead.customer.contactPersons.length})</p>
+                        </div>
+                        {displayLead.customer.contactPersons.map((contact: any, index: number) => (
+                          <div key={index} className="md:col-span-2 lg:col-span-3 bg-gray-50 border border-gray-200 rounded p-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <p className="text-xs text-gray-500">Name</p>
+                                <p className="text-sm font-medium text-gray-900">{contact.name}</p>
+                              </div>
+                              {contact.designation && (
+                                <div>
+                                  <p className="text-xs text-gray-500">Designation</p>
+                                  <p className="text-sm font-medium text-gray-900">{contact.designation}</p>
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-xs text-gray-500">Phone</p>
+                                <p className="text-sm font-medium text-gray-900">{contact.phone}</p>
+                              </div>
+                              {contact.email && (
+                                <div>
+                                  <p className="text-xs text-gray-500">Email</p>
+                                  <p className="text-sm font-medium text-gray-900">{contact.email}</p>
+                                </div>
+                              )}
+                              {contact.communication_mode && contact.communication_mode.length > 0 && (
+                                <div>
+                                  <p className="text-xs text-gray-500">Communication Mode</p>
+                                  <p className="text-sm font-medium text-gray-900">{contact.communication_mode.join(', ')}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* ===== SECTION 1: Basic Information ===== */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                  Basic Information Of Lead
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Customer</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.businessName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Customer Branch</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.branch_name || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    <div>
+                      <p className="text-sm text-gray-500">Currency</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.currency || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Clock className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Days in Pipeline</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.submittedDate
+                          ? Math.floor(
+                            (new Date().getTime() -
+                              new Date(displayLead.submittedDate).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                          )
+                          : 0}{" "}
+                        days
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* <div className="flex items-center space-x-3">
+                    <Phone className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Contact No</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.phone || displayLead.contactNo}
+                      </p>
+                    </div>
+                  </div> */}
+
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Lead Generated Date</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.leadGeneratedDate
+                          ? new Date(displayLead.leadGeneratedDate).toLocaleDateString(
+                            "en-IN"
+                          )
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Link className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="text-sm text-gray-500">Referenced By</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.referencedBy || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Lead Type</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.leadType}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Work Type</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.workType || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <AlertTriangle className={`h-5 w-5 ${getCriticalityColor(displayLead.leadCriticality)}`} />
+                    <div>
+                      <p className="text-sm text-gray-500">Lead Criticality</p>
+                      <p className={`text-sm font-medium ${getCriticalityColor(displayLead.leadCriticality)}`}>
+                        {displayLead.leadCriticality}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Lead Source</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.leadSource}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="h-5 w-5 text-blue-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Lead Stage</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.leadStage}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Next Follow-Up Date</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.nextFollowUpDate
+                          ? new Date(displayLead.nextFollowUpDate).toLocaleDateString("en-IN")
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Deal Closure (ETA)</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.eta
+                          ? new Date(displayLead.eta).toLocaleDateString("en-IN")
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Lead Temperature */}
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Lead Temperature</p>
+                      <p className={`text-sm font-medium ${displayLead.leadTemperature === 'Hot' ? 'text-red-600' :
+                        displayLead.leadTemperature === 'Warm' ? 'text-orange-600' :
+                          displayLead.leadTemperature === 'Cold' ? 'text-blue-600' :
+                            'text-gray-900'
+                        }`}>
+                        {displayLead.leadTemperature || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <User className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Created By</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.created_by_name || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <User className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Assigned To</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.assigned_user_name || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <FileBarChart className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Quotation Number</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.temp_quotation_number || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* <div className="flex items-center space-x-3">
+                    <Clock className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Response Time</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.approximateResponseTime} days
+                      </p>
+                    </div>
+                  </div> */}
+                </div>
+              </div>
+
+              {/* Project Progress */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Project Progress
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Current Stage</span>
+                    <span className="font-medium">{displayLead.leadStage}</span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      style={{
+                        width:
+                          displayLead.leadStage === "Information Stage"
+                            ? "20%"
+                            : displayLead.leadStage === "Enquiry"
+                              ? "40%"
+                              : displayLead.leadStage === "Meeting"
+                                ? "60%"
+                                : displayLead.leadStage === "Quoted"
+                                  ? "80%"
+                                  : displayLead.leadStage === "Won"
+                                    ? "100%"
+                                    : "0%",
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ===== SECTION 2: Project Details ===== */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                  Project Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Name</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.projectName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Value</p>
+                      <p className="text-sm font-bold text-green-600">
+                        {displayLead.projectValue}L
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project Zone */}
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Zone</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {zones.find((zone) => zone.id === displayLead.projectZone)?.name || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project State */}
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project State</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {states.find((state) => state.id === displayLead.projectState)?.name || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project District */}
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project District</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {districts.find((district) => district.id === displayLead.projectDistrict)?.name || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project City */}
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project City</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.projectCity || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project Street - Full Width */}
+                  <div className="md:col-span-2 lg:col-span-3 flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Street</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.projectStreet || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project Location - Full Width */}
+                  <div className="md:col-span-2 lg:col-span-3 flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Location</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.projectLocation || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project Pincode */}
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Pincode</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.projectPincode || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NEW FIELD: Project Current Status */}
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="h-5 w-5 text-blue-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Project Current Status</p>
+                      <p className={`text-sm font-medium ${displayLead.projectCurrentStatus === 'Active' ? 'text-green-600' :
+                        displayLead.projectCurrentStatus === 'Hold' ? 'text-yellow-600' :
+                          displayLead.projectCurrentStatus === 'Stalled' ? 'text-orange-600' :
+                            displayLead.projectCurrentStatus === 'Cancelled' ? 'text-red-600' :
+                              displayLead.projectCurrentStatus === 'Purchase' ? 'text-blue-600' :
+                                'text-gray-900'
+                        }`}>
+                        {displayLead.projectCurrentStatus || "-"}
+                      </p>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Project Progress */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Project Progress
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Current Stage</span>
-                      <span className="font-medium">{displayLead.leadStage}</span>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+              {/* ===== SECTION 3: Contact Persons ===== */}
+              {displayLead.contactPersons && displayLead.contactPersons.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Contact Persons</h3>
+                  <div className="space-y-2">
+                    {displayLead.contactPersons.map((contact: any, index: number) => (
                       <div
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width:
-                            displayLead.leadStage === "Information Stage"
-                              ? "20%"
-                              : displayLead.leadStage === "Enquiry"
-                                ? "40%"
-                                : displayLead.leadStage === "Meeting"
-                                  ? "60%"
-                                  : displayLead.leadStage === "Quoted"
-                                    ? "80%"
-                                    : displayLead.leadStage === "Won"
-                                      ? "100%"
-                                      : "0%",
-                        }}
-                      ></div>
-                    </div>
+                        key={index}
+                        className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-colors"
+                      >
+                        {/* Header Row with Name and Designation */}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {contact.name || "Unnamed Contact"}
+                            </p>
+                            {contact.designation && (
+                              <p className="text-xs text-gray-500 truncate">{contact.designation}</p>
+                            )}
+                          </div>
+                          {displayLead.contactPersons.length > 1 && (
+                            <span className="ml-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full flex-shrink-0">
+                              #{index + 1}
+                            </span>
+                          )}
+                        </div>
 
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Submitted Date</span>
-                        <span>
-                          {displayLead.submittedDate
-                            ? new Date(displayLead.submittedDate).toLocaleDateString(
-                              "en-IN"
-                            )
-                            : "N/A"}
-                        </span>
+                        {/* Compact Info Grid */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                          {contact.email && (
+                            <div className="col-span-2">
+                              <span className="text-gray-500">📧</span>
+                              <span className="ml-1 text-gray-700 truncate">{contact.email}</span>
+                            </div>
+                          )}
+                          {contact.phone && (
+                            <div>
+                              <span className="text-gray-500">📞</span>
+                              <span className="ml-1 text-gray-700">{contact.phone}</span>
+                            </div>
+                          )}
+                          {contact.alternative_number && (
+                            <div>
+                              <span className="text-gray-500">📱</span>
+                              <span className="ml-1 text-gray-700">{contact.alternative_number}</span>
+                            </div>
+                          )}
+                          {contact.date_of_birth && (
+                            <div>
+                              <span className="text-gray-500">🎂</span>
+                              <span className="ml-1 text-gray-700">
+                                {new Date(contact.date_of_birth).toLocaleDateString("en-IN", {
+                                  day: '2-digit',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          {contact.anniversary_date && (
+                            <div>
+                              <span className="text-gray-500">💝</span>
+                              <span className="ml-1 text-gray-700">
+                                {new Date(contact.anniversary_date).toLocaleDateString("en-IN", {
+                                  day: '2-digit',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Days in Pipeline</span>
-                        <span>
-                          {displayLead.submittedDate
-                            ? Math.floor(
-                              (new Date().getTime() -
-                                new Date(displayLead.submittedDate).getTime()) /
-                              (1000 * 60 * 60 * 24)
-                            )
-                            : 0}{" "}
-                          days
-                        </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* ===== SECTION 4: Other Details ===== */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                  Other Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  {/* NEW FIELD: Probability % */}
+                  <div className="flex items-center space-x-3">
+                    <TrendingUp className="h-5 w-5 text-purple-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Win Probability</p>
+                      <p className="text-sm font-medium text-purple-600">
+                        {displayLead.ownProbability ? `${displayLead.ownProbability}%` : "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Involved Associates - Full Width */}
+                  <div className="md:col-span-2">
+                    <div className="flex items-start space-x-3">
+                      <Users className="h-5 w-5 text-blue-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-2">Competitors</p>
+                        {leadCompetitors &&
+                          leadCompetitors.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {leadCompetitors.map((a: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="inline-flex items-center px-3 py-1 rounded-half bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
+                              >
+                                <span className="mr-1 text-gray-700">{a.competitor_name} ---- </span>
+                                <span className="font-semibold">{a.win_probability} %</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">-</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Submitted Date</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.submittedDate
+                          ? new Date(displayLead.submittedDate).toLocaleDateString(
+                            "en-IN"
+                          )
+                          : "N/A"}
+                      </p>
+                    </div>
+                  </div> */}
+
+                  {/* <div className="flex items-center space-x-3">
+                    <Clock className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Days in Pipeline</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayLead.submittedDate
+                          ? Math.floor(
+                            (new Date().getTime() -
+                              new Date(displayLead.submittedDate).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                          )
+                          : 0}{" "}
+                        days
+                      </p>
+                    </div>
+                  </div> */}
+
+                  {/* Lead Details - Full Width */}
+                  <div className="md:col-span-2">
+                    <div className="flex items-start space-x-3">
+                      <FileText className="h-5 w-5 text-gray-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-1">Lead Details</p>
+                        <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded border border-gray-200">
+                          {displayLead.leadDetails || "-"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Involved Associates - Full Width */}
+                  <div className="md:col-span-2">
+                    <div className="flex items-start space-x-3">
+                      <Users className="h-5 w-5 text-blue-400 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-2">Involved Associates</p>
+                        {displayLead.involvedAssociates &&
+                          displayLead.involvedAssociates.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {displayLead.involvedAssociates.map((a: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
+                              >
+                                <span className="mr-1">{a.designation}</span>
+                                <span className="font-semibold">{a.associateName}</span>
+                                {a.otherInfo && (
+                                  <span className="ml-1 text-gray-500">
+                                    ({a.otherInfo})
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">-</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -962,8 +1733,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                       onClick={handleDesignHelpModalOpen}
                       disabled={designHelpSent}
                       className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${designHelpSent
-                          ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
-                          : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                        ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
+                        : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
                         }`}
                       title={designHelpSent ? 'This lead has already been assigned for design help.' : ''}
                     >
@@ -974,7 +1745,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {(displayLead?.uploadedFiles ?? []).map((file) => {
+                  {(displayLead?.uploadedFiles ?? []).map((file: any) => {
                     const Icon = getIconByMime(file.mime, file.original_name);
                     const sizeLabel = formatBytes(file.size);
 
@@ -1000,78 +1771,17 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                           <p className="text-xs text-gray-500 mt-3">
                             <User className="inline-block h-4 w-4 " /><b>{file.created_by_name || "-"}</b>
                           </p>
+                          {file.file_note && (
+                            <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 italic">
+                              <span className="font-semibold not-italic">Note:</span> {file.file_note}
+                            </div>
+                          )}
                         </div>
 
                         <Download className="h-4 w-4 text-gray-400 ml-3" />
                       </a>
                     );
                   })}
-                </div>
-              </div>
-
-              {/* Additional Lead Details */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Additional Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Building className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-500">Customer Branch</span>
-                    <div className="font-medium text-gray-900 ml-2">
-                      {displayLead.branch_name || "-"}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    <span className="text-gray-500">Currency</span>
-                    <div className="font-medium text-gray-900 ml-2">
-                      {displayLead.currency || "-"}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Link className="h-4 w-4 text-blue-500" />
-                    <span className="text-gray-500">Referenced By</span>
-                    <div className="font-medium text-gray-900 ml-2">
-                      {displayLead.referencedBy || "-"}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-500">Lead Generated Date</span>
-                    <div className="font-medium text-gray-900 ml-2">
-                      {displayLead.leadGeneratedDate
-                        ? new Date(displayLead.leadGeneratedDate).toLocaleDateString(
-                          "en-IN"
-                        )
-                        : "-"}
-                    </div>
-                  </div>
-                  <div className="md:col-span-2 flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-blue-500" />
-                    <span className="text-gray-500">Involved Associates</span>
-                    {displayLead.involvedAssociates &&
-                      displayLead.involvedAssociates.length > 0 ? (
-                      <div className="flex flex-wrap gap-2 ml-2">
-                        {displayLead.involvedAssociates.map((a: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-800 font-medium"
-                          >
-                            <span className="mr-1">{a.designation}</span>
-                            <span className="font-semibold">{a.associateName}</span>
-                            {a.otherInfo && (
-                              <span className="ml-1 text-gray-500">
-                                ({a.otherInfo})
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="font-medium text-gray-900 ml-2">-</div>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
@@ -1194,31 +1904,49 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     Select Outcome
                   </label>
                   <div className="flex space-x-4">
+                    {displayLead.leadStage === "Quoted" && (
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="Won"
+                          checked={selectedOutcome === "Won"}
+                          onChange={(e) =>
+                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
+                          }
+                          className="mr-2"
+                        />
+                        <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
+                        <span className="text-sm text-green-600">Won</span>
+                      </label>
+                    )}
+                    {displayLead.leadStage === "Quoted" && (
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="Lost"
+                          checked={selectedOutcome === "Lost"}
+                          onChange={(e) =>
+                            setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
+                          }
+                          className="mr-2"
+                        />
+                        <XCircle className="h-4 w-4 text-red-600 mr-1" />
+                        <span className="text-sm text-red-600">Lost</span>
+                      </label>
+                    )}
+
                     <label className="flex items-center">
                       <input
                         type="radio"
-                        value="Won"
-                        checked={selectedOutcome === "Won"}
+                        value="Hold"
+                        checked={selectedOutcome === "Hold"}
                         onChange={(e) =>
-                          setSelectedOutcome(e.target.value as "Won" | "Lost")
+                          setSelectedOutcome(e.target.value as "Won" | "Lost" | "Hold")
                         }
                         className="mr-2"
                       />
-                      <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                      <span className="text-sm text-green-600">Won</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="Lost"
-                        checked={selectedOutcome === "Lost"}
-                        onChange={(e) =>
-                          setSelectedOutcome(e.target.value as "Won" | "Lost")
-                        }
-                        className="mr-2"
-                      />
-                      <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                      <span className="text-sm text-red-600">Lost</span>
+                      <PauseCircle className="h-4 w-4 text-yellow-600 mr-1" />
+                      <span className="text-sm text-yellow-600">Hold</span>
                     </label>
                   </div>
                 </div>
@@ -1255,7 +1983,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 disabled={!winLossReason.trim() || isSubmitting}
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${selectedOutcome === "Won"
                   ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
+                  : selectedOutcome === "Hold"
+                    ? "bg-yellow-600 hover:bg-yellow-700"
+                    : "bg-red-600 hover:bg-red-700"
                   } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {isSubmitting ? (
@@ -1264,11 +1994,18 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     {selectedOutcome === "Won"
                       ? "Marking as Won..."
                       : "Marking as Lost..."}
+
+                    {selectedOutcome === "Hold" ? ("Marking as Hold...") : ""}
                   </>
                 ) : selectedOutcome === "Won" ? (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Mark as Won
+                  </>
+                ) : selectedOutcome === "Hold" ? (
+                  <>
+                    <PauseCircle className="h-4 w-4 mr-2" />
+                    Mark as Hold
                   </>
                 ) : (
                   <>

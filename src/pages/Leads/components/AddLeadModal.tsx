@@ -210,6 +210,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [showCustomLeadSource, setShowCustomLeadSource] = useState(false);
   const [customLeadSource, setCustomLeadSource] = useState("");
 
+  // Temporary leads states
+  const [tempLeads, setTempLeads] = useState<Array<{ lead_id: string; project_name: string }>>([]);
+  const [selectedTempLeadId, setSelectedTempLeadId] = useState<string>("");
+  const [originalTempLeadData, setOriginalTempLeadData] = useState<any>(null);
+  const [originalLeadContacts, setOriginalLeadContacts] = useState<any[]>([]);
+  const [originalLeadCompetitors, setOriginalLeadCompetitors] = useState<any[]>([]);
+
   const steps = [
     { id: 1, name: "General Information", description: "Basic lead details" },
     { id: 2, name: "Upload Files", description: "Supporting documents" },
@@ -729,9 +736,23 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             );
 
             setCustomers(approvedCustomers);
-            const selectedCustomer = approvedCustomers.find(
-              (customer: any) => customer.name === initialData.businessName
-            );
+
+            // First try to find by customer_id (more reliable)
+            let selectedCustomer = null;
+            const customerId = initialData.customer_id || initialData.customerId;
+
+            if (customerId) {
+              selectedCustomer = approvedCustomers.find(
+                (customer: any) => customer.id === customerId
+              );
+            }
+
+            // Fallback to name matching if ID not found
+            if (!selectedCustomer && initialData.businessName) {
+              selectedCustomer = approvedCustomers.find(
+                (customer: any) => customer.name === initialData.businessName
+              );
+            }
 
 
             if (selectedCustomer) {
@@ -740,6 +761,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
               setSelectedCustomerId(localCustomerId);
               // update snapshot
               initialFormRef.current.customer_id = localCustomerId;
+
+              // Update formData with the actual customer name from the found customer
+              setFormData((prev: any) => ({
+                ...prev,
+                businessName: selectedCustomer.name, // Use the actual customer name
+              }));
 
               // Fetch branches for this customer
               const branchResponse = await axios.get(
@@ -763,6 +790,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   setFormData((prev: any) => ({
                     ...prev,
                     customerBranch: selectedBranch.branch_name,
+                    currency: selectedBranch.currency || prev.currency, // Set currency from branch
                   }));
 
                   // Fetch contacts for this branch
@@ -829,6 +857,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       initialFormRef.current.contact_person_id = selectedContact.id;
                     }
                   }
+                }
+
+                // Set currency from customer if available
+                if (selectedCustomer.currency && selectedCustomer.currency.length > 0) {
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    currency: initialData.currency || selectedCustomer.currency[0],
+                  }));
                 }
               }
             }
@@ -1030,9 +1066,187 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
+  // Fetch temporary leads on mount
+  useEffect(() => {
+    const fetchTempLeads = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/lead/temp-leads`
+        );
+        if (response.data.success) {
+          setTempLeads(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching temporary leads:', error);
+        setTempLeads([]);
+      }
+    };
+    if (isOpen && !initialData) {
+      fetchTempLeads();
+    }
+  }, [isOpen, initialData]);
+
+  // Handle temporary lead selection
+  const handleTempLeadSelect = async (leadId: string) => {
+    setSelectedTempLeadId(leadId);
+
+    if (!leadId) {
+      return;
+    }
+
+    try {
+      // Fetch the full lead details
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/temp-lead/${leadId}`
+      );
+
+      if (response.data.success) {
+        const leadData = response.data.data;
+        console.log('Temp Lead Data:', leadData);
+
+        // Parse work_type if it's a JSON string
+        let parsedWorkType = leadData.work_type;
+        if (typeof parsedWorkType === 'string' && parsedWorkType.trim().startsWith('[')) {
+          try {
+            parsedWorkType = JSON.parse(parsedWorkType);
+          } catch (e) {
+            console.error('Error parsing work_type:', e);
+          }
+        }
+
+        // Store original lead data for comparison
+        setOriginalTempLeadData({
+          businessName: leadData.customer?.business_name || "",
+          projectName: leadData.project_name || "",
+          projectValue: leadData.project_value || "",
+          leadType: leadData.lead_type || "",
+          workType: parsedWorkType || "",
+          leadCriticality: leadData.lead_criticality || "",
+          leadSource: leadData.lead_source || "",
+          leadStage: leadData.lead_stage || "Information Stage",
+          leadGeneratedDate: leadData.lead_date_generated_on ? new Date(leadData.lead_date_generated_on).toISOString().split('T')[0] : new Date().toLocaleDateString("en-CA"),
+          referencedBy: leadData.referenced_by || "",
+          eta: leadData.eta ? new Date(leadData.eta).toISOString().split('T')[0] : "",
+          leadDetails: leadData.lead_details || "",
+          currency: leadData.currency || "INR",
+          nextFollowUpDate: leadData.next_followup_date ? new Date(leadData.next_followup_date).toISOString().split('T')[0] : "",
+          leadTemperature: leadData.lead_temperature || "",
+          ownProbability: leadData.own_probability || "",
+          projectState: leadData.project_state || "",
+          projectDistrict: leadData.project_district || "",
+          projectCity: leadData.project_city || "",
+          projectPincode: leadData.project_pincode || "",
+          projectStreet: leadData.project_street || "",
+          projectLocation: leadData.project_location || "",
+          projectZone: leadData.project_zone || "",
+          projectCurrentStatus: leadData.project_current_status || "",
+          assignedTo: leadData.assigned_user_id || "",
+        });
+
+        // Store original lead contacts
+        if (leadData.contact) {
+          setOriginalLeadContacts(leadData.contact.map((contact: any) => ({
+            id: contact.id || Math.random().toString(36).substr(2, 9),
+            name: contact.name || "",
+            designation: contact.designation || "",
+            email: contact.email || "",
+            phone: contact.phone || "",
+            alternativeNumber: contact.alternative_number || "",
+            dateOfBirth: contact.date_of_birth ? new Date(contact.date_of_birth).toISOString().split('T')[0] : "",
+            anniversaryDate: contact.anniversary_date ? new Date(contact.anniversary_date).toISOString().split('T')[0] : "",
+            communicationMode: contact.communication_mode || [],
+          })));
+        }
+
+        // Store original competitors
+        if (leadData.competitors) {
+          setOriginalLeadCompetitors(leadData.competitors.map((competitor: any) => ({
+            id: competitor.id || Math.random().toString(36).substr(2, 9),
+            competitorName: competitor.competitor_name || "",
+            winProbability: competitor.win_probability || "",
+          })));
+        }
+
+        // Populate form data with lead information
+        setFormData((prev: typeof formData) => ({
+          ...prev,
+          businessName: leadData.customer?.business_name || "",
+          projectName: leadData.project_name || "",
+          projectValue: leadData.project_value || "",
+          leadType: leadData.lead_type || "",
+          workType: parsedWorkType || "",
+          leadCriticality: leadData.lead_criticality || "",
+          leadSource: leadData.lead_source || "",
+          leadStage: leadData.lead_stage || "Information Stage",
+          leadGeneratedDate: leadData.lead_date_generated_on ? new Date(leadData.lead_date_generated_on).toISOString().split('T')[0] : new Date().toLocaleDateString("en-CA"),
+          referencedBy: leadData.referenced_by || "",
+          eta: leadData.eta ? new Date(leadData.eta).toISOString().split('T')[0] : "",
+          leadDetails: leadData.lead_details || "",
+          currency: leadData.currency || "INR",
+          nextFollowUpDate: leadData.next_followup_date ? new Date(leadData.next_followup_date).toISOString().split('T')[0] : "",
+          leadTemperature: leadData.lead_temperature || "",
+          ownProbability: leadData.own_probability || "",
+          projectState: leadData.project_state || "",
+          projectDistrict: leadData.project_district || "",
+          projectCity: leadData.project_city || "",
+          projectPincode: leadData.project_pincode || "",
+          projectStreet: leadData.project_street || "",
+          projectLocation: leadData.project_location || "",
+          projectZone: leadData.project_zone || "",
+          projectCurrentStatus: leadData.project_current_status || "",
+          assignedTo: leadData.assigned_user_id || "",
+          // Populate lead contacts
+          leadContacts: leadData.contact ? leadData.contact.map((contact: any) => ({
+            id: contact.id || Math.random().toString(36).substr(2, 9),
+            name: contact.name || "",
+            designation: contact.designation || "",
+            email: contact.email || "",
+            phone: contact.phone || "",
+            alternativeNumber: contact.alternative_number || "",
+            dateOfBirth: contact.date_of_birth ? new Date(contact.date_of_birth).toISOString().split('T')[0] : "",
+            anniversaryDate: contact.anniversary_date ? new Date(contact.anniversary_date).toISOString().split('T')[0] : "",
+            communicationMode: contact.communication_mode || [],
+          })) : prev.leadContacts,
+          // Populate competitors
+          leadCompetitors: leadData.competitors ? leadData.competitors.map((competitor: any) => ({
+            id: competitor.id || Math.random().toString(36).substr(2, 9),
+            competitorName: competitor.competitor_name || "",
+            winProbability: competitor.win_probability || "",
+          })) : prev.leadCompetitors,
+        }));
+
+        // Set customer if available
+        if (leadData.customer_id) {
+          setSelectedCustomerId(leadData.customer_id);
+          // Fetch customer branches if needed
+          if (leadData.customer_id) {
+            await fetchCustomerBranches(leadData.customer_id);
+          }
+        }
+
+        // Set branch if available
+        if (leadData.customer_branch_id) {
+          setSelectedBranchId(leadData.customer_branch_id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching temporary lead details:", error);
+      showToast("Failed to load temporary lead details. Please try again.", "error");
+    }
+  };
+
   const fallbackCustomer = customers.find(c => c.id === selectedCustomerId);
 
-  const currenciesToShow = selectedBranchId ? customerBranches.map(b => b.currency) : fallbackCustomer?.currency ?? [];
+  // Get currency options based on selected branch or customer
+  const currenciesToShow = (() => {
+    if (selectedBranchId) {
+      // Find the specific selected branch and get its currency
+      const selectedBranch = customerBranches.find(b => b.id === selectedBranchId);
+      return selectedBranch?.currency ? [selectedBranch.currency] : [];
+    }
+    // Otherwise use customer's currencies
+    return fallbackCustomer?.currency ?? [];
+  })();
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -1142,14 +1356,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     if (name === "leadSource") {
       if (value === "Others") {
         setShowCustomLeadSource(true);
-        setFormData((prev) => ({
+        setFormData((prev: any) => ({
           ...prev,
           leadSource: "",
         }));
       } else {
         setShowCustomLeadSource(false);
         setCustomLeadSource("");
-        setFormData((prev) => ({
+        setFormData((prev: any) => ({
           ...prev,
           leadSource: value,
         }));
@@ -1157,7 +1371,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       return;
     }
 
-    setFormData((prev) => ({
+    setFormData((prev: any) => ({
       ...prev,
       [name]: value,
     }));
@@ -1565,6 +1779,260 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         setIsLoading(false);
         return;
       }
+
+      // Check if this lead is from a temp lead
+      if (selectedTempLeadId) {
+        // For temp leads, update once instead of creating multiple leads
+        const updatePayload: Record<string, any> = {
+          is_temp_lead: false,
+          customer_branch_id: selectedBranchId || null, // Add branch ID
+        };
+
+        // Field mapping from UI to backend
+        const fieldMapping: Record<string, string> = {
+          businessName: 'business_name',
+          projectName: 'project_name',
+          projectValue: 'project_value',
+          leadType: 'lead_type',
+          workType: 'work_type',
+          leadCriticality: 'lead_criticality',
+          leadSource: 'lead_source',
+          leadStage: 'lead_stage',
+          leadGeneratedDate: 'lead_date_generated_on',
+          referencedBy: 'referenced_by',
+          eta: 'eta',
+          leadDetails: 'lead_details',
+          currency: 'currency',
+          nextFollowUpDate: 'next_followup_date',
+          leadTemperature: 'lead_temperature',
+          ownProbability: 'own_probability',
+          projectState: 'project_state',
+          projectDistrict: 'project_district',
+          projectCity: 'project_city',
+          projectPincode: 'project_pincode',
+          projectStreet: 'project_street',
+          projectLocation: 'project_location',
+          projectZone: 'project_zone',
+          projectCurrentStatus: 'project_current_status',
+        };
+
+        // Compare current form data with original data and add changed fields
+        if (originalTempLeadData) {
+          Object.keys(fieldMapping).forEach((uiKey) => {
+            const currentValue = formData[uiKey as keyof typeof formData];
+            const originalValue = originalTempLeadData[uiKey];
+
+            // Compare values (handle arrays separately)
+            let hasChanged = false;
+            if (Array.isArray(currentValue) && Array.isArray(originalValue)) {
+              hasChanged = JSON.stringify(currentValue) !== JSON.stringify(originalValue);
+            } else {
+              hasChanged = currentValue !== originalValue;
+            }
+
+            // If value has changed, add to payload
+            if (hasChanged) {
+              const backendKey = fieldMapping[uiKey as keyof typeof fieldMapping];
+              // Special handling for work_type - send as JSON string array
+              if (backendKey === 'work_type') {
+                updatePayload[backendKey] = JSON.stringify(Array.isArray(currentValue) ? currentValue : [currentValue]);
+              } else if (backendKey === 'project_value') {
+                updatePayload[backendKey] = parseFloat(currentValue as string) || 0;
+              } else if (backendKey === 'own_probability') {
+                updatePayload[backendKey] = currentValue ? parseFloat(currentValue as string) : null;
+              } else {
+                updatePayload[backendKey] = currentValue || null;
+              }
+            }
+          });
+        }
+
+        console.log('Update payload for temp lead (complete registration):', updatePayload);
+
+        const updateResponse = await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/lead/${selectedTempLeadId}`,
+          updatePayload
+        );
+
+        if (updateResponse.status !== 200 && updateResponse.status !== 201) {
+          throw new Error("Failed to update lead");
+        }
+
+        console.log("Temp lead updated successfully (complete registration):", updateResponse.data);
+
+        const leadId = selectedTempLeadId;
+
+
+
+        // Handle document uploads (always allow uploads for temp leads)
+        // In multi-worktype mode, files are stored in multiWorktypeState.step2.documents
+        const worktypeDocuments = multiWorktypeState.step2.documents[selectedWorktypes[0]] || [];
+        const commonDocuments = multiWorktypeState.step2.documents['COMMON'] || [];
+        const allDocuments = [...worktypeDocuments, ...commonDocuments];
+
+        console.log('[handleCompleteRegistration] Checking for files. worktypeDocuments:', worktypeDocuments);
+        console.log('[handleCompleteRegistration] commonDocuments:', commonDocuments);
+        console.log('[handleCompleteRegistration] Total documents:', allDocuments.length);
+
+        if (allDocuments.length > 0) {
+          try {
+            await uploadFilesForLead(leadId, allDocuments);
+            await updateLeadStageAfterFileUpload(leadId);
+            console.log("Documents uploaded successfully for temp lead");
+          } catch (uploadError) {
+            console.error("Error uploading documents for temp lead:", uploadError);
+          }
+        }
+
+        // Intelligent Contact Person Handling
+        if (formData.leadContacts && formData.leadContacts.length > 0) {
+          const newContacts: any[] = [];
+          const modifiedContacts: any[] = [];
+
+          formData.leadContacts.forEach((contact: any) => {
+            const originalContact = originalLeadContacts.find((orig) => orig.id === contact.id);
+
+            if (!originalContact) {
+              // New contact
+              newContacts.push(contact);
+            } else {
+              // Check if modified
+              const hasChanged =
+                contact.name !== originalContact.name ||
+                contact.designation !== originalContact.designation ||
+                contact.email !== originalContact.email ||
+                contact.phone !== originalContact.phone ||
+                contact.alternativeNumber !== originalContact.alternativeNumber ||
+                contact.dateOfBirth !== originalContact.dateOfBirth ||
+                contact.anniversaryDate !== originalContact.anniversaryDate ||
+                JSON.stringify(contact.communicationMode) !== JSON.stringify(originalContact.communicationMode);
+
+              if (hasChanged) {
+                modifiedContacts.push(contact);
+              }
+            }
+          });
+
+          // Create new contacts via bulk POST
+          if (newContacts.length > 0) {
+            try {
+              const contactsPayload = newContacts.map((contact) => ({
+                lead_id: leadId,
+                name: contact.name,
+                designation: contact.designation || null,
+                email: contact.email || null,
+                phone: contact.phone,
+                alternative_number: contact.alternativeNumber || null,
+                date_of_birth: contact.dateOfBirth || null,
+                anniversary_date: contact.anniversaryDate || null,
+                communication_mode: contact.communicationMode || null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
+                contactsPayload
+              );
+              console.log(`${newContacts.length} new contact(s) created for temp lead`);
+            } catch (error) {
+              console.error("Error creating new contacts:", error);
+            }
+          }
+
+          // Update modified contacts via individual PUT
+          for (const contact of modifiedContacts) {
+            try {
+              const updatePayload = {
+                name: contact.name,
+                designation: contact.designation || null,
+                email: contact.email || null,
+                phone: contact.phone,
+                alternative_number: contact.alternativeNumber || null,
+                date_of_birth: contact.dateOfBirth || null,
+                anniversary_date: contact.anniversaryDate || null,
+                communication_mode: contact.communicationMode || null,
+              };
+              await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`,
+                updatePayload
+              );
+              console.log(`Contact ${contact.name} updated successfully`);
+            } catch (error) {
+              console.error(`Error updating contact ${contact.name}:`, error);
+            }
+          }
+
+          console.log(`Contacts processed: ${newContacts.length} new, ${modifiedContacts.length} modified, ${formData.leadContacts.length - newContacts.length - modifiedContacts.length} unchanged`);
+        }
+
+        // Intelligent Competitor Handling
+        if (formData.leadCompetitors && formData.leadCompetitors.length > 0) {
+          const newCompetitors: any[] = [];
+          const modifiedCompetitors: any[] = [];
+
+          formData.leadCompetitors.forEach((competitor: any) => {
+            const originalCompetitor = originalLeadCompetitors.find((orig) => orig.id === competitor.id);
+
+            if (!originalCompetitor) {
+              // New competitor
+              newCompetitors.push(competitor);
+            } else {
+              // Check if modified
+              const hasChanged =
+                competitor.competitorName !== originalCompetitor.competitorName ||
+                competitor.winProbability !== originalCompetitor.winProbability;
+
+              if (hasChanged) {
+                modifiedCompetitors.push(competitor);
+              }
+            }
+          });
+
+          // Create new competitors via bulk POST
+          if (newCompetitors.length > 0) {
+            try {
+              const competitorsPayload = newCompetitors.map((competitor) => ({
+                lead_id: leadId,
+                competitor_name: competitor.competitorName,
+                win_probability: competitor.winProbability ? parseFloat(competitor.winProbability) : null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
+                competitorsPayload
+              );
+              console.log(`${newCompetitors.length} new competitor(s) created for temp lead`);
+            } catch (error) {
+              console.error("Error creating new competitors:", error);
+            }
+          }
+
+          // Update modified competitors via individual PUT
+          for (const competitor of modifiedCompetitors) {
+            try {
+              const updatePayload = {
+                competitor_name: competitor.competitorName,
+                win_probability: competitor.winProbability ? parseFloat(competitor.winProbability) : null,
+              };
+              await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/${competitor.id}`,
+                updatePayload
+              );
+              console.log(`Competitor ${competitor.competitorName} updated successfully`);
+            } catch (error) {
+              console.error(`Error updating competitor ${competitor.competitorName}:`, error);
+            }
+          }
+
+          console.log(`Competitors processed: ${newCompetitors.length} new, ${modifiedCompetitors.length} modified, ${formData.leadCompetitors.length - newCompetitors.length - modifiedCompetitors.length} unchanged`);
+        }
+
+        // For temp leads, we don't create multiple leads, just update the one
+        // Show success and close modal
+        showToast("Lead updated successfully!");
+        onClose();
+        setIsLoading(false);
+        return;
+      }
+
+      // Normal flow: Create multiple leads for each worktype
       const results: { [worktype: string]: { success: boolean; leadId?: string; error?: string } } = {};
 
       // Create leads sequentially for each worktype
@@ -1815,50 +2283,137 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
 
       console.log("Creating unified lead with worktypes:", selectedWorktypes);
 
-      // 1. Create Lead
-      const leadPayload = {
-        business_name: formData.businessName,
-        customer_id: selectedCustomerId || null,
-        customer_branch_id: selectedBranchId || null,
-        lead_date_generated_on: formData.leadGeneratedDate,
-        referenced_by: formData.referencedBy || null,
-        project_name: formData.projectName,
-        project_value: parseFloat(formData.projectValue) || 0,
-        lead_type: formData.leadType,
-        work_type: JSON.stringify(selectedWorktypes), // Unified Array String
-        lead_criticality: formData.leadCriticality,
-        lead_source: formData.leadSource,
-        lead_stage: formData.leadStage,
-        approximate_response_time_day: 0,
-        eta: formData.eta || null,
-        lead_details: formData.leadDetails || null,
-        currency: formData.currency || null,
-        created_by: userData?.id || null,
-        assigned_user_id: formData.assignedTo || null, // Single assignment
-        next_followup_date: formData.nextFollowUpDate || null,
-        // New fields
-        lead_temperature: formData.leadTemperature || null,
-        own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
-        project_state: formData.projectState || null,
-        project_district: formData.projectDistrict || null,
-        project_city: formData.projectCity || null,
-        project_pincode: formData.projectPincode || null,
-        project_street: formData.projectStreet || null,
-        project_location: formData.projectLocation || null,
-        project_zone: formData.projectZone || null,
-        project_current_status: formData.projectCurrentStatus || null,
-      };
+      let leadId: string;
 
-      const leadResponse = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/lead`,
-        leadPayload
-      );
-      const leadData = leadResponse.data.data;
-      const leadId = leadData.lead_id;
+      // Check if this lead is from a temp lead
+      if (selectedTempLeadId) {
+        // Update existing temp lead - set is_temp_lead to false and include changed fields
+        const updatePayload: Record<string, any> = {
+          is_temp_lead: false,
+          customer_branch_id: selectedBranchId || null, // Add branch ID
+        };
 
-      console.log(`Unified lead created: ${leadId}`);
+        // Field mapping from UI to backend
+        const fieldMapping: Record<string, string> = {
+          businessName: 'business_name',
+          projectName: 'project_name',
+          projectValue: 'project_value',
+          leadType: 'lead_type',
+          workType: 'work_type',
+          leadCriticality: 'lead_criticality',
+          leadSource: 'lead_source',
+          leadStage: 'lead_stage',
+          leadGeneratedDate: 'lead_date_generated_on',
+          referencedBy: 'referenced_by',
+          eta: 'eta',
+          leadDetails: 'lead_details',
+          currency: 'currency',
+          nextFollowUpDate: 'next_followup_date',
+          leadTemperature: 'lead_temperature',
+          ownProbability: 'own_probability',
+          projectState: 'project_state',
+          projectDistrict: 'project_district',
+          projectCity: 'project_city',
+          projectPincode: 'project_pincode',
+          projectStreet: 'project_street',
+          projectLocation: 'project_location',
+          projectZone: 'project_zone',
+          projectCurrentStatus: 'project_current_status',
+          assignedTo: 'assigned_user_id',
+        };
+
+        // Compare current form data with original data and add changed fields
+        if (originalTempLeadData) {
+          Object.keys(fieldMapping).forEach((uiKey) => {
+            const currentValue = formData[uiKey as keyof typeof formData];
+            const originalValue = originalTempLeadData[uiKey];
+
+            // Compare values (handle arrays separately)
+            let hasChanged = false;
+            if (Array.isArray(currentValue) && Array.isArray(originalValue)) {
+              hasChanged = JSON.stringify(currentValue) !== JSON.stringify(originalValue);
+            } else {
+              hasChanged = currentValue !== originalValue;
+            }
+
+            // If value has changed, add to payload
+            if (hasChanged) {
+              const backendKey = fieldMapping[uiKey as keyof typeof fieldMapping];
+              // Special handling for work_type - send as JSON string array
+              if (backendKey === 'work_type') {
+                updatePayload[backendKey] = JSON.stringify(Array.isArray(currentValue) ? currentValue : [currentValue]);
+              } else if (backendKey === 'project_value') {
+                updatePayload[backendKey] = parseFloat(currentValue as string) || 0;
+              } else if (backendKey === 'own_probability') {
+                updatePayload[backendKey] = currentValue ? parseFloat(currentValue as string) : null;
+              } else {
+                updatePayload[backendKey] = currentValue || null;
+              }
+            }
+          });
+        }
+
+        console.log('Update payload for temp lead (unified):', updatePayload);
+
+        const updateResponse = await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL}/lead/${selectedTempLeadId}`,
+          updatePayload
+        );
+
+        if (updateResponse.status !== 200 && updateResponse.status !== 201) {
+          throw new Error("Failed to update lead");
+        }
+
+        console.log("Temp lead updated successfully (unified):", updateResponse.data);
+        leadId = selectedTempLeadId;
+      } else {
+        // Normal flow: Create new lead
+        const leadPayload = {
+          business_name: formData.businessName,
+          customer_id: selectedCustomerId || null,
+          customer_branch_id: selectedBranchId || null,
+          lead_date_generated_on: formData.leadGeneratedDate,
+          referenced_by: formData.referencedBy || null,
+          project_name: formData.projectName,
+          project_value: parseFloat(formData.projectValue) || 0,
+          lead_type: formData.leadType,
+          work_type: JSON.stringify(selectedWorktypes), // Unified Array String
+          lead_criticality: formData.leadCriticality,
+          lead_source: formData.leadSource,
+          lead_stage: formData.leadStage,
+          approximate_response_time_day: 0,
+          eta: formData.eta || null,
+          lead_details: formData.leadDetails || null,
+          currency: formData.currency || null,
+          created_by: userData?.id || null,
+          assigned_user_id: formData.assignedTo || null, // Single assignment
+          next_followup_date: formData.nextFollowUpDate || null,
+          // New fields
+          lead_temperature: formData.leadTemperature || null,
+          own_probability: formData.ownProbability ? parseFloat(formData.ownProbability) : null,
+          project_state: formData.projectState || null,
+          project_district: formData.projectDistrict || null,
+          project_city: formData.projectCity || null,
+          project_pincode: formData.projectPincode || null,
+          project_street: formData.projectStreet || null,
+          project_location: formData.projectLocation || null,
+          project_zone: formData.projectZone || null,
+          project_current_status: formData.projectCurrentStatus || null,
+        };
+
+        const leadResponse = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/lead`,
+          leadPayload
+        );
+        const leadData = leadResponse.data.data;
+        leadId = leadData.lead_id;
+      }
+
+      console.log(`Unified lead created/updated: ${leadId}`);
 
       // 2. Upload Files (Unified)
+      console.log('Checking for files to upload. uploadedFiles:', uploadedFiles);
+      console.log('Number of files:', uploadedFiles.length);
       if (uploadedFiles.length > 0) {
         try {
           await uploadFilesForLead(leadId, uploadedFiles);
@@ -1903,46 +2458,184 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         }
       }
 
-      // 4.5. Add Lead Contacts (Unified)
+      // 4.5. Add/Update Lead Contacts (Unified) - Intelligent Handling
       if (formData.leadContacts && formData.leadContacts.length > 0) {
-        try {
-          const contactsPayload = formData.leadContacts.map((contact: any) => ({
-            lead_id: leadId,
-            name: contact.name,
-            designation: contact.designation || null,
-            email: contact.email || null,
-            phone: contact.phone,
-            alternative_number: contact.alternative_number || null,
-            date_of_birth: contact.date_of_birth || null,
-            anniversary_date: contact.anniversary_date || null,
-            communication_mode: contact.communication_mode || null,
-          }));
-          await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
-            contactsPayload
-          );
-          console.log(`Contacts added for unified lead`);
-        } catch (contactError) {
-          console.error(`Error adding contacts:`, contactError);
+        if (selectedTempLeadId) {
+          // Intelligent handling for temp leads
+          const newContacts: any[] = [];
+          const modifiedContacts: any[] = [];
+
+          formData.leadContacts.forEach((contact: any) => {
+            const originalContact = originalLeadContacts.find((orig) => orig.id === contact.id);
+
+            if (!originalContact) {
+              newContacts.push(contact);
+            } else {
+              const hasChanged =
+                contact.name !== originalContact.name ||
+                contact.designation !== originalContact.designation ||
+                contact.email !== originalContact.email ||
+                contact.phone !== originalContact.phone ||
+                contact.alternativeNumber !== originalContact.alternativeNumber ||
+                contact.dateOfBirth !== originalContact.dateOfBirth ||
+                contact.anniversaryDate !== originalContact.anniversaryDate ||
+                JSON.stringify(contact.communicationMode) !== JSON.stringify(originalContact.communicationMode);
+
+              if (hasChanged) {
+                modifiedContacts.push(contact);
+              }
+            }
+          });
+
+          // Create new contacts
+          if (newContacts.length > 0) {
+            try {
+              const contactsPayload = newContacts.map((contact) => ({
+                lead_id: leadId,
+                name: contact.name,
+                designation: contact.designation || null,
+                email: contact.email || null,
+                phone: contact.phone,
+                alternative_number: contact.alternativeNumber || null,
+                date_of_birth: contact.dateOfBirth || null,
+                anniversary_date: contact.anniversaryDate || null,
+                communication_mode: contact.communicationMode || null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
+                contactsPayload
+              );
+              console.log(`${newContacts.length} new contact(s) created`);
+            } catch (error) {
+              console.error("Error creating new contacts:", error);
+            }
+          }
+
+          // Update modified contacts
+          for (const contact of modifiedContacts) {
+            try {
+              const updatePayload = {
+                name: contact.name,
+                designation: contact.designation || null,
+                email: contact.email || null,
+                phone: contact.phone,
+                alternative_number: contact.alternativeNumber || null,
+                date_of_birth: contact.dateOfBirth || null,
+                anniversary_date: contact.anniversaryDate || null,
+                communication_mode: contact.communicationMode || null,
+              };
+              await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-contact/${contact.id}`,
+                updatePayload
+              );
+              console.log(`Contact ${contact.name} updated`);
+            } catch (error) {
+              console.error(`Error updating contact:`, error);
+            }
+          }
+
+          console.log(`Contacts: ${newContacts.length} new, ${modifiedContacts.length} modified, ${formData.leadContacts.length - newContacts.length - modifiedContacts.length} unchanged`);
+        } else {
+          // Normal flow: create all contacts
+          try {
+            const contactsPayload = formData.leadContacts.map((contact: any) => ({
+              lead_id: leadId,
+              name: contact.name,
+              designation: contact.designation || null,
+              email: contact.email || null,
+              phone: contact.phone,
+              alternative_number: contact.alternative_number || null,
+              date_of_birth: contact.date_of_birth || null,
+              anniversary_date: contact.anniversary_date || null,
+              communication_mode: contact.communication_mode || null,
+            }));
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL}/lead-contact/bulk`,
+              contactsPayload
+            );
+            console.log(`Contacts added for unified lead`);
+          } catch (contactError) {
+            console.error(`Error adding contacts:`, contactError);
+          }
         }
       }
 
-      // 4.6. Add Lead Competitors (Unified)
+      // 4.6. Add/Update Lead Competitors (Unified) - Intelligent Handling
       if (formData.leadCompetitors && formData.leadCompetitors.length > 0) {
-        try {
-          const competitorPayload = formData.leadCompetitors.map((competitor: any) => ({
-            lead_id: leadId,
-            competitor_name: competitor.competitor_name,
-            win_probability: competitor.win_probability,
-            created_by: userData?.id || null,
-          }));
-          await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
-            competitorPayload
-          );
-          console.log(`Competitors added for unified lead`);
-        } catch (competitorError) {
-          console.error(`Error adding competitors:`, competitorError);
+        if (selectedTempLeadId) {
+          // Intelligent handling for temp leads
+          const newCompetitors: any[] = [];
+          const modifiedCompetitors: any[] = [];
+
+          formData.leadCompetitors.forEach((competitor: any) => {
+            const originalCompetitor = originalLeadCompetitors.find((orig) => orig.id === competitor.id);
+
+            if (!originalCompetitor) {
+              newCompetitors.push(competitor);
+            } else {
+              const hasChanged =
+                competitor.competitorName !== originalCompetitor.competitorName ||
+                competitor.winProbability !== originalCompetitor.winProbability;
+
+              if (hasChanged) {
+                modifiedCompetitors.push(competitor);
+              }
+            }
+          });
+
+          // Create new competitors
+          if (newCompetitors.length > 0) {
+            try {
+              const competitorsPayload = newCompetitors.map((competitor) => ({
+                lead_id: leadId,
+                competitor_name: competitor.competitorName,
+                win_probability: competitor.winProbability ? parseFloat(competitor.winProbability) : null,
+              }));
+              await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
+                competitorsPayload
+              );
+              console.log(`${newCompetitors.length} new competitor(s) created`);
+            } catch (error) {
+              console.error("Error creating new competitors:", error);
+            }
+          }
+
+          // Update modified competitors
+          for (const competitor of modifiedCompetitors) {
+            try {
+              const updatePayload = {
+                competitor_name: competitor.competitorName,
+                win_probability: competitor.winProbability ? parseFloat(competitor.winProbability) : null,
+              };
+              await axios.put(
+                `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/${competitor.id}`,
+                updatePayload
+              );
+              console.log(`Competitor ${competitor.competitorName} updated`);
+            } catch (error) {
+              console.error(`Error updating competitor:`, error);
+            }
+          }
+
+          console.log(`Competitors: ${newCompetitors.length} new, ${modifiedCompetitors.length} modified, ${formData.leadCompetitors.length - newCompetitors.length - modifiedCompetitors.length} unchanged`);
+        } else {
+          // Normal flow: create all competitors
+          try {
+            const competitorPayload = formData.leadCompetitors.map((competitor: any) => ({
+              lead_id: leadId,
+              competitor_name: competitor.competitor_name,
+              win_probability: competitor.win_probability,
+              created_by: userData?.id || null,
+            }));
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL}/lead-competitor/bulk`,
+              competitorPayload
+            );
+            console.log(`Competitors added for unified lead`);
+          } catch (competitorError) {
+            console.error(`Error adding competitors:`, competitorError);
+          }
         }
       }
 
@@ -2247,6 +2940,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     setValidationErrors({});
     setFileErrors([]);
     setFormData(defaultFormData);
+    setSelectedTempLeadId(""); // Clear temp lead selection
+    setOriginalTempLeadData(null); // Clear original temp lead data
+    setOriginalLeadContacts([]); // Clear original lead contacts
+    setOriginalLeadCompetitors([]); // Clear original lead competitors
     onClose();
   };
 
@@ -3049,6 +3746,28 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       </select>
                       <ValidationError fieldName="customerBranch" />
                     </div>
+
+                    {/* Select From Temporary Lead */}
+                    {!isEditMode && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Select From Temporary Lead
+                        </label>
+                        <select
+                          value={selectedTempLeadId}
+                          onChange={(e) => handleTempLeadSelect(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select Temporary Lead</option>
+                          {tempLeads.map((lead) => (
+                            <option key={lead.lead_id} value={lead.lead_id}>
+                              {lead.project_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {/* Currency */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
