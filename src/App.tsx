@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Leads from "./pages/Leads/Leads";
 import TempLeads from "./pages/TempLead/Leads";
 import Customers from "./pages/Customers/Customers";
+import Competitors from "./pages/Competitors/Competitors";
 import Vendors from "./pages/Vendors/Vendors";
 import Associates from "./pages/Associates/Associates";
 import BOM from "./pages/BOM/BOM";
@@ -125,6 +126,7 @@ const AppContent: React.FC = () => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/customers" element={<Customers />} />
+              <Route path="/competitors" element={<Competitors />} />
               <Route path="/vendors" element={<Vendors />} />
               <Route path="/associates" element={<Associates />} />
               <Route path="/bom" element={<BOM />} />
