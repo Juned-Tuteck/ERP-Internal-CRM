@@ -85,7 +85,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       href: "/temp-lead",
       icon: UserPlus,
       accessKey: "Temp Lead",
-    }
+    },
+    {
+      name: "Associates",
+      href: "/associates",
+      icon: UserPlus,
+      accessKey: "Associates",
+    },
     // { name: 'Settings', href: '/settings', icon: Settings, accessKey: 'Settings' },
   ];
 

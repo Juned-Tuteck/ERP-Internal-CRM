@@ -132,6 +132,7 @@ export const uploadComplianceFile = async (
   uploadBy: string
 ): Promise<any> => {
   const formData = new FormData();
+  console.log("clicked upload compliance file")
   formData.append('file', file);
   formData.append('document_type', documentType);
   formData.append('entity_level', entityLevel);
