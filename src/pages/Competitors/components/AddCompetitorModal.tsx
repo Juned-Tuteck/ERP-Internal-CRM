@@ -205,6 +205,9 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
   const [showCompetitorPopup, setShowCompetitorPopup] = useState(false);
   const CompetitorInputRef = useRef<HTMLDivElement>(null);
 
+  // All competitors for dropdown
+  const [allCompetitors, setAllCompetitors] = useState<Array<{ id: string, name: string }>>([]);
+
   // Competitor details modal states
   const [showCompetitorDetailsModal, setShowCompetitorDetailsModal] = useState(false);
   const [selectedCompetitorDetails, setSelectedCompetitorDetails] = useState<any>(null);
@@ -324,7 +327,6 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
 
   const branchKeymap = {
     id: "id",
-    branchName: "branch_name",
     contactNumber: "contact_number",
     email: "email_id",
     country: "country",
@@ -334,7 +336,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
     city: "city",
     pincode: "pincode",
     street: "street",
-    googleLocation: "google_location",
+    googleLocation: "location",
     addressType: "address_type",
     currentStatus: "current_status",
     blacklistReason: "blacklist_reason",
@@ -344,11 +346,12 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
     gstNumber: "gst_number",
     panNumber: "pan_number",
     tanNumber: "tan_number",
-    bankName: "bank_name",
-    bankAccountNumber: "bank_account_number",
+    bankName: "banck_name",
+    branchName: "bank_branch_name",
+    bankAccountNumber: "bank_account_no",
     ifscCode: "ifsc_code",
     zone: "zone_id",
-    nameOfBranchProject: "name_of_branch_project",
+    nameOfBranchProject: "branch_project_name",
   };
 
   const branchContactKeymap = {
@@ -425,14 +428,48 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
 
   useEffect(() => {
     if (initialData) {
-      // Ensure all branches start with isEditing: false in edit mode
+      // Helper function to parse currency from API format to array
+      const parseCurrencyToArray = (currencyValue: any): string[] => {
+        console.log("currencyValue", currencyValue);
+        if (!currencyValue) return [];
+
+        // If it's already an array, return it
+        if (Array.isArray(currencyValue)) {
+          return currencyValue;
+        }
+
+        // If it's a string, parse it
+        if (typeof currencyValue === 'string') {
+          try {
+            // Remove extra quotes, braces, and brackets, then split by comma
+            const cleaned = currencyValue.replace(/["{}\\[\]]/g, '');
+            console.log("cleaned", cleaned);
+            const currencies = cleaned.split(',').map((c: string) => c.trim()).filter(Boolean);
+            return currencies;
+          } catch (e) {
+            console.error('Error parsing currency:', e);
+            return [];
+          }
+        }
+
+        return [];
+      };
+
+      // Parse currency for main form data
+      const parsedCurrency = parseCurrencyToArray(initialData.currency);
+
+      console.log("parsedCurrency", parsedCurrency);
+      // Ensure all branches start with isEditing: false in edit mode and parse their currency
       const updatedInitialData = {
         ...initialData,
+        currency: parsedCurrency,
         branches: (initialData.branches || []).map((branch: Branch) => ({
           ...branch,
+          currency: parseCurrencyToArray(branch.currency),
           isEditing: false,
         })),
       };
+      console.log("updatedInitialData", updatedInitialData);
       setFormData(updatedInitialData);
       setInitialFiles(initialData.uploadedFiles || []);
       setUploadedFiles([]); // Reset uploaded files for edit mode
@@ -455,13 +492,13 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
 
           const filteredCompetitors = CompetitorData
             .filter((Competitor: any) =>
-              Competitor.business_name.trim()
+              Competitor.company_name.trim()
                 .toLowerCase()
                 .includes(formData.businessName.toLowerCase())
             )
             .map((Competitor: any) => ({
-              id: Competitor.Competitor_id,
-              name: Competitor.business_name
+              id: Competitor.id,
+              name: Competitor.company_name
             }));
 
           setCompetitorSuggestions(filteredCompetitors);
@@ -581,6 +618,30 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
 
   // Removed: Temporary Competitor functionality
 
+  // Helper function to parse currency from API response
+  const parseCurrency = (currencyValue: any): string => {
+    if (!currencyValue) return '-';
+
+    // If it's already an array, join it
+    if (Array.isArray(currencyValue)) {
+      return currencyValue.join(', ');
+    }
+
+    // If it's a string, try to parse it
+    if (typeof currencyValue === 'string') {
+      try {
+        // Remove extra quotes and braces, then split by comma
+        const cleaned = currencyValue.replace(/["{}\[\]]/g, '');
+        const currencies = cleaned.split(',').map((c: string) => c.trim()).filter(Boolean);
+        return currencies.join(', ') || '-';
+      } catch (e) {
+        return currencyValue;
+      }
+    }
+
+    return String(currencyValue);
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -597,16 +658,19 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
       };
 
       // Handle cascade updates for location fields
-      if (name === "zone") {
+      if (name === "zone" || name === "zoneName") {
         // When zone changes, reset state, district and city
         updatedFormData.state = "";
+        updatedFormData.stateName = "";
         updatedFormData.district = "";
+        updatedFormData.districtName = "";
         updatedFormData.city = "";
-      } else if (name === "state") {
+      } else if (name === "state" || name === "stateName") {
         // When state changes, reset district and city
         updatedFormData.district = "";
+        updatedFormData.districtName = "";
         updatedFormData.city = "";
-      } else if (name === "district") {
+      } else if (name === "district" || name === "districtName") {
         // When district changes, reset city
         updatedFormData.city = "";
       }
@@ -2926,7 +2990,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
         </div>
 
         {/* Competitor Sub Group */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Competitor Sub Group
           </label>
@@ -2943,7 +3007,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
 
         {/* Industry Type */}
         <div>
@@ -3397,13 +3461,14 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
         {/* Zone */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Zone
+            Zone *
           </label>
           <select
             name={!isBranch ? "zone" : undefined}
-            value={data.zone || ""}
-            onChange={(e) => onChange("zone", e.target.value)}
+            value={data.zoneName || ""}
+            onChange={(e) => onChange("zoneName", e.target.value)}
             disabled={readOnly}
+            required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Select Zone</option>
@@ -3422,9 +3487,9 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
           </label>
           <select
             name={!isBranch ? "state" : undefined}
-            value={data.state}
-            onChange={(e) => onChange("state", e.target.value)}
-            disabled={readOnly || !data.zone}
+            value={data.stateName}
+            onChange={(e) => onChange("stateName", e.target.value)}
+            disabled={readOnly || !data.zoneName}
             required
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${errors?.state
               ? "border-red-300 focus:ring-red-500 focus:border-red-500"
@@ -3432,9 +3497,9 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
               } disabled:bg-gray-100`}
           >
             <option value="">Select State</option>
-            {data.zone &&
+            {data.zoneName &&
               states
-                .filter((s) => s.zone_id === zones.find(z => z.name === data.zone)?.id)
+                .filter((s) => s.zone_id === zones.find(z => z.name === data.zoneName)?.id)
                 .map((s) => (
                   <option key={s.id} value={s.name}>
                     {s.name}
@@ -3453,16 +3518,16 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
           </label>
           <select
             name={!isBranch ? "district" : undefined}
-            value={data.district}
-            onChange={(e) => onChange("district", e.target.value)}
-            disabled={readOnly || !data.state}
+            value={data.districtName}
+            onChange={(e) => onChange("districtName", e.target.value)}
+            disabled={readOnly || !data.stateName}
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           >
             <option value="">Select District</option>
-            {data.state &&
+            {data.stateName &&
               districts
-                .filter((d) => d.state_id === states.find(s => s.name === data.state)?.id)
+                .filter((d) => d.state_id === states.find(s => s.name === data.stateName)?.id)
                 .map((d) => (
                   <option key={d.id} value={d.name}>
                     {d.name}
@@ -3566,7 +3631,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
         )}
 
         {/* Competitor Category */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Competitor Category
           </label>
@@ -3584,7 +3649,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
 
         {/* Current Status */}
         <div>
@@ -3627,7 +3692,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
         )}
 
         {/* Risk Level */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Risk Level
           </label>
@@ -3645,10 +3710,10 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
 
         {/* Credit Days */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Credit Days
           </label>
@@ -3666,7 +3731,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
       </div>
     </div>
   );
@@ -4611,7 +4676,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                         console.log("Initial file:", file),
                         console.log("Active file tab:", uploadedFiles),
                         <div
-                          key={file.original_name + idx}
+                          key={file.originalName + idx}
                           className={`flex items-center px-3 py-1 mr-2 mb-2 rounded-t cursor-pointer ${activeFileTab === idx
                             ? "bg-blue-100 border-t-2 border-blue-500"
                             : "bg-gray-100"
@@ -4619,7 +4684,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                           onClick={() => setActiveFileTab(idx)}
                         >
                           <span className="text-xs font-medium text-gray-800 mr-2">
-                            {file.original_name}
+                            {file.originalName}
                           </span>
                           <button
                             type="button"
@@ -4802,11 +4867,11 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Competitor Number</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.Competitor_number || '-'}</p>
+                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.competitor_number || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Business Name</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.business_name || '-'}</p>
+                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.company_name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Contact Number</p>
@@ -4814,26 +4879,26 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Email</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.email || '-'}</p>
+                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.email_id || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Competitor Type</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.Competitor_type || '-'}</p>
+                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.industry_type || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Competitor Potential</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.Competitor_potential || '-'}</p>
+                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.associate_potential || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Currency</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.currency || '-'}</p>
+                    <p className="text-sm text-gray-900">{parseCurrency(selectedCompetitorDetails.currency)}</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <p className="text-xs text-gray-500 font-medium">Status</p>
                     <p className={`text-sm font-medium ${selectedCompetitorDetails.active ? 'text-green-600' : 'text-red-600'}`}>
                       {selectedCompetitorDetails.active ? 'Active' : 'Inactive'}
                     </p>
-                  </div>
+                  </div> */}
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Approval Status</p>
                     <p className={`text-sm font-medium ${selectedCompetitorDetails.approval_status === 'APPROVED' ? 'text-green-600' :
@@ -4851,16 +4916,16 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                 <h4 className="text-lg font-semibold text-gray-800 mb-4">Location Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500 font-medium">Country</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.country || '-'}</p>
+                    <p className="text-xs text-gray-500 font-medium">Zone</p>
+                    <p className="text-sm text-gray-900">{zones.find(z => z.id === selectedCompetitorDetails.zone_id)?.name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">State</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.state || '-'}</p>
+                    <p className="text-sm text-gray-900">{states.find(s => s.id === selectedCompetitorDetails.state_id)?.name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">District</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.district || '-'}</p>
+                    <p className="text-sm text-gray-900">{districts.find(d => d.id === selectedCompetitorDetails.district_id)?.name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">City</p>
@@ -4895,11 +4960,11 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Account Number</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.bank_account_number || '-'}</p>
+                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.bank_account_no || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Branch Name</p>
-                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.branch_name || '-'}</p>
+                    <p className="text-sm text-gray-900">{selectedCompetitorDetails.bank_branch_name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">IFSC Code</p>
@@ -4918,7 +4983,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Name</p>
-                            <p className="text-sm text-gray-900">{contact.name || '-'}</p>
+                            <p className="text-sm text-gray-900">{contact.fullName || '-'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Designation</p>
@@ -4926,11 +4991,11 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Email</p>
-                            <p className="text-sm text-gray-900">{contact.email || '-'}</p>
+                            <p className="text-sm text-gray-900">{contact.emailId || '-'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Phone</p>
-                            <p className="text-sm text-gray-900">{contact.phone || '-'}</p>
+                            <p className="text-sm text-gray-900">{contact.contactNumber || '-'}</p>
                           </div>
                         </div>
                       </div>
@@ -4958,19 +5023,19 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Currency</p>
-                            <p className="text-sm text-gray-900">{branch.currency || '-'}</p>
+                            <p className="text-sm text-gray-900">{parseCurrency(branch.currency)}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500 font-medium">Country</p>
-                            <p className="text-sm text-gray-900">{branch.country || '-'}</p>
+                            <p className="text-xs text-gray-500 font-medium">Zone</p>
+                            <p className="text-sm text-gray-900">{zones.find(z => z.id === branch.zoneId)?.name || '-'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">State</p>
-                            <p className="text-sm text-gray-900">{branch.state || '-'}</p>
+                            <p className="text-sm text-gray-900">{states.find(s => s.id === branch.stateId)?.name || '-'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">District</p>
-                            <p className="text-sm text-gray-900">{branch.district || '-'}</p>
+                            <p className="text-sm text-gray-900">{districts.find(d => d.id === branch.districtId)?.name || '-'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">City</p>
@@ -5043,12 +5108,12 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Uploaded At</p>
                             <p className="text-sm text-gray-900">
-                              {file.created_at ? new Date(file.created_at).toLocaleString() : '-'}
+                              {file.createdAt ? new Date(file.createdAt).toLocaleString() : '-'}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-medium">Uploaded By</p>
-                            <p className="text-sm text-gray-900">{file.created_by_name || '-'}</p>
+                            <p className="text-sm text-gray-900">{file.createdByName || '-'}</p>
                           </div>
                         </div>
                       </div>

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import AddCompetitorModal from "./AddCompetitorModal";
+import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
 
 
 interface CompetitorDetailsProps {
@@ -37,6 +38,12 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Location lookup data
+  const [zones, setZones] = useState<Array<{ id: string; name: string }>>([]);
+  const [states, setStates] = useState<Array<{ id: string; name: string }>>([]);
+  const [districts, setDistricts] = useState<Array<{ id: string; name: string }>>([]);
+
   const [mappedApiData, setMappedApiData] = useState<any>({
     ...Competitor,
     panNumber: "ABCDE1234F",
@@ -97,51 +104,49 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
     ],
   });
 
-  const transformToFormData = (Competitor: any) => {
-    return {
-      businessName: Competitor.name || "",
-      contactNo: Competitor.phone || "",
-      email: Competitor.email || "",
-      country: Competitor.country || "India",
-      currency: Competitor.currency || "INR",
-      state: Competitor.state || "",
-      district: Competitor.district || "",
-      city: Competitor.city || "",
-      CompetitorType: Competitor.type || "",
-      CompetitorPotential: Competitor.potential || "",
-      pincode: Competitor.pincode || "",
-      active: Competitor.status === "active",
-      panNumber: Competitor.panNumber || "",
-      tanNumber: Competitor.tanNumber || "",
-      gstNumber: Competitor.gstNumber || "",
-      bankName: Competitor.bankName || "",
-      bankAccountNumber: Competitor.bankAccountNumber || "",
-      branchName: Competitor.branchName || "",
-      ifscCode: Competitor.ifscCode || "",
-      contactPersons: Competitor.contactPersons || [],
-      branches: Competitor.branches || [],
-      uploadedFiles: Competitor.uploadedFiles || [],
+  // Fetch zones, states, and districts on component mount
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      try {
+        const [zonesData, statesData, districtsData] = await Promise.all([
+          zoneApi.getAll(),
+          stateApi.getAll(),
+          districtApi.getAll()
+        ]);
+        setZones(zonesData || []);
+        setStates(statesData || []);
+        setDistricts(districtsData || []);
+      } catch (error) {
+        console.error("Error fetching location data:", error);
+      }
     };
-  };
+    fetchLocationData();
+  }, []);
 
   useEffect(() => {
-    if (Competitor?.id) {
+    if (Competitor?.id && zones.length > 0 && states.length > 0 && districts.length > 0) {
       console.log("Fetching Competitor details for ID:", Competitor);
       axios
         .get(`${import.meta.env.VITE_API_BASE_URL}/Competitor/${Competitor.id}`)
         .then((response) => {
           console.log("Fetched Competitor details:", response.data.data);
           const apiData = response.data.data;
+
+          // Helper function to resolve UUID to name
+          const getZoneName = (zoneId: string) => zones.find(z => z.id === zoneId)?.name || "";
+          const getStateName = (stateId: string) => states.find(s => s.id === stateId)?.name || "";
+          const getDistrictName = (districtId: string) => districts.find(d => d.id === districtId)?.name || "";
+
           const mappedEnhancedCompetitor = {
             businessName: apiData.company_name || "",
             contactNo: apiData.contact_number || "",
             email: apiData.email_id || "",
             country: apiData.country || "",
-            currency: typeof apiData.currency === 'string'
-              ? apiData.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
-              : [],
-            state: apiData.state || "",
-            district: apiData.district || "",
+            currency: apiData.currency,
+            state: apiData.state_id || "",
+            stateName: getStateName(apiData.state_id || ""),
+            district: apiData.district_id || "",
+            districtName: getDistrictName(apiData.district_id || ""),
             city: apiData.city || "",
             CompetitorType: apiData.industry_type || "",
             CompetitorPotential: apiData.associate_potential || "",
@@ -165,7 +170,8 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
             addressType: apiData.address_type || "",
             street: apiData.street || "",
             googleLocation: apiData.location || "",
-            zone: apiData.zone || "",
+            zone: apiData.zone_id || "",
+            zoneName: getZoneName(apiData.zone_id || ""),
             nameOfBranchProject: apiData.branch_project_name || "",
             hoContactNumber: apiData.ho_contact_number || "",
             hoEmailId: apiData.ho_email_id || "",
@@ -189,15 +195,15 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
             branches:
               apiData.branches?.map((branch: any) => ({
                 id: branch.branchId,
-                branchName: branch.branchName,
+                nameOfBranchProject: branch.branchProjectName || "",
                 contactNumber: branch.contactNumber,
                 email: branch.emailId,
                 country: branch.country || "India",
-                currency: typeof branch.currency === 'string'
-                  ? branch.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
-                  : [],
-                state: branch.state || "",
-                district: branch.district || "",
+                currency: branch.currency,
+                state: branch.stateId || "",
+                stateName: getStateName(branch.stateId || ""),
+                district: branch.districtId || "",
+                districtName: getDistrictName(branch.districtId || ""),
                 city: branch.city || "",
                 pincode: branch.pincode || "",
                 address: `${branch.city}, ${branch.district}, ${branch.state} - ${branch.pincode}`,
@@ -205,14 +211,15 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                 panNumber: branch.panNumber || "",
                 tanNumber: branch.tanNumber || "",
                 bankName: branch.bankName || "",
-                bankAccountNumber: branch.bankAccountNumber || "",
+                branchName: branch.bankBranchName,
+                bankAccountNumber: branch.bankAccountNo || "",
                 ifscCode: branch.ifscCode || "",
                 addressType: branch.addressType || "",
                 street: branch.street || "",
-                googleLocation: branch.google_location || "",
-                zone: branch.zone || "",
-                nameOfBranchProject: branch.name_of_branch_project || "",
-                currentStatus: branch.current_status || "",
+                googleLocation: branch.location || "",
+                zone: branch.zoneId || "",
+                zoneName: getZoneName(branch.zoneId || ""),
+                currentStatus: branch.currentStatus || "",
                 blacklistReason: branch.blacklist_reason || "",
                 CompetitorCategory: branch.Competitor_category || "",
                 riskLevel: branch.risk_level || "",
@@ -238,78 +245,35 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
           };
           console.log("Mapped enhanced Competitor:", mappedEnhancedCompetitor);
           setMappedApiData(mappedEnhancedCompetitor);
-          setCompetitorInitialData({ ...Competitor, ...mappedEnhancedCompetitor });
+
+          // For edit mode, pass name fields instead of UUIDs so dropdowns can pre-fill
+          const editModeData = {
+            ...Competitor,
+            ...mappedEnhancedCompetitor,
+            // Replace UUID fields with name fields for dropdowns
+            zone: mappedEnhancedCompetitor.zoneName || "",
+            state: mappedEnhancedCompetitor.stateName || "",
+            district: mappedEnhancedCompetitor.districtName || "",
+            // Update branches to use name fields
+            branches: mappedEnhancedCompetitor.branches?.map((branch: any) => ({
+              ...branch,
+              zone: branch.zoneName || "",
+              state: branch.stateName || "",
+              district: branch.districtName || "",
+            })) || [],
+          };
+          setCompetitorInitialData(editModeData);
         })
         .catch((error) => {
           console.error("Error fetching Competitor details:", error);
         });
     }
-  }, [Competitor?.id, refreshTrigger]);
+  }, [Competitor?.id, refreshTrigger, zones, states, districts]);
 
   useEffect(() => {
     console.log("API Data:", mappedApiData);
   });
 
-  // Mock enhanced Competitor data
-  const enhancedCompetitor = {
-    ...Competitor,
-    panNumber: "ABCDE1234F",
-    gstNumber: "27ABCDE1234F1Z5",
-    bankName: "State Bank of India",
-    bankAccountNumber: "1234567890123456",
-    ifscCode: "SBIN0001234",
-    contactPersons: [
-      {
-        name: "Amit Sharma",
-        phone: "+91 98765 43211",
-        email: "amit@company.in",
-        designation: "CEO",
-      },
-      {
-        name: "Priya Patel",
-        phone: "+91 98765 43212",
-        email: "priya@company.in",
-        designation: "CTO",
-      },
-    ],
-    branches: [
-      {
-        branchName: "Mumbai Head Office",
-        contactNumber: "+91 98765 43210",
-        email: "mumbai@company.in",
-        address: "Andheri East, Mumbai, Maharashtra - 400069",
-        contactPersons: [
-          {
-            name: "Rajesh Kumar",
-            phone: "+91 98765 43213",
-            email: "rajesh@company.in",
-          },
-        ],
-      },
-      {
-        branchName: "Pune Branch",
-        contactNumber: "+91 98765 43214",
-        email: "pune@company.in",
-        address: "Hinjewadi, Pune, Maharashtra - 411057",
-        contactPersons: [
-          {
-            name: "Sneha Gupta",
-            phone: "+91 98765 43215",
-            email: "sneha@company.in",
-          },
-        ],
-      },
-    ],
-    uploadedFiles: [
-      {
-        name: "Business_Registration.pdf",
-        size: "2.4 MB",
-        uploadDate: "2024-01-15",
-      },
-      { name: "GST_Certificate.pdf", size: "1.8 MB", uploadDate: "2024-01-15" },
-      { name: "PAN_Card.jpg", size: "0.5 MB", uploadDate: "2024-01-15" },
-    ],
-  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -705,7 +669,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-3">
+                {/* <div className="flex items-start space-x-3">
                   <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Country</p>
@@ -713,14 +677,14 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                       {mappedApiData.country}
                     </p>
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex items-start space-x-3">
                   <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Zone</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {mappedApiData.zone}
+                      {mappedApiData.zoneName || "-"}
                     </p>
                   </div>
                 </div>
@@ -730,7 +694,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">State</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {mappedApiData.state}
+                      {mappedApiData.stateName || "-"}
                     </p>
                   </div>
                 </div>
@@ -740,7 +704,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                   <div>
                     <p className="text-sm text-gray-500">District</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {mappedApiData.district}
+                      {mappedApiData.districtName || "-"}
                     </p>
                   </div>
                 </div>
@@ -784,7 +748,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                     </p>
                   </div>
                 </div>
-
+                {/* 
                 <div className="flex items-start space-x-3">
                   <Users className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
@@ -793,9 +757,9 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                       {mappedApiData.CompetitorCategory}
                     </p>
                   </div>
-                </div>
+                </div> */}
 
-                <div className="flex items-start space-x-3">
+                {/* <div className="flex items-start space-x-3">
                   <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-sm text-gray-500">Risk Level</p>
@@ -813,7 +777,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                       {mappedApiData.creditDays}
                     </p>
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -1045,7 +1009,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                         <div>
                           <p className="text-sm text-gray-500">Zone</p>
                           <p className="text-sm font-medium text-gray-900">
-                            {branch.zone}
+                            {branch.zoneName || "-"}
                           </p>
                         </div>
                       </div>
@@ -1055,7 +1019,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                         <div>
                           <p className="text-sm text-gray-500">State</p>
                           <p className="text-sm font-medium text-gray-900">
-                            {branch.state}
+                            {branch.stateName || "-"}
                           </p>
                         </div>
                       </div>
@@ -1065,7 +1029,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                         <div>
                           <p className="text-sm text-gray-500">District</p>
                           <p className="text-sm font-medium text-gray-900">
-                            {branch.district}
+                            {branch.districtName || "-"}
                           </p>
                         </div>
                       </div>
@@ -1110,7 +1074,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-start space-x-3">
+                      {/* <div className="flex items-start space-x-3">
                         <Users className="h-5 w-5 text-gray-400 mt-0.5" />
                         <div>
                           <p className="text-sm text-gray-500">Competitor Category</p>
@@ -1138,7 +1102,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                             {branch.creditDays}
                           </p>
                         </div>
-                      </div>
+                      </div> */}
 
                       <div className="flex items-start space-x-3">
                         <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
