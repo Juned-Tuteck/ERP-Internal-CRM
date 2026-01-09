@@ -197,6 +197,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [editingCompetitorIndex, setEditingCompetitorIndex] = useState<number | null>(null);
   const [editingCompetitorData, setEditingCompetitorData] = useState<any>(null);
+  const [allCompetitors, setAllCompetitors] = useState<Array<{ id: string; name: string }>>([]);
   const [users, setUsers] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -1112,9 +1113,27 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   }, [isOpen, initialData]);
 
-  // Fetch associates when modal opens
+  // Fetch all competitors for dropdown
   useEffect(() => {
+    const fetchAllCompetitors = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/Competitor`
+        );
+        if (response.data.success) {
+          const competitorData = response.data.data.map((competitor: any) => ({
+            id: competitor.id,
+            name: competitor.company_name
+          }));
+          setAllCompetitors(competitorData);
+        }
+      } catch (error) {
+        console.error('Error fetching competitors:', error);
+        setAllCompetitors([]);
+      }
+    };
     if (isOpen) {
+      fetchAllCompetitors();
       fetchAssociates();
     }
   }, [isOpen]);
@@ -4619,12 +4638,17 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                                   <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Competitor Name *
                                   </label>
-                                  <input
-                                    type="text"
+                                  <select
                                     id="new-competitor-name"
-                                    placeholder="Enter competitor name"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                  />
+                                  >
+                                    <option value="">Select Competitor</option>
+                                    {allCompetitors.map((competitor) => (
+                                      <option key={competitor.id} value={competitor.name}>
+                                        {competitor.name}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                                 <div>
                                   <label className="block text-sm font-medium text-gray-700 mb-1">

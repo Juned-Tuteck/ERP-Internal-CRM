@@ -84,11 +84,17 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   // Design Help state
   const [showDesignHelpModal, setShowDesignHelpModal] = useState(false);
-  const [designEngineers, setDesignEngineers] = useState<any[]>([]);
-  const [selectedDesignEngineerId, setSelectedDesignEngineerId] = useState('');
-  const [isLoadingEngineers, setIsLoadingEngineers] = useState(false);
+  const [eligibleUsers, setEligibleUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSendingHelp, setIsSendingHelp] = useState(false);
   const [designHelpSent, setDesignHelpSent] = useState(false);
+  const [targetRole, setTargetRole] = useState<'design head' | 'design engineer'>('design engineer');
+  const [designHelpStatus, setDesignHelpStatus] = useState<{
+    sentToDesignHead: boolean;
+    sentToDesignEngineer: boolean;
+    lastRole: string | null;
+  }>({ sentToDesignHead: false, sentToDesignEngineer: false, lastRole: null });
 
   // Lead competitors state
   const [leadCompetitors, setLeadCompetitors] = useState<any[]>([]);
@@ -241,12 +247,30 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         `${import.meta.env.VITE_API_BASE_URL}/design-help?lead_id=${leadId}`
       );
       if (response.data.success && response.data.data && response.data.data.length > 0) {
+        const designHelpRecords = response.data.data;
+
+        // Check what roles were sent to
+        const sentToDesignHead = designHelpRecords.some((record: any) => record.role === 'design head');
+        const sentToDesignEngineer = designHelpRecords.some((record: any) => record.role === 'design engineer');
+        const lastRecord = designHelpRecords[designHelpRecords.length - 1];
+
+        console.log("sentToDesignHead", sentToDesignHead);
+        console.log("sentToDesignEngineer", sentToDesignEngineer);
+        console.log("lastRecord", lastRecord);
+
+        setDesignHelpStatus({
+          sentToDesignHead,
+          sentToDesignEngineer,
+          lastRole: lastRecord.role || null
+        });
         setDesignHelpSent(true);
       } else {
+        setDesignHelpStatus({ sentToDesignHead: false, sentToDesignEngineer: false, lastRole: null });
         setDesignHelpSent(false);
       }
     } catch (error) {
       console.error('Error checking design help status:', error);
+      setDesignHelpStatus({ sentToDesignHead: false, sentToDesignEngineer: false, lastRole: null });
       setDesignHelpSent(false);
     }
   };
@@ -288,15 +312,15 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       showToast('Comment added successfully By ' + userData?.name, 'success');
     } catch (error) {
       console.error('Error adding comment:', error);
-      alert('Failed to add comment. Please try again.');
+      showToast('Failed to add comment. Please try again.', 'error');
     } finally {
       setIsAddingComment(false);
     }
   };
 
-  // Fetch design engineers
-  const fetchDesignEngineers = async () => {
-    setIsLoadingEngineers(true);
+  // Fetch eligible users based on role and zone
+  const fetchEligibleUsers = async (role: string, leadZone: string | null) => {
+    setIsLoadingUsers(true);
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_AUTH_BASE_URL}/users/basic`,
@@ -307,16 +331,21 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
       if (response.data.success && response.data.data) {
         const filtered = response.data.data.filter((user: any) => {
-          return user.role === 'design engineer' ||
-            (user.roles && user.roles.includes('design engineer'));
+          // Check if user has the required role
+          const hasRole = user.role === role || (user.roles && user.roles.includes(role));
+
+          // Check if user is in the same zone (if leadZone is specified)
+          const inSameZone = !leadZone || user.zone === leadZone;
+
+          return hasRole && inSameZone;
         });
-        setDesignEngineers(filtered);
+        setEligibleUsers(filtered);
       }
     } catch (error) {
-      console.error('Error fetching design engineers:', error);
-      alert('Failed to load design engineers. Please try again.');
+      console.error('Error fetching eligible users:', error);
+      showToast('Failed to load users. Please try again.', 'error');
     } finally {
-      setIsLoadingEngineers(false);
+      setIsLoadingUsers(false);
     }
   };
 
@@ -359,15 +388,30 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
 
   // Handle design help modal open
   const handleDesignHelpModalOpen = () => {
+    // Determine target role based on current user's role and relation to the lead
+    let role: 'design head' | 'design engineer' = 'design engineer';
+
+    // If current user is the assigned user, they should send to design head
+    if (userData?.id === displayLead.assignedTo) {
+      role = 'design head';
+    }
+    // If current user is a design head, they should forward to design engineer
+    else if (userData?.role === 'design head' || (userData?.roles && userData.roles.includes('design head'))) {
+      role = 'design engineer';
+    }
+
+    setTargetRole(role);
     setShowDesignHelpModal(true);
-    setSelectedDesignEngineerId('');
-    fetchDesignEngineers();
+    setSelectedUserId('');
+
+    // Fetch eligible users based on target role and lead's zone
+    fetchEligibleUsers(role, displayLead.projectZone);
   };
 
   // Send design help request
   const handleSendDesignHelp = async () => {
-    if (!selectedDesignEngineerId || !displayLead?.id || !userData?.id) {
-      alert('Please select a design engineer.');
+    if (!selectedUserId || !displayLead?.id || !userData?.id) {
+      showToast('Please select a user.', 'error');
       return;
     }
 
@@ -375,8 +419,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     try {
       const payload = {
         lead_id: displayLead.id,
-        user_id: selectedDesignEngineerId,
-        role: 'design engineer',
+        user_id: selectedUserId,
+        role: targetRole,
         created_by: userData.id
       };
 
@@ -385,13 +429,42 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         payload
       );
 
-      alert('Design help request sent successfully!');
+      const roleLabel = targetRole === 'design head' ? 'Design Head' : 'Design Engineer';
+      showToast(`Successfully sent to ${roleLabel}!`, 'success');
       setDesignHelpSent(true);
       setShowDesignHelpModal(false);
-      setSelectedDesignEngineerId('');
+      setSelectedUserId('');
+
+      // Send notification to the assigned user
+      try {
+        const notificationPayload = {
+          sender_id: userData.id,
+          receiver_user_id: selectedUserId,
+          title: `You have been assigned as ${roleLabel} for design help`,
+          message: `Lead: ${displayLead.projectName || 'Untitled'} (${displayLead.leadNumber || 'N/A'})`,
+          link: "/leads",
+          service_type: 'design_help'
+        };
+
+        await axios.post(
+          `${import.meta.env.VITE_AUTH_BASE_URL}/notifications/user`,
+          notificationPayload,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('auth_token')}`
+            }
+          }
+        );
+      } catch (notificationError) {
+        console.error('Failed to send notification:', notificationError);
+        // Don't disrupt the main flow - notification is auxiliary
+      }
+
+      // Refresh design help status
+      checkDesignHelpStatus(displayLead.id);
     } catch (error) {
       console.error('Error sending design help request:', error);
-      alert('Failed to send design help request. Please try again.');
+      showToast('Failed to send design help request. Please try again.', 'error');
     } finally {
       setIsSendingHelp(false);
     }
@@ -400,7 +473,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const handleAssignUser = async () => {
     const currentLead = leadDetails || lead;
     if (!selectedAssignee) {
-      alert("Please select a user to assign.");
+      showToast("Please select a user to assign.", "error");
       return;
     }
 
@@ -599,17 +672,17 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       // Validation Logic
       if (statusModalTab === 'closure') {
         if (!winLossReason) {
-          alert("Reason is mandatory.");
+          showToast("Reason is mandatory.", "error");
           return;
         }
         if (selectedOutcome === 'Lost' && !winLossRemark.trim()) {
-          alert("Remark is mandatory when status is Lost.");
+          showToast("Remark is mandatory when status is Lost.", "error");
           return;
         }
       } else {
         // Hold/Other tab
         if (!winLossReason.trim()) {
-          alert("Reason is mandatory.");
+          showToast("Reason is mandatory.", "error");
           return;
         }
       }
@@ -724,7 +797,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
     } catch (error) {
       console.error("Error updating lead status:", error);
       // You might want to show an error message to the user here
-      alert("Failed to update lead status. Please try again.");
+      showToast("Failed to update lead status. Please try again.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -733,7 +806,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   // Generate Quotation Number Handler
   const handleGenerateQuotationNumber = async () => {
     if (!displayLead?.id || !displayLead?.leadNumber) {
-      alert('Missing required information to generate quotation number.');
+      showToast('Missing required information to generate quotation number.', "error");
       return;
     }
 
@@ -758,16 +831,45 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
         leadStage: "Quoted"
       }));
 
-      alert(`Quotation number generated: ${quotationNumber}`);
+      showToast(`Quotation number generated: ${quotationNumber}`, "success");
 
       // Close modal and refresh
       setShowGenerateQuotationModal(false);
       setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error("Error generating quotation number:", error);
-      alert("Failed to generate quotation number. Please try again.");
+      showToast("Failed to generate quotation number. Please try again.", "error");
     } finally {
       setIsGeneratingQuotation(false);
+    }
+  };
+
+  // Helper function to get button style based on design help status
+  const getDesignHelpButtonStyle = () => {
+    // Determine current state
+    let state: 'sent' | 'pending' | 'disabled';
+
+    if (designHelpSent) {
+      state = 'sent';
+    } else if (
+      (userData?.id === displayLead.assignedTo && designHelpStatus.sentToDesignHead) ||
+      (userData?.role === 'design head' && designHelpStatus.sentToDesignEngineer) ||
+      (userData?.id !== displayLead.assignedTo && userData?.role !== 'design head')
+    ) {
+      state = 'disabled';
+    } else {
+      state = 'pending';
+    }
+
+    // Return style based on state using switch
+    switch (state) {
+      case 'sent':
+        return 'border-green-600 text-green-600 bg-green-50 opacity-75';
+      case 'disabled':
+        return 'border-gray-300 text-gray-400 bg-gray-50 opacity-50';
+      case 'pending':
+      default:
+        return 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50';
     }
   };
 
@@ -1572,15 +1674,31 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   {displayLead.leadStage !== "Information Stage" && (
                     <button
                       onClick={handleDesignHelpModalOpen}
-                      disabled={designHelpSent || userData?.id != displayLead.assignedTo}
-                      className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${designHelpSent
-                        ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
-                        : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
-                        }`}
-                      title={designHelpSent ? 'This lead has already been assigned for design help.' : ''}
+                      disabled={
+                        // Disable if assigned user already sent to design head
+                        (userData?.id === displayLead.assignedTo && designHelpStatus.sentToDesignHead) ||
+                        // // Disable if design head already sent to design engineer
+                        // (userData?.role === 'design head' && designHelpStatus.sentToDesignEngineer) ||
+                        // Disable if user is neither assigned user nor design head
+                        (userData?.id !== displayLead.assignedTo && userData?.role !== 'design head')
+                      }
+                      className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${getDesignHelpButtonStyle()} disabled:opacity-50 disabled:cursor-not-allowed`}
+                      title={
+                        designHelpSent
+                          ? 'Design help has been assigned'
+                          : userData?.id !== displayLead.assignedTo && userData?.role !== 'design head'
+                            ? 'Only assigned user or design head can send for design help'
+                            : ''
+                      }
                     >
                       <Users className="h-4 w-4 mr-2" />
-                      {designHelpSent ? 'Sent to Design Engineer' : 'Send for Design Help'}
+                      {designHelpSent
+                        ? 'Design Help Assigned'
+                        : userData?.id === displayLead.assignedTo
+                          ? 'Send to Design Head'
+                          : userData?.role === 'design head'
+                            ? 'Forward to Design Engineer'
+                            : 'Send for Design Help'}
                     </button>
                   )}
                 </div>
@@ -2159,7 +2277,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                Send for Design Help
+                {targetRole === 'design head' ? 'Send to Design Head' : 'Forward to Design Engineer'}
               </h3>
               <button
                 onClick={() => setShowDesignHelpModal(false)}
@@ -2173,29 +2291,29 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Design Engineer
+                    {targetRole === 'design head' ? 'Select Design Head' : 'Select Design Engineer'}
                   </label>
-                  {isLoadingEngineers ? (
+                  {isLoadingUsers ? (
                     <div className="flex items-center justify-center py-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      <span className="ml-2 text-sm text-gray-600">Loading engineers...</span>
+                      <span className="ml-2 text-sm text-gray-600">Loading users...</span>
                     </div>
-                  ) : designEngineers.length > 0 ? (
+                  ) : eligibleUsers.length > 0 ? (
                     <select
-                      value={selectedDesignEngineerId}
-                      onChange={(e) => setSelectedDesignEngineerId(e.target.value)}
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">-- Select Design Engineer --</option>
-                      {designEngineers.map((engineer) => (
-                        <option key={engineer.id} value={engineer.id}>
-                          {engineer.name}
+                      <option value="">-- Select User --</option>
+                      {eligibleUsers.map((user: any) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
                         </option>
                       ))}
                     </select>
                   ) : (
                     <div className="text-sm text-gray-500 py-4 text-center">
-                      No design engineers available
+                      No users available for the selected role in this zone
                     </div>
                   )}
                 </div>
@@ -2211,7 +2329,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </button>
               <button
                 onClick={handleSendDesignHelp}
-                disabled={!selectedDesignEngineerId || isSendingHelp}
+                disabled={!selectedUserId || isSendingHelp}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {isSendingHelp ? (
