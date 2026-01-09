@@ -33,14 +33,15 @@ const AssociateApproval: React.FC = () => {
   const fetchAssociates = async () => {
     try {
       const associates = await getAssociates();
-
+      console.log("associates", associates);
       // Filter associates with approval_status not APPROVED or REJECTED
-      const filteredAssociates = associates.filter(
+      const filteredAssociates = associates.data.filter(
         (associate: any) =>
           associate.approval_status !== "APPROVED" &&
           associate.approval_status !== "REJECTED" &&
           associate.approval_status !== "DRAFT"
       );
+      console.log("filteredAssociates", filteredAssociates);
 
       // Map API keys to UI keys
       const mappedAssociates = filteredAssociates.map((associate: any) => ({
@@ -68,6 +69,7 @@ const AssociateApproval: React.FC = () => {
         uploadedFiles: [], // Assuming no uploaded files in the API response
       }));
 
+      console.log("mappedAssociates", mappedAssociates);
       setPendingAssociates(mappedAssociates);
     } catch (error) {
       console.error("Error fetching associates:", error);

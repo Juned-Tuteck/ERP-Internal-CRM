@@ -31,6 +31,7 @@ interface AddAssociateModalProps {
   onClose: () => void;
   onSubmit: (AssociateData: any) => void;
   initialData?: any;
+  onDataChange?: () => void; // Called when data is updated (e.g., branch save)
 }
 
 interface ContactPerson {
@@ -82,6 +83,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
   onClose,
   onSubmit,
   initialData,
+  onDataChange,
 }) => {
   //----------------------------------------------------------------------------------- For Notification
   const token = localStorage.getItem('auth_token') || '';
@@ -120,6 +122,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
       AssociateSubGroup: "",
       alternateNumber: "",
       AssociateClassification: "",
+      experience: "",  // Added missing experience field
       msmeRegistered: "No",
       udyamRegistrationNumber: "",
       nameOfBranchProject: "",
@@ -218,55 +221,55 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
 
   // Clear modal state function
   const clearModalState = () => {
-    if (!isEditMode) {
-      setCurrentStep(1);
-      setFormData({
-        businessName: "",
-        contactNo: "",
-        email: "",
-        country: "India",
-        currency: [],
-        state: "",
-        district: "",
-        city: "",
-        AssociateType: "",
-        AssociatePotential: "",
-        pincode: "",
-        street: "",
-        googleLocation: "",
-        addressType: "HO",
-        zone: "",
-        nameOfBranchProject: "",
-        hoContactNumber: "",
-        hoEmailId: "",
-        currentStatus: "Active",
-        blacklistReason: "",
-        AssociateCategory: "",
-        riskLevel: "",
-        creditDays: "",
-        tdsApplicability: "",
-        active: true,
-        AssociateGroup: "",
-        AssociateSubGroup: "",
-        alternateNumber: "",
-        AssociateClassification: "",
-        msmeRegistered: "No",
-        udyamRegistrationNumber: "",
-        panNumber: "",
-        tanNumber: "",
-        gstNumber: "",
-        bankName: "",
-        bankAccountNumber: "",
-        branchName: "",
-        ifscCode: "",
-        contactPersons: [],
-        branches: [],
-        uploadedFiles: [],
-      });
-      setUploadedFiles([]);
-      setInitialFiles([]);
-      setFieldChanges({});
-    }
+    // Always reset to step 1 and clear form data (both create and edit mode)
+    setCurrentStep(1);
+    setFormData({
+      businessName: "",
+      contactNo: "",
+      email: "",
+      country: "India",
+      currency: [],
+      state: "",
+      district: "",
+      city: "",
+      AssociateType: "",
+      AssociatePotential: "",
+      pincode: "",
+      street: "",
+      googleLocation: "",
+      addressType: "HO",
+      zone: "",
+      nameOfBranchProject: "",
+      hoContactNumber: "",
+      hoEmailId: "",
+      currentStatus: "Active",
+      blacklistReason: "",
+      AssociateCategory: "",
+      riskLevel: "",
+      creditDays: "",
+      tdsApplicability: "",
+      active: true,
+      AssociateGroup: "",
+      AssociateSubGroup: "",
+      alternateNumber: "",
+      AssociateClassification: "",
+      experience: "",
+      msmeRegistered: "No",
+      udyamRegistrationNumber: "",
+      panNumber: "",
+      tanNumber: "",
+      gstNumber: "",
+      bankName: "",
+      bankAccountNumber: "",
+      branchName: "",
+      ifscCode: "",
+      contactPersons: [],
+      branches: [],
+      uploadedFiles: [],
+    });
+    setUploadedFiles([]);
+    setInitialFiles([]);
+    setFieldChanges({});
     setValidationErrors({});
     setContactPersonErrors({});
     setBranchErrors({});
@@ -278,6 +281,8 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
     setTempAssociateComplianceFiles([]);
     setOriginalTempAssociateData(null);
     setOriginalContactPersons([]);
+    setCreatedAssociateId(null);  // Reset created associate ID
+    setPendingFiles({ PAN: null, TAN: null, GST: null, BANK: null });  // Clear pending files
   };
 
   // Enhanced close handler
@@ -321,6 +326,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
     AssociateSubGroup: "customer_sub_group",
     alternateNumber: "alternate_number",
     AssociateClassification: "customer_classification",
+    experience: "experience",  // Added experience field mapping
     msmeRegistered: "msme_registered",
     udyamRegistrationNumber: "udyam_registration_number",
     nameOfBranchProject: "name_of_branch_project",
@@ -432,21 +438,33 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
 
   useEffect(() => {
     if (initialData) {
-      // Ensure all branches start with isEditing: false in edit mode
-      const updatedInitialData = {
+      // Normalize field names to match formData structure (handle casing differences)
+      const normalizedData = {
         ...initialData,
+        // Normalize Associate-related fields (lowercase to PascalCase)
+        AssociateType: initialData.AssociateType || initialData.associateType || "",
+        AssociatePotential: initialData.AssociatePotential || initialData.associatePotential || "",
+        AssociateCategory: initialData.AssociateCategory || initialData.associateCategory || "",
+        AssociateGroup: initialData.AssociateGroup || initialData.associateGroup || "",
+        AssociateSubGroup: initialData.AssociateSubGroup || initialData.associateSubGroup || "",
+        AssociateClassification: initialData.AssociateClassification || initialData.associateClassification || "",
+        // Ensure branches start with isEditing: false in edit mode
         branches: (initialData.branches || []).map((branch: Branch) => ({
           ...branch,
           isEditing: false,
         })),
       };
-      setFormData(updatedInitialData);
+
+      setFormData(normalizedData);
       setInitialFiles(initialData.uploadedFiles || []);
       setUploadedFiles([]); // Reset uploaded files for edit mode
       // Store original contact persons for comparison
       setOriginalContactPersons(initialData.contactPersons || []);
       // Store original branches for comparison
       setOriginalBranches(initialData.branches || []);
+    } else if (initialData === null) {
+      // Clear form data when initialData is explicitly set to null
+      clearModalState();
     }
   }, [initialData]);
 
@@ -1558,7 +1576,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
       if (isNewBranch) {
         // POST request for new branch - use branch key map
         const payload: Record<string, any> = {
-          Associate_id: formData.id,
+          associate_id: formData.id,
         };
 
         // Map UI fields to backend fields using branchKeymap
@@ -1684,6 +1702,9 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
       //     branch.id === id ? { ...branch, isEditing: false } : branch
       //   ),
       // }));
+
+      // Notify parent component that data has changed
+      onDataChange?.();
     } catch (error) {
       console.error("Error saving branch:", error);
       // You might want to show a toast notification or error message here
@@ -2124,7 +2145,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
 
     try {
       // Import the upload function
-      const { uploadComplianceFile } = await import('../../../utils/AssociateApi');
+      const { uploadComplianceFile } = await import('../../../utils/associateApi');
 
       // Upload PAN if selected
       if (pendingFiles.PAN) {
@@ -2218,7 +2239,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
 
     try {
       // Import the upload function
-      const { uploadComplianceFile } = await import('../../../utils/AssociateApi');
+      const { uploadComplianceFile } = await import('../../../utils/associateApi');
 
       // Upload PAN if selected
       if (branchPendingFiles.PAN) {
@@ -2981,7 +3002,8 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
       }
 
       if (uploadedFiles.length === 0) {
-        // No files to upload, just close the modal
+        // No files to upload, notify parent and close the modal
+        onSubmit(formData);
         onClose();
         return;
       }
@@ -2993,8 +3015,9 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
         });
 
         console.log("Files uploaded successfully");
+        // Notify parent component of successful associate creation
+        onSubmit(formData);
         // Close modal after successful upload
-        // handleSubmit();
         onClose();
       } catch (err) {
         console.error("Upload failed", err);
@@ -3079,9 +3102,17 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
 
       if (currentUserId) backendPayload.updated_by = currentUserId;
 
-      console.log("Submitting edit with payload:", backendPayload);
+      // Get the associate ID from initialData or createdAssociateId
+      const associateId = initialData?.Associate_id || initialData?.id || createdAssociateId;
+
+      if (!associateId) {
+        console.error("No associate ID found for update");
+        throw new Error("Associate ID is required for update");
+      }
+
+      console.log("Submitting edit with payload:", backendPayload, "Associate ID:", associateId);
       const response = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/associate/${formData.id}`,
+        `${import.meta.env.VITE_API_BASE_URL}/associate/${associateId}`,
         backendPayload,
         {
           headers: {
@@ -3095,6 +3126,12 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
       }
 
       console.log("Associate updated successfully:", response.data);
+
+      // Call onSubmit to trigger refresh in parent component
+      if (onSubmit) {
+        onSubmit(response.data);
+      }
+
       handleClose();
     } catch (error) {
       console.error("Error updating Associate:", error);
@@ -3778,7 +3815,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select Currency</option>
-                {formData.currency.map((c) => (
+                {formData.currency.map((c: any) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
@@ -4107,10 +4144,11 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           {createdAssociateId && isEditMode && (
             <div className="mt-2">
               <ComplianceFileUpload
-                AssociateId={createdAssociateId}
+                entityType="associate"
+                entityId={createdAssociateId}
                 documentType="GST"
                 entityLevel={isBranch ? "BRANCH" : "HO"}
-                AssociateBranchId={isBranch ? branchId : null}
+                branchId={isBranch ? branchId : null}
                 uploadBy={currentUserId}
                 disabled={!createdAssociateId}
               />
@@ -4120,10 +4158,11 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           {!createdAssociateId && !isBranch && !isEditMode && (
             <div className="mt-2">
               <ComplianceFileUpload
-                AssociateId={null}
+                entityType="associate"
+                entityId={null}
                 documentType="GST"
                 entityLevel="HO"
-                AssociateBranchId={null}
+                branchId={null}
                 uploadBy={currentUserId}
                 onFileSelect={(file) => setPendingFiles(prev => ({ ...prev, GST: file }))}
                 queuedFile={pendingFiles.GST}
@@ -4191,10 +4230,11 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           {createdAssociateId && isEditMode && (
             <div className="mt-2">
               <ComplianceFileUpload
-                AssociateId={createdAssociateId}
+                entityType="associate"
+                entityId={createdAssociateId}
                 documentType="PAN"
                 entityLevel={isBranch ? "BRANCH" : "HO"}
-                AssociateBranchId={isBranch ? branchId : null}
+                branchId={isBranch ? branchId : null}
                 uploadBy={currentUserId}
                 disabled={!createdAssociateId}
               />
@@ -4273,10 +4313,11 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           {createdAssociateId && isEditMode && (
             <div className="mt-2">
               <ComplianceFileUpload
-                AssociateId={createdAssociateId}
+                entityType="associate"
+                entityId={createdAssociateId}
                 documentType="TAN"
                 entityLevel={isBranch ? "BRANCH" : "HO"}
-                AssociateBranchId={isBranch ? branchId : null}
+                branchId={isBranch ? branchId : null}
                 uploadBy={currentUserId}
                 disabled={!createdAssociateId}
               />
@@ -4439,10 +4480,11 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
               Bank Documents
             </label>
             <ComplianceFileUpload
-              AssociateId={createdAssociateId}
+              entityType="associate"
+              entityId={createdAssociateId}
               documentType="BANK"
               entityLevel={isBranch ? "BRANCH" : "HO"}
-              AssociateBranchId={isBranch ? branchId : null}
+              branchId={isBranch ? branchId : null}
               uploadBy={currentUserId}
               disabled={!createdAssociateId}
               label="Upload Bank Document (Cancelled Cheque / Bank Proof)"

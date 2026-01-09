@@ -3078,7 +3078,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
       if (currentUserId) backendPayload.updated_by = currentUserId;
 
-      console.log("Submitting edit with payload:", backendPayload);
+      console.log("Submitting edit with payload:", backendPayload, formData);
       const response = await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/customer/${formData.id}`,
         backendPayload,

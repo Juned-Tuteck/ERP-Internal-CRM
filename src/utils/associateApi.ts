@@ -468,6 +468,29 @@ export const downloadAssociateComplianceFile = async (
     return response.data;
 };
 
+// ==================== ALIAS EXPORTS FOR COMPATIBILITY ====================
+// These aliases match the naming convention used in AddAssociateModal.tsx
+// and provide consistency with the customer API pattern
+
+/**
+ * Alias for uploadAssociateComplianceFile
+ * Upload a compliance file for an associate
+ */
+export const uploadComplianceFile = uploadAssociateComplianceFile;
+
+/**
+ * Alias for getAssociateComplianceFiles
+ * Get all compliance files for an associate
+ */
+export const getComplianceFiles = getAssociateComplianceFiles;
+
+/**
+ * Alias for downloadAssociateComplianceFile
+ * Download a compliance file
+ */
+export const downloadComplianceFile = downloadAssociateComplianceFile;
+
+
 // ==================== ASSOCIATE FILE APIs ====================
 
 /**

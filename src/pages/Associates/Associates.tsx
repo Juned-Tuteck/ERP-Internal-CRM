@@ -41,6 +41,12 @@ const Associates: React.FC = () => {
     });
   };
 
+  const handleRegisterAssociate = () => {
+    // Clear any previously set initial data before opening the modal
+    setAssociateInitialData(null);
+    setIsAddModalOpen(true);
+  };
+
   const tabs = [
     { id: 'associates', name: 'All Associates', icon: HardHat },
     { id: 'approval', name: 'Associate Approval', icon: CheckCircle },
@@ -64,7 +70,7 @@ const Associates: React.FC = () => {
           </button>
           {activeTab === 'associates' && (
             <button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={handleRegisterAssociate}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -82,8 +88,8 @@ const Associates: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                  ? 'border-teal-500 text-teal-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-teal-500 text-teal-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               <div className="flex items-center space-x-2">
@@ -109,6 +115,7 @@ const Associates: React.FC = () => {
             <AssociateDetails
               associate={selectedAssociate}
               setAssociateInitialData={setAssociateInitialData}
+              onAssociateUpdate={() => setScreenRefresh(prev => prev + 1)}
             />
           </div>
         </div>
@@ -118,7 +125,10 @@ const Associates: React.FC = () => {
 
       <AddAssociateModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setAssociateInitialData(null);
+          setIsAddModalOpen(false);
+        }}
         onSubmit={handleAddAssociate}
         initialData={associateInitialData}
       />
