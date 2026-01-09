@@ -64,7 +64,7 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
   const fetchLeads = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/lead/`
+        `${import.meta.env.VITE_API_BASE_URL}/temp-lead/`
       );
       const apiLeads = response.data.data;
       console.log("Fetched leads for approval:", apiLeads);

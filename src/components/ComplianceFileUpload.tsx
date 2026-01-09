@@ -3,10 +3,11 @@ import { Upload, Download, CheckCircle, XCircle, Loader } from 'lucide-react';
 import axios from 'axios';
 
 interface ComplianceFileUploadProps {
-  customerId: string | null;  // Can be null for queue mode
+  entityType?: 'customer' | 'associate';  // Type of entity (optional for backward compatibility)
+  entityId?: string | null;  // Can be null for queue mode (customerId or associateId)
   documentType: 'PAN' | 'TAN' | 'GST' | 'BANK';
   entityLevel: 'HO' | 'BRANCH';
-  customerBranchId?: string | null;
+  branchId?: string | null;  // customerBranchId or associateBranchId
   uploadBy: string;
   onUploadSuccess?: (fileData: any) => void;
   onUploadError?: (error: string) => void;
@@ -15,6 +16,9 @@ interface ComplianceFileUploadProps {
   // Queue mode props
   onFileSelect?: (file: File | null) => void;  // Callback for queue mode
   queuedFile?: File | null;  // Display queued file
+  // Legacy props for backward compatibility
+  customerId?: string | null;
+  customerBranchId?: string | null;
 }
 
 interface UploadedFile {
@@ -27,10 +31,11 @@ interface UploadedFile {
 }
 
 const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
-  customerId,
+  entityType: propEntityType,
+  entityId: propEntityId,
   documentType,
   entityLevel,
-  customerBranchId = null,
+  branchId: propBranchId,
   uploadBy,
   onUploadSuccess,
   onUploadError,
@@ -38,7 +43,15 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
   label,
   onFileSelect,
   queuedFile,
+  // Legacy props
+  customerId,
+  customerBranchId,
 }) => {
+  // Support backward compatibility: use legacy props if new props not provided
+  const entityType = propEntityType || (customerId !== undefined ? 'customer' : 'associate');
+  const entityId = propEntityId !== undefined ? propEntityId : customerId;
+  const branchId = propBranchId !== undefined ? propBranchId : customerBranchId;
+
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -47,27 +60,43 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
   const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.dwg', '.xls', '.xlsx'];
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+  // Determine API endpoint based on entity type
+  const getApiEndpoint = () => {
+    return entityType === 'customer'
+      ? 'customer-compliance-file'
+      : 'associate-compliance-file';
+  };
+
+  // Determine branch ID field name based on entity type
+  const getBranchIdFieldName = () => {
+    return entityType === 'customer'
+      ? 'customer_branch_id'
+      : 'associate_branch_id';
+  };
+
   // Fetch existing files for this document type
   useEffect(() => {
-    if (customerId) {
+    if (entityId) {
       fetchUploadedFiles();
     }
-  }, [customerId, documentType, entityLevel, customerBranchId]);
+  }, [entityId, documentType, entityLevel, branchId]);
 
   const fetchUploadedFiles = async () => {
     try {
+      const apiEndpoint = getApiEndpoint();
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${customerId}/compliance-files`
+        `${import.meta.env.VITE_API_BASE_URL}/${apiEndpoint}/${entityId}/compliance-files`
       );
 
       if (response.data.success) {
         // Filter files by document type, entity level, and branch ID
+        const branchFieldName = getBranchIdFieldName();
         const filtered = response.data.data.filter((file: any) => {
           const matchesType = file.document_type === documentType;
           const matchesLevel = file.entity_level === entityLevel;
           const matchesBranch = entityLevel === 'HO'
             ? true
-            : file.customer_branch_id === customerBranchId;
+            : file[branchFieldName] === branchId;
 
           return matchesType && matchesLevel && matchesBranch;
         });
@@ -115,8 +144,8 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
       return;
     }
 
-    // Queue mode: If customerId is null, store file in queue
-    if (!customerId && onFileSelect) {
+    // Queue mode: If entityId is null, store file in queue
+    if (!entityId && onFileSelect) {
       onFileSelect(file);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
@@ -124,8 +153,8 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
       return;
     }
 
-    // Upload mode: If customerId exists, upload immediately
-    if (customerId) {
+    // Upload mode: If entityId exists, upload immediately
+    if (entityId) {
       await uploadFile(file);
     }
 
@@ -133,8 +162,8 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
   };
 
   const uploadFile = async (file: File) => {
-    if (!customerId) {
-      setError('Customer ID is required for upload');
+    if (!entityId) {
+      setError(`${entityType === 'customer' ? 'Customer' : 'Associate'} ID is required for upload`);
       return;
     }
 
@@ -148,12 +177,14 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
       formData.append('entity_level', entityLevel);
       formData.append('upload_by', uploadBy);
 
-      if (entityLevel === 'BRANCH' && customerBranchId) {
-        formData.append('customer_branch_id', customerBranchId);
+      if (entityLevel === 'BRANCH' && branchId) {
+        const branchFieldName = getBranchIdFieldName();
+        formData.append(branchFieldName, branchId);
       }
 
+      const apiEndpoint = getApiEndpoint();
       const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${customerId}/compliance-files`,
+        `${import.meta.env.VITE_API_BASE_URL}/${apiEndpoint}/${entityId}/compliance-files`,
         formData,
         {
           headers: {
@@ -189,8 +220,9 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
 
   const handleDownload = async (fileId: string, fileName: string) => {
     try {
+      const apiEndpoint = getApiEndpoint();
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/customer-compliance-file/${customerId}/compliance-files/${fileId}/download`,
+        `${import.meta.env.VITE_API_BASE_URL}/${apiEndpoint}/${entityId}/compliance-files/${fileId}/download`,
         {
           responseType: 'blob',
         }
@@ -221,7 +253,7 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
       <div className="flex items-center gap-2">
         <input
           type="file"
-          id={`upload-${documentType}-${entityLevel}-${customerBranchId || 'ho'}`}
+          id={`upload-${documentType}-${entityLevel}-${branchId || 'ho'}`}
           className="hidden"
           onChange={handleFileSelect}
           accept={ALLOWED_EXTENSIONS.join(',')}
@@ -229,7 +261,7 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
         />
 
         <label
-          htmlFor={`upload-${documentType}-${entityLevel}-${customerBranchId || 'ho'}`}
+          htmlFor={`upload-${documentType}-${entityLevel}-${branchId || 'ho'}`}
           className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${disabled || uploading
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : 'bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer'
@@ -266,7 +298,7 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
       )}
 
       {/* Queued file display (before upload) */}
-      {queuedFile && !customerId && (
+      {queuedFile && !entityId && (
         <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1.5 text-xs">
           <div className="flex items-center text-yellow-800">
             <span className="font-medium">Selected:</span>
@@ -276,7 +308,7 @@ const ComplianceFileUpload: React.FC<ComplianceFileUploadProps> = ({
             </span>
           </div>
           <div className="text-yellow-700 text-[10px] mt-0.5">
-            Will be uploaded after customer registration
+            Will be uploaded after {entityType === 'customer' ? 'customer' : 'associate'} registration
           </div>
         </div>
       )}

@@ -17,6 +17,7 @@ import { CustomLoader } from '../../../components/CustomLoader';
 import { useToast } from '../../../components/Toast';
 import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
 import { SearchableSelect } from '../../../components/SearchableSelect';
+import { getAssociates } from '../../../utils/associateApi';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -295,13 +296,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     "Purchase",
   ];
 
-  // Replace this with your actual registered associates source
-  const registeredAssociates = [
-    { id: "1", name: "Architect A" },
-    { id: "2", name: "Consultant B" },
-    { id: "3", name: "Engineer C" },
-    { id: "4", name: "Designer D" },
-  ];
+  // State for associates fetched from API
+  const [associates, setAssociates] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
 
   const validateProjectValue = (value: string): boolean => {
     const numValue = parseFloat(value);
@@ -1066,6 +1064,34 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     }
   };
 
+  // Fetch associates from API
+  const fetchAssociates = async () => {
+    try {
+      const associatesData = await getAssociates();
+      console.log("Associates API Response:", associatesData);
+
+      // Handle the response - it might be the array directly or wrapped in data
+      const associatesArray = Array.isArray(associatesData) ? associatesData : ((associatesData as any)?.data || []);
+      console.log("Associates Array:", associatesArray);
+
+      // Filter only approved associates
+      const approvedAssociates = associatesArray.filter(
+        (associate: any) => associate.approval_status === "APPROVED"
+      );
+      console.log("approvedAssociates", approvedAssociates);
+
+      setAssociates(
+        approvedAssociates.map((associate: any) => ({
+          id: associate.associate_id,
+          name: associate.business_name,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching associates:", error);
+      setAssociates([]);
+    }
+  };
+
   // Fetch temporary leads on mount
   useEffect(() => {
     const fetchTempLeads = async () => {
@@ -1085,6 +1111,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       fetchTempLeads();
     }
   }, [isOpen, initialData]);
+
+  // Fetch associates when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchAssociates();
+    }
+  }, [isOpen]);
 
   // Handle temporary lead selection
   const handleTempLeadSelect = async (leadId: string) => {
@@ -2908,7 +2941,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const addAssociate = () => {
     if (!associateForm.designation || !associateForm.associateId) return;
     const associateName =
-      registeredAssociates.find((a) => a.id === associateForm.associateId)
+      associates.find((a) => a.id === associateForm.associateId)
         ?.name || "";
     setFormData((prev: any) => ({
       ...prev,
@@ -5229,7 +5262,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                             className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-sm"
                           >
                             <option value="">Select Associate</option>
-                            {registeredAssociates.map((a) => (
+                            {associates.map((a) => (
                               <option key={a.id} value={a.id}>
                                 {a.name}
                               </option>
