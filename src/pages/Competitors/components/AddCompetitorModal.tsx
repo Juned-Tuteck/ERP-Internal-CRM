@@ -1410,6 +1410,8 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
       const branch = formData.branches.find((b: Branch) => b.id === id);
       if (!branch) return;
 
+      console.log("branch", branch);
+
       // Check if this is a new branch (has temp ID from Date.now())
       const isNewBranch = !originalBranches.some(
         (originalBranch) => originalBranch.id === id
@@ -1418,7 +1420,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
       if (isNewBranch) {
         // POST request for new branch - use branch key map
         const payload: Record<string, any> = {
-          Competitor_id: formData.id,
+          competitor_id: formData.id,
         };
 
         // Map UI fields to backend fields using branchKeymap
@@ -1432,16 +1434,16 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
         if (currentUserId) payload.created_by = currentUserId;
 
         // Convert zone/state/district names to IDs for bulk post
-        if (branch.zone) {
-          const zone = zones.find(z => z.name === branch.zone);
+        if (branch.zoneName) {
+          const zone = zones.find(z => z.name === branch.zoneName);
           payload.zone_id = zone?.id || null;
         }
-        if (branch.state) {
-          const state = states.find(s => s.name === branch.state);
+        if (branch.stateName) {
+          const state = states.find(s => s.name === branch.stateName);
           payload.state_id = state?.id || null;
         }
-        if (branch.district) {
-          const district = districts.find(d => d.name === branch.district);
+        if (branch.districtName) {
+          const district = districts.find(d => d.name === branch.districtName);
           payload.district_id = district?.id || null;
         }
 
@@ -1655,7 +1657,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
       if (isNewContact) {
         // POST request for new branch contact person
         const payload: Record<string, any> = {
-          Competitor_branch_id: branchId,
+          competitor_branch_id: branchId,
         };
 
         // Map UI fields to backend fields using branchContactKeymap
@@ -2228,8 +2230,9 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
         "email",
         "country",
         "currency",
-        "state",
-        "district",
+        "zoneName",
+        "stateName",
+        "districtName",
         "city",
         "CompetitorType",
         "CompetitorPotential",
@@ -2355,16 +2358,16 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
 
         // Special transformations for backend compatibility
         // 1. Convert zone/state/district names to IDs
-        if (formData.zone) {
-          const zone = zones.find(z => z.name === formData.zone);
+        if (formData.zoneName) {
+          const zone = zones.find(z => z.name === formData.zoneName);
           CompetitorPayload.zone_id = zone?.id || null;
         }
-        if (formData.state) {
-          const state = states.find(s => s.name === formData.state);
+        if (formData.stateName) {
+          const state = states.find(s => s.name === formData.stateName);
           CompetitorPayload.state_id = state?.id || null;
         }
-        if (formData.district) {
-          const district = districts.find(d => d.name === formData.district);
+        if (formData.districtName) {
+          const district = districts.find(d => d.name === formData.districtName);
           CompetitorPayload.district_id = district?.id || null;
         }
 
