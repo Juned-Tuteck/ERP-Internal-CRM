@@ -1563,6 +1563,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
         `${import.meta.env.VITE_API_BASE_URL}/lead/${leadId}`,
         {
           lead_stage: "Enquiry",
+          updated_by: userData?.id || null
         }
       );
       console.log("Lead stage updated to Enquiry after file upload");
@@ -1899,6 +1900,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           });
         }
 
+        updatePayload.updated_by = userData?.id || null;
         console.log('Update payload for temp lead (complete registration):', updatePayload);
 
         const updateResponse = await axios.put(
@@ -2405,6 +2407,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           });
         }
 
+        updatePayload.updated_by = userData?.id || null;
         console.log('Update payload for temp lead (unified):', updatePayload);
 
         const updateResponse = await axios.put(
