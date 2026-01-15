@@ -110,7 +110,7 @@ const LeadsReport: React.FC = () => {
                 <div className="w-full bg-gray-200 rounded-full h-4">
                   <div
                     className={`h-4 rounded-full transition-all duration-300 ${
-                      index === 0 ? 'bg-blue-500' :
+                      index === 0 ? 'bg-primary-500' :
                       index === 1 ? 'bg-yellow-500' :
                       index === 2 ? 'bg-orange-500' :
                       index === 3 ? 'bg-red-500' : 'bg-green-500'
@@ -171,7 +171,7 @@ const LeadsReport: React.FC = () => {
               <p className="text-xs text-gray-500">{region.percentage}% of total</p>
               <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-blue-500 h-2 rounded-full"
+                  className="bg-primary-500 h-2 rounded-full"
                   style={{ width: `${region.percentage * 5}%` }}
                 ></div>
               </div>

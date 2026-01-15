@@ -214,7 +214,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ selectedProject, onSelectProj
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-8 w-8 bg-purple-600 rounded-full flex items-center justify-center">
+                    <div className="h-8 w-8 bg-primary-500 rounded-full flex items-center justify-center">
                       <span className="text-xs font-medium text-white">{project.customerAvatar}</span>
                     </div>
                     <div className="ml-3">

@@ -1451,7 +1451,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                         <button
                           type="button"
                           onClick={addPaymentTerm}
-                          className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                          className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Payment Term
@@ -1566,7 +1566,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                   <button
                     type="button"
                     onClick={addContact}
-                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Contact
@@ -1706,7 +1706,7 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
               <button
                 type="button"
                 onClick={handleNext}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
               >
                 Next
                 <ChevronRight className="h-4 w-4 ml-2" />

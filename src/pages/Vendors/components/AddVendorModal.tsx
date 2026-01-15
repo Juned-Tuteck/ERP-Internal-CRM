@@ -1505,7 +1505,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                     <button
                       type="button"
                       onClick={addContactPerson}
-                      className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                      className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Contact
@@ -1598,7 +1598,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                   <button
                     type="button"
                     onClick={addBranch}
-                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Branch
@@ -1985,7 +1985,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                   type="button"
                   onClick={handleNext}
                   disabled={isLoading}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>

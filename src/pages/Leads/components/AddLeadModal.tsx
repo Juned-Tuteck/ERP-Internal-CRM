@@ -3385,7 +3385,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => setShowWorkTypeDropdown(false)}
-                                className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                                className="w-full px-3 py-1 bg-primary-500 text-white rounded-md hover:bg-primary-600 text-sm"
                               >
                                 Done
                               </button>
@@ -3961,7 +3961,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => setShowWorkTypeDropdown(false)}
-                                  className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                                  className="w-full px-3 py-1 bg-primary-500 text-white rounded-md hover:bg-primary-600 text-sm"
                                 >
                                   Done
                                 </button>
@@ -4789,7 +4789,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       type="button"
                       onClick={() => setShowAddContact(true)}
                       disabled={!formData.businessName}
-                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      className="px-3 py-1.5 bg-primary-500 text-white text-sm rounded-md hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                       + Add Contact Person
                     </button>
@@ -5233,7 +5233,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                                 }
                               }}
                               disabled={!selectedContactForAdd}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                              className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                             >
                               Add Contact
                             </button>
@@ -5395,7 +5395,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                           />
                           <label
                             htmlFor="file-upload-common"
-                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-primary-500 hover:bg-primary-600 cursor-pointer"
                           >
                             Choose Common Files
                           </label>
@@ -5467,7 +5467,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                             />
                             <label
                               htmlFor={`file-upload-${worktype}`}
-                              className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                              className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-primary-500 hover:bg-primary-600 cursor-pointer"
                             >
                               Choose Files
                             </label>
@@ -5544,7 +5544,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                       />
                       <label
                         htmlFor="file-upload"
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 cursor-pointer"
                       >
                         Choose Files
                       </label>
@@ -5751,7 +5751,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                             isLoading ||
                             !!validationErrors.newComment
                           }
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                          className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                         >
                           <MessageSquare className="h-4 w-4" />
                         </button>
@@ -5824,7 +5824,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                   type="button"
                   onClick={handleNext}
                   disabled={isLoading}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                 >
                   {isLoading ? "Saving..." : "Save"}
                 </button>
@@ -5861,7 +5861,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                     type="button"
                     onClick={handleNext}
                     disabled={isLoading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                   >
                     {isLoading ? "Saving..." : "Next"}
                     <ChevronRight className="h-4 w-4 ml-2" />

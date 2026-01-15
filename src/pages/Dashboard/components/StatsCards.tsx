@@ -17,7 +17,7 @@ const StatsCards: React.FC = () => {
       change: '+8.2%',
       trend: 'up',
       icon: Users,
-      color: 'bg-blue-500',
+      color: 'bg-primary-500',
     },
     {
       name: 'Conversion Rate',

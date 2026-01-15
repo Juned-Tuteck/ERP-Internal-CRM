@@ -158,7 +158,7 @@ const PerformanceReport: React.FC = () => {
                   <tr key={member.name} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                        <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-white">
                             {member.name.split(' ').map(n => n[0]).join('')}
                           </span>

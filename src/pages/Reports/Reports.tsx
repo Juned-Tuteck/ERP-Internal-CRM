@@ -39,7 +39,7 @@ const Reports: React.FC = () => {
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </button>
-          <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+          <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600">
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </button>
@@ -55,7 +55,7 @@ const Reports: React.FC = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >

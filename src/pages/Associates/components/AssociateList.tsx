@@ -129,7 +129,7 @@ const AssociateList: React.FC<AssociateListProps> = ({
           >
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 bg-teal-600 rounded-lg flex items-center justify-center">
+                <div className="h-10 w-10 bg-primary-500 rounded-lg flex items-center justify-center">
                   <span className="text-sm font-medium text-white">
                     {associate.avatar}
                   </span>

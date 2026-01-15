@@ -79,7 +79,7 @@ const NotificationSettings: React.FC = () => {
                   type="button"
                   onClick={() => handleToggle('emailNotifications', key)}
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    value ? 'bg-blue-600' : 'bg-gray-200'
+                    value ? 'bg-primary-500' : 'bg-gray-200'
                   }`}
                 >
                   <span
@@ -114,7 +114,7 @@ const NotificationSettings: React.FC = () => {
                   type="button"
                   onClick={() => handleToggle('pushNotifications', key)}
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    value ? 'bg-blue-600' : 'bg-gray-200'
+                    value ? 'bg-primary-500' : 'bg-gray-200'
                   }`}
                 >
                   <span
@@ -148,7 +148,7 @@ const NotificationSettings: React.FC = () => {
                   type="button"
                   onClick={() => handleToggle('smsNotifications', key)}
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    value ? 'bg-blue-600' : 'bg-gray-200'
+                    value ? 'bg-primary-500' : 'bg-gray-200'
                   }`}
                 >
                   <span
@@ -165,7 +165,7 @@ const NotificationSettings: React.FC = () => {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            className="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
           >
             <Save className="h-4 w-4 mr-2" />
             Save Preferences

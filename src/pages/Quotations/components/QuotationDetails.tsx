@@ -907,7 +907,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                   <button
                     onClick={() => setIsEditModalOpen(true)}
                     disabled={isApprovalSent}
-                    className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
@@ -937,7 +937,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                ? "border-blue-500 text-blue-600"
+                ? "border-primary-500 text-primary-600"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
             >
@@ -2073,7 +2073,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                         key={comment.id || index}
                         className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg"
                       >
-                        <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+                        <div className="h-8 w-8 bg-primary-500 rounded-full flex items-center justify-center">
                           <span className="text-xs font-medium text-white">
                             {comment.created_by
                               ? comment.created_by.substring(0, 2).toUpperCase()
