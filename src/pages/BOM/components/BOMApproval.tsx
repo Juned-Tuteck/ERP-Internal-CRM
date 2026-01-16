@@ -815,7 +815,7 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
             <div className="flex items-center justify-end p-6 border-t border-gray-100">
               <button
                 onClick={() => setShowReasonPopup(false)}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Got it
               </button>
@@ -972,7 +972,7 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
             <div className="flex items-center justify-end p-6 border-t border-gray-200">
               <button
                 onClick={() => setShowApprovalHistory(false)}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Close
               </button>

@@ -677,7 +677,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-green-600 rounded-full flex items-center justify-center">
+            <div className="h-16 w-16 bg-primary-500 rounded-full flex items-center justify-center">
               <span className="text-xl font-medium text-white">
                 {displayLead.avatar}
               </span>
@@ -837,7 +837,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             <button
               onClick={() => setActiveTab('basic')}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'basic'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
@@ -846,7 +846,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             <button
               onClick={() => setActiveTab('followup')}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'followup'
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
@@ -1387,7 +1387,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   {/* Progress Bar */}
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      className="bg-primary-500 h-2 rounded-full transition-all duration-300"
                       style={{
                         width:
                           displayLead.leadStage === "Information Stage"
@@ -1734,7 +1734,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                       disabled={designHelpSent}
                       className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${designHelpSent
                         ? 'border-green-600 text-green-600 bg-green-50 cursor-not-allowed opacity-75'
-                        : 'border-blue-600 text-blue-600 bg-white hover:bg-blue-50'
+                        : 'border-primary-500 text-primary-600 bg-white hover:bg-primary-50'
                         }`}
                       title={designHelpSent ? 'This lead has already been assigned for design help.' : ''}
                     >
@@ -1806,7 +1806,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     <button
                       onClick={handleAddComment}
                       disabled={!newComment.trim() || isAddingComment}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       {isAddingComment ? (
                         <>
@@ -2077,7 +2077,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <span className="text-xs text-gray-500"></span>
                   <button
                     onClick={() => setShowHistoryModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded hover:bg-teal-700"
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded hover:bg-teal-700"
                   >
                     CLOSE
                   </button>
@@ -2276,7 +2276,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               <button
                 onClick={handleSendDesignHelp}
                 disabled={!selectedDesignEngineerId || isSendingHelp}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {isSendingHelp ? (
                   <>

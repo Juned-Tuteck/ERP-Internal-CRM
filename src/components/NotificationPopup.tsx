@@ -38,7 +38,7 @@ const NotificationPopup: React.FC<NotificationPopupProps> = ({
     >
       {/* Progress bar */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gray-100">
-        <div className="h-full bg-blue-500 animate-progress origin-left" />
+        <div className="h-full bg-primary-500 animate-progress origin-left" />
       </div>
 
       <div className="p-4">

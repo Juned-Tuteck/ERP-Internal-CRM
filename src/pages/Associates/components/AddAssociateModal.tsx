@@ -3510,7 +3510,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowCurrencyDropdown(false)}
-                    className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                    className="w-full px-3 py-1 bg-primary-500 text-white rounded-md hover:bg-primary-600 text-sm"
                   >
                     Done
                   </button>
@@ -4143,15 +4143,22 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           )}
           {createdAssociateId && isEditMode && (
             <div className="mt-2">
-              <ComplianceFileUpload
-                entityType="associate"
-                entityId={createdAssociateId}
-                documentType="GST"
-                entityLevel={isBranch ? "BRANCH" : "HO"}
-                branchId={isBranch ? branchId : null}
-                uploadBy={currentUserId}
-                disabled={!createdAssociateId}
-              />
+              {/* Check if branch is saved before allowing upload */}
+              {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  ⚠️ Please save this branch first before uploading compliance files
+                </div>
+              ) : (
+                <ComplianceFileUpload
+                  entityType="associate"
+                  entityId={createdAssociateId}
+                  documentType="GST"
+                  entityLevel={isBranch ? "BRANCH" : "HO"}
+                  branchId={isBranch ? branchId : null}
+                  uploadBy={currentUserId}
+                  disabled={!createdAssociateId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                />
+              )}
             </div>
           )}
           {/* Queue mode: Show upload before Associate creation */}
@@ -4229,15 +4236,22 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           )}
           {createdAssociateId && isEditMode && (
             <div className="mt-2">
-              <ComplianceFileUpload
-                entityType="associate"
-                entityId={createdAssociateId}
-                documentType="PAN"
-                entityLevel={isBranch ? "BRANCH" : "HO"}
-                branchId={isBranch ? branchId : null}
-                uploadBy={currentUserId}
-                disabled={!createdAssociateId}
-              />
+              {/* Check if branch is saved before allowing upload */}
+              {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  ⚠️ Please save this branch first before uploading compliance files
+                </div>
+              ) : (
+                <ComplianceFileUpload
+                  entityType="associate"
+                  entityId={createdAssociateId}
+                  documentType="PAN"
+                  entityLevel={isBranch ? "BRANCH" : "HO"}
+                  branchId={isBranch ? branchId : null}
+                  uploadBy={currentUserId}
+                  disabled={!createdAssociateId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                />
+              )}
             </div>
           )}
           {/* Queue mode: Show upload before Associate creation */}
@@ -4312,15 +4326,22 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           )}
           {createdAssociateId && isEditMode && (
             <div className="mt-2">
-              <ComplianceFileUpload
-                entityType="associate"
-                entityId={createdAssociateId}
-                documentType="TAN"
-                entityLevel={isBranch ? "BRANCH" : "HO"}
-                branchId={isBranch ? branchId : null}
-                uploadBy={currentUserId}
-                disabled={!createdAssociateId}
-              />
+              {/* Check if branch is saved before allowing upload */}
+              {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  ⚠️ Please save this branch first before uploading compliance files
+                </div>
+              ) : (
+                <ComplianceFileUpload
+                  entityType="associate"
+                  entityId={createdAssociateId}
+                  documentType="TAN"
+                  entityLevel={isBranch ? "BRANCH" : "HO"}
+                  branchId={isBranch ? branchId : null}
+                  uploadBy={currentUserId}
+                  disabled={!createdAssociateId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                />
+              )}
             </div>
           )}
           {/* Queue mode: Show upload before Associate creation */}
@@ -4479,16 +4500,23 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Bank Documents
             </label>
-            <ComplianceFileUpload
-              entityType="associate"
-              entityId={createdAssociateId}
-              documentType="BANK"
-              entityLevel={isBranch ? "BRANCH" : "HO"}
-              branchId={isBranch ? branchId : null}
-              uploadBy={currentUserId}
-              disabled={!createdAssociateId}
-              label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
-            />
+            {/* Check if branch is saved before allowing upload */}
+            {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+              <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                ⚠️ Please save this branch first before uploading compliance files
+              </div>
+            ) : (
+              <ComplianceFileUpload
+                entityType="associate"
+                entityId={createdAssociateId}
+                documentType="BANK"
+                entityLevel={isBranch ? "BRANCH" : "HO"}
+                branchId={isBranch ? branchId : null}
+                uploadBy={currentUserId}
+                disabled={!createdAssociateId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
+              />
+            )}
           </div>
         )}
         {/* Queue mode: Show upload before Associate creation */}
@@ -4573,7 +4601,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
           type="button"
           onClick={onAdd}
           disabled={readOnly || !canAdd || persons.some((p) => p.isEditing)}
-          className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Contact Person
@@ -4920,7 +4948,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
                     disabled={formData.branches.some(
                       (branch: Branch) => branch.isEditing
                     )}
-                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Branch
@@ -5093,7 +5121,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
                     />
                     <label
                       htmlFor="file-upload"
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 cursor-pointer"
                     >
                       Choose Files
                     </label>
@@ -5270,7 +5298,7 @@ const AddAssociateModal: React.FC<AddAssociateModalProps> = ({
                 type="button"
                 onClick={handleNext}
                 disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Processing..." : (currentStep == 1 ? "Register and Next" : "Next")}
                 {!isLoading && <ChevronRight className="h-4 w-4 ml-2" />}

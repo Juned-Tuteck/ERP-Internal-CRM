@@ -62,7 +62,7 @@ const QuotationStep5: React.FC<QuotationStep5Props> = ({ formData, setFormData, 
             type="button"
             onClick={addComment}
             disabled={!newComment.trim() || isAddingComment}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isAddingComment ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

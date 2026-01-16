@@ -751,7 +751,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
               </button>
               <button
                 onClick={handleFileUpload}
-                className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="px-4 py-2 rounded-md text-white bg-primary-500 hover:bg-primary-600"
                 disabled={!file}
               >
                 Upload

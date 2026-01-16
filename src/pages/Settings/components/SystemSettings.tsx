@@ -161,7 +161,7 @@ const SystemSettings: React.FC = () => {
                 type="button"
                 onClick={() => handleToggle('autoSave')}
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  settings.autoSave ? 'bg-blue-600' : 'bg-gray-200'
+                  settings.autoSave ? 'bg-primary-500' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -191,7 +191,7 @@ const SystemSettings: React.FC = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
             >
               <Save className="h-4 w-4 mr-2" />
               Save Settings

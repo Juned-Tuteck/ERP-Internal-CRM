@@ -40,7 +40,7 @@ const ProfileSettings: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Profile Picture */}
         <div className="flex items-center space-x-6">
-          <div className="h-24 w-24 bg-blue-600 rounded-full flex items-center justify-center">
+          <div className="h-24 w-24 bg-primary-500 rounded-full flex items-center justify-center">
             <span className="text-2xl font-medium text-white">RA</span>
           </div>
           <div>
@@ -170,7 +170,7 @@ const ProfileSettings: React.FC = () => {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            className="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
           >
             <Save className="h-4 w-4 mr-2" />
             Save Changes

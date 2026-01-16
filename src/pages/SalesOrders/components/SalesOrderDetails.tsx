@@ -323,7 +323,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
               {enhancedSalesOrder?.approval_status?.toUpperCase() === 'PENDING' && (
               <button
                 onClick={() => setIsEditModalOpen(true)}
-                className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-blue-50"
+                className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-white hover:bg-primary-50"
               >
                 <Edit className="h-3 w-3 mr-1" />
                 Edit
@@ -352,7 +352,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
               onClick={() => setActiveTab(tab.id)}
               className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -779,7 +779,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
               {enhancedSalesOrder.contacts.map((contact: any, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center space-x-3 mb-3">
-                    <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-white">
                         {contact.name.split(' ').map((n: string) => n[0]).join('')}
                       </span>
@@ -813,7 +813,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
               <div className="space-y-4">
                 {enhancedSalesOrder.comments.map((comment: any, index: number) => (
                   <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <div className="h-8 w-8 bg-primary-500 rounded-full flex items-center justify-center">
                       <span className="text-xs font-medium text-white">
                         {comment.author.split(' ').map((n: string) => n[0]).join('')}
                       </span>
@@ -840,7 +840,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
                       placeholder="Add a comment..."
                     ></textarea>
                   </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 self-end">
+                  <button className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 self-end">
                     Add Comment
                   </button>
                 </div>

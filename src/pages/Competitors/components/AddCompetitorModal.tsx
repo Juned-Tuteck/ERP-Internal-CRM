@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Save,
@@ -1483,7 +1483,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
 
         ]);
 
-        console.log("Branch ID replaced (temp â†’ actual):", id, "â†’", actualBranchId);
+        console.log("Branch ID replaced (temp → actual):", id, "→", actualBranchId);
 
       } else {
         // PUT request for existing branch
@@ -3145,7 +3145,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowCurrencyDropdown(false)}
-                    className="w-full px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                    className="w-full px-3 py-1 bg-primary-500 text-white rounded-md hover:bg-primary-600 text-sm"
                   >
                     Done
                   </button>
@@ -4125,7 +4125,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
           type="button"
           onClick={onAdd}
           disabled={readOnly || !canAdd || persons.some((p) => p.isEditing)}
-          className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Contact Person
@@ -4473,7 +4473,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                     disabled={formData.branches.some(
                       (branch: Branch) => branch.isEditing
                     )}
-                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Branch
@@ -4646,7 +4646,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                     />
                     <label
                       htmlFor="file-upload"
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 cursor-pointer"
                     >
                       Choose Files
                     </label>
@@ -4660,7 +4660,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                           key={index}
                           className="text-red-500 text-xs mt-1 flex items-center"
                         >
-                          <span className="mr-1">âš </span>
+                          <span className="mr-1">⚠</span>
                           {error}
                         </p>
                       ))}
@@ -4823,7 +4823,7 @@ const AddCompetitorModal: React.FC<AddCompetitorModalProps> = ({
                 type="button"
                 onClick={handleNext}
                 disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Processing..." : (currentStep == 1 ? "Register and Next" : "Next")}
                 {!isLoading && <ChevronRight className="h-4 w-4 ml-2" />}

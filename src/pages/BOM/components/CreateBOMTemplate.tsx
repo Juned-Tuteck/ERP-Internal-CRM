@@ -1334,7 +1334,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                   method === "manual"
-                    ? "bg-blue-600 text-white border border-blue-600 shadow"
+                    ? "bg-primary-500 text-white border border-blue-600 shadow"
                     : "bg-white text-gray-700 border border-gray-300"
                 }`}
               >
@@ -1347,7 +1347,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                   method === "upload"
-                    ? "bg-blue-600 text-white border border-blue-600 shadow"
+                    ? "bg-primary-500 text-white border border-blue-600 shadow"
                     : "bg-white text-gray-700 border border-gray-300"
                 }`}
               >
@@ -1431,7 +1431,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                       <button
                         type="button"
                         onClick={addSpec}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Spec
@@ -1527,7 +1527,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                   />
                   <label
                     htmlFor="csv-upload"
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 cursor-pointer"
                   >
                     Choose File
                   </label>
@@ -1597,7 +1597,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                   </button>
                   <button
                     onClick={handleSaveSpecification}
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
                   >
                     Save Specification
                   </button>
@@ -1646,7 +1646,7 @@ const CreateBOMTemplate: React.FC<CreateBOMTemplateProps> = ({
                       disabled={
                         !formData.workType || !formData.name || isSubmitting
                       }
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? "Creating..." : "Next"}
                       <ChevronRight className="h-4 w-4 ml-2" />
