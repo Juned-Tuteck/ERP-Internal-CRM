@@ -17,7 +17,8 @@ import {
   Trash2,
   Power,
   Image, FileSpreadsheet, File, Download, FileCheck,
-  User
+  User,
+  ChevronDown
 } from "lucide-react";
 import axios from "axios";
 import AddCompetitorModal from "./AddCompetitorModal";
@@ -38,6 +39,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [expandedBranches, setExpandedBranches] = useState<number[]>([]);
 
   // Location lookup data
   const [zones, setZones] = useState<Array<{ id: string; name: string }>>([]);
@@ -936,333 +938,358 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
         {
           activeTab === "branches" && (
             <div className="space-y-6">
-              {mappedApiData.branches.map((branch: any, index: number) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-6 space-y-6"
-                >
-                  {/* Branch Header */}
-                  <div className="border-b pb-4">
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {branch.nameOfBranchProject}
-                    </h3>
-                  </div>
+              {mappedApiData.branches.map((branch: any, index: number) => {
+                const isExpanded = expandedBranches.includes(index);
+                const toggleBranch = () => {
+                  setExpandedBranches(prev =>
+                    prev.includes(index)
+                      ? prev.filter(i => i !== index)
+                      : [...prev, index]
+                  );
+                };
 
-                  {/* Billing Address Section */}
-                  <div className="border border-gray-200 rounded-lg p-6 space-y-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                      Billing Address
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Address Type</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.addressType}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Name of Branch / Project</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.nameOfBranchProject}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Contact Number</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.contactNumber}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Email ID</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.email}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Country</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.country}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Zone</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.zoneName || "-"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">State</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.stateName || "-"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">District</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.districtName || "-"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">City</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.city}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Pincode</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.pincode}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3 md:col-span-2">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Street</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.street}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Google Location</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.googleLocation}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* <div className="flex items-start space-x-3">
-                        <Users className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Competitor Category</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.CompetitorCategory}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Risk Level</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.riskLevel}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Credit Days</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.creditDays}
-                          </p>
-                        </div>
-                      </div> */}
-
-                      <div className="flex items-start space-x-3">
-                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Current Status</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.currentStatus}
-                          </p>
-                        </div>
-                      </div>
+                return (
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-lg overflow-hidden"
+                  >
+                    {/* Branch Header - Clickable */}
+                    <div
+                      className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors border-b"
+                      onClick={toggleBranch}
+                    >
+                      <h3 className="text-xl font-semibold text-gray-900">
+                        {branch.nameOfBranchProject}
+                      </h3>
+                      <ChevronDown
+                        className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${isExpanded ? 'transform rotate-180' : ''
+                          }`}
+                      />
                     </div>
-                  </div>
 
-                  {/* Compliance Section */}
-                  <div className="border border-gray-200 rounded-lg p-6 space-y-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                      Compliance
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="flex items-start space-x-3">
-                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-500">GST Number</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.gstNumber}
-                          </p>
-                          {/* Branch GST File Display */}
-                          {renderBranchComplianceFile(branch.complianceFiles, 'GST')}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-500">PAN Number</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.panNumber}
-                          </p>
-                          {/* Branch PAN File Display */}
-                          {renderBranchComplianceFile(branch.complianceFiles, 'PAN')}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-500">TAN Number</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.tanNumber}
-                          </p>
-                          {/* Branch TAN File Display */}
-                          {renderBranchComplianceFile(branch.complianceFiles, 'TAN')}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bank Details Section */}
-                  <div className="border border-gray-200 rounded-lg p-6 space-y-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                      Bank Details
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="flex items-start space-x-3">
-                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Bank Name</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.bankName}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Branch Name</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.branchName}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">Account Number</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.bankAccountNumber}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-gray-500">IFSC Code</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {branch.ifscCode}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Branch Bank Document Display */}
-                      <div className="md:col-span-3">
-                        <p className="text-sm text-gray-500 mb-2">Bank Documents</p>
-                        {renderBranchComplianceFile(branch.complianceFiles, 'BANK')}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contact Persons Section */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                      Contact Persons
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {branch.contactPersons.map(
-                        (person: any, personIndex: number) => (
-                          <div
-                            key={personIndex}
-                            className="border border-gray-200 rounded-lg p-4"
-                          >
-                            <div className="flex items-center space-x-3 mb-3">
-                              <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
-                                <span className="text-sm font-medium text-white">
-                                  {person.name
-                                    .split(" ")
-                                    .map((n: string) => n[0])
-                                    .join("")}
-                                </span>
-                              </div>
+                    {/* Collapsible Content */}
+                    <div
+                      className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'
+                        }`}
+                    >
+                      <div className="p-6 space-y-6">
+                        {/* Billing Address Section */}
+                        <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                            Billing Address
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                               <div>
+                                <p className="text-sm text-gray-500">Address Type</p>
                                 <p className="text-sm font-medium text-gray-900">
-                                  {person.name}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {person.designation}
+                                  {branch.addressType}
                                 </p>
                               </div>
                             </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                                {person.phone}
+
+                            <div className="flex items-start space-x-3">
+                              <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Name of Branch / Project</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.nameOfBranchProject}
+                                </p>
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                                {person.email}
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Contact Number</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.contactNumber}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Email ID</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.email}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Country</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.country}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Zone</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.zoneName || "-"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">State</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.stateName || "-"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">District</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.districtName || "-"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">City</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.city}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Pincode</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.pincode}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3 md:col-span-2">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Street</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.street}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Google Location</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.googleLocation}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* <div className="flex items-start space-x-3">
+                              <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Competitor Category</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.CompetitorCategory}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Risk Level</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.riskLevel}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Credit Days</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.creditDays}
+                                </p>
+                              </div>
+                            </div> */}
+
+                            <div className="flex items-start space-x-3">
+                              <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Current Status</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.currentStatus}
+                                </p>
                               </div>
                             </div>
                           </div>
-                        )
-                      )}
+                        </div>
+
+                        {/* Compliance Section */}
+                        <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                            Compliance
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="flex items-start space-x-3">
+                              <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-500">GST Number</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.gstNumber}
+                                </p>
+                                {/* Branch GST File Display */}
+                                {renderBranchComplianceFile(branch.complianceFiles, 'GST')}
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-500">PAN Number</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.panNumber}
+                                </p>
+                                {/* Branch PAN File Display */}
+                                {renderBranchComplianceFile(branch.complianceFiles, 'PAN')}
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-500">TAN Number</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.tanNumber}
+                                </p>
+                                {/* Branch TAN File Display */}
+                                {renderBranchComplianceFile(branch.complianceFiles, 'TAN')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bank Details Section */}
+                        <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                            Bank Details
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="flex items-start space-x-3">
+                              <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Bank Name</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.bankName}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Branch Name</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.branchName}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">Account Number</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.bankAccountNumber}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                              <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-gray-500">IFSC Code</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {branch.ifscCode}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Branch Bank Document Display */}
+                            <div className="md:col-span-3">
+                              <p className="text-sm text-gray-500 mb-2">Bank Documents</p>
+                              {renderBranchComplianceFile(branch.complianceFiles, 'BANK')}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Contact Persons Section */}
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
+                            Contact Persons
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {branch.contactPersons.map(
+                              (person: any, personIndex: number) => (
+                                <div
+                                  key={personIndex}
+                                  className="border border-gray-200 rounded-lg p-4"
+                                >
+                                  <div className="flex items-center space-x-3 mb-3">
+                                    <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                                      <span className="text-sm font-medium text-white">
+                                        {person.name
+                                          .split(" ")
+                                          .map((n: string) => n[0])
+                                          .join("")}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {person.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {person.designation}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center text-sm text-gray-600">
+                                      <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                                      {person.phone}
+                                    </div>
+                                    <div className="flex items-center text-sm text-gray-600">
+                                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                                      {person.email}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
-              }
-            </div >
+                );
+              })}
+            </div>
           )
         }
 
@@ -1273,33 +1300,6 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                 Competitor Documents
               </h3>
 
-              {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {mappedApiData.uploadedFiles?.map((file: any, index: number) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
-                >
-                  <div className="flex items-center space-x-3 mb-3">
-                    <FileText className="h-8 w-8 text-blue-600" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {file.original_name}
-                      </p>
-                      <p className="text-xs text-gray-500">{file.size}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-500">
-                      Uploaded:{" "}
-                      {new Date(file.created_at).toLocaleDateString("en-IN")}
-                    </span>
-                    <button className="text-xs text-blue-600 hover:text-blue-800">
-                      View
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div> */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {(mappedApiData?.uploadedFiles ?? []).map((file: any) => {
                   const Icon = getIconByMime(file.mime, file.original_name);
@@ -1311,26 +1311,26 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                       href={`${import.meta.env.VITE_API_BASE_URL}/Competitor-file/${file.competitorId}/files/${file.id}/download`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      className="group flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-200"
                     >
-                      <Icon className="h-8 w-8 text-blue-600 mr-3" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate" title={file.original_name}>
-                          {file.original_name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {sizeLabel} • {file.mime ?? "unknown"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {file.created_at ? new Date(file.created_at).toLocaleDateString("en-IN") : "-"}
-                        </p>
-                        <p className="">
-                          <User className="h-3 w-3 inline-block mr-1 text-gray-400" />
-                          {file.created_by_name || "-"}
-                        </p>
+                      <div className="flex-shrink-0 p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                        <Icon className="h-5 w-5 text-blue-600" />
                       </div>
 
-                      <Download className="h-4 w-4 text-gray-400 ml-3" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate mb-0.5" title={file.originalName}>
+                          {file.originalName}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span>{file.createdAt ? new Date(file.createdAt).toLocaleDateString("en-IN") : "-"}</span>
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {file.createdByName || "-"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
                     </a>
                   );
                 })}
