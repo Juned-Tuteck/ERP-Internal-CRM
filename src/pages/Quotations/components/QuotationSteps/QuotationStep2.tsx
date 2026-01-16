@@ -611,7 +611,7 @@ const QuotationStep2: React.FC<QuotationStep2Props> = ({
                 e.stopPropagation();
                 addCostItem(sectionKey);
               }}
-              className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-primary-500 hover:bg-primary-600"
             >
               <Plus className="h-3 w-3 mr-1" />
               Add

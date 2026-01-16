@@ -137,7 +137,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project }) => {
               onClick={() => setActiveTab(tab.id)}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -226,7 +226,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project }) => {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                       <div 
-                        className="bg-blue-600 h-2.5 rounded-full" 
+                        className="bg-primary-500 h-2.5 rounded-full" 
                         style={{ width: `${enhancedProject.progress}%` }}
                       ></div>
                     </div>
@@ -284,7 +284,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project }) => {
               {enhancedProject.team.map((member: any, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center space-x-3 mb-3">
-                    <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                    <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-white">
                         {member.name.split(' ').map((n: string) => n[0]).join('')}
                       </span>
@@ -375,7 +375,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project }) => {
             
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center space-x-4 mb-6">
-                <div className="h-12 w-12 bg-purple-600 rounded-lg flex items-center justify-center">
+                <div className="h-12 w-12 bg-primary-500 rounded-lg flex items-center justify-center">
                   <span className="text-lg font-medium text-white">{project.customerAvatar}</span>
                 </div>
                 <div>

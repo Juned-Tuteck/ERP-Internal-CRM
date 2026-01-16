@@ -396,7 +396,7 @@ const LeadList: React.FC<LeadListProps> = ({ selectedLead, onSelectLead }) => {
             >
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="h-10 w-10 bg-green-600 rounded-full flex items-center justify-center">
+                  <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
                     {/* Use initials as avatar */}
                     <span className="text-sm font-medium text-white">
                       {lead.businessName

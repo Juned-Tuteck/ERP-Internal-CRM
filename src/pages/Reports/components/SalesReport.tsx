@@ -60,7 +60,7 @@ const SalesReport: React.FC = () => {
                 <p className="text-sm font-medium text-gray-600">{metric.name}</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{metric.value}</p>
               </div>
-              <div className="bg-blue-500 rounded-lg p-3">
+              <div className="bg-primary-500 rounded-lg p-3">
                 <metric.icon className="h-6 w-6 text-white" />
               </div>
             </div>
@@ -96,7 +96,7 @@ const SalesReport: React.FC = () => {
                   <div className="flex-1 mx-4">
                     <div className="w-full bg-gray-200 rounded-full h-4">
                       <div
-                        className="bg-blue-500 h-4 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                        className="bg-primary-500 h-4 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
                         style={{ width: `${(item.sales / maxSales) * 100}%` }}
                       >
                         <span className="text-xs text-white font-medium">₹{item.sales}L</span>
@@ -117,7 +117,7 @@ const SalesReport: React.FC = () => {
             {topPerformers.map((performer, index) => (
               <div key={performer.name} className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50">
                 <div className="flex-shrink-0">
-                  <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                  <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-white">
                       {performer.name.split(' ').map(n => n[0]).join('')}
                     </span>
@@ -134,7 +134,7 @@ const SalesReport: React.FC = () => {
                   </div>
                   <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full"
+                      className="bg-primary-500 h-2 rounded-full"
                       style={{ width: `${performer.target}%` }}
                     ></div>
                   </div>

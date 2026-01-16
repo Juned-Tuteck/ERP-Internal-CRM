@@ -402,7 +402,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
       <div className="p-6 border-b border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-purple-600 rounded-lg flex items-center justify-center shadow-md">
+            <div className="h-16 w-16 bg-primary-500 rounded-lg flex items-center justify-center shadow-md">
               <span className="text-2xl font-bold text-white">
                 {Competitor.avatar}
               </span>
@@ -474,7 +474,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                ? "border-blue-500 text-blue-600"
+                ? "border-primary-500 text-primary-600"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
             >
@@ -894,7 +894,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                       className="border border-gray-200 rounded-lg p-4"
                     >
                       <div className="flex items-center space-x-3 mb-3">
-                        <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                        <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-white">
                             {person.name
                               .split(" ")

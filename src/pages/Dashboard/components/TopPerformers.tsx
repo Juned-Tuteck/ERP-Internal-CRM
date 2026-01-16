@@ -52,7 +52,7 @@ const TopPerformers: React.FC = () => {
         {performers.map((performer, index) => (
           <div key={performer.id} className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
             <div className="flex-shrink-0">
-              <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-white">{performer.avatar}</span>
               </div>
             </div>

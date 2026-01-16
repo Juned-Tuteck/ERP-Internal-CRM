@@ -1374,7 +1374,7 @@ const CreateQuotationModal: React.FC<CreateQuotationModalProps> = ({
                 type="button"
                 onClick={handleNext}
                 disabled={isSubmitting}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
               >
                 {isSubmitting ? "Processing..." : "Next"}
                 <ChevronRight className="h-4 w-4 ml-2" />
