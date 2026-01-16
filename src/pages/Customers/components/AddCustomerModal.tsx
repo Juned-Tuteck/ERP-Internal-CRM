@@ -4098,14 +4098,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           )}
           {createdCustomerId && isEditMode && (
             <div className="mt-2">
-              <ComplianceFileUpload
-                customerId={createdCustomerId}
-                documentType="GST"
-                entityLevel={isBranch ? "BRANCH" : "HO"}
-                customerBranchId={isBranch ? branchId : null}
-                uploadBy={currentUserId}
-                disabled={!createdCustomerId}
-              />
+              {/* Check if branch is saved before allowing upload */}
+              {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  ⚠️ Please save this branch first before uploading compliance files
+                </div>
+              ) : (
+                <ComplianceFileUpload
+                  customerId={createdCustomerId}
+                  documentType="GST"
+                  entityLevel={isBranch ? "BRANCH" : "HO"}
+                  customerBranchId={isBranch ? branchId : null}
+                  uploadBy={currentUserId}
+                  disabled={!createdCustomerId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                />
+              )}
             </div>
           )}
           {/* Queue mode: Show upload before customer creation */}
@@ -4182,14 +4189,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           )}
           {createdCustomerId && isEditMode && (
             <div className="mt-2">
-              <ComplianceFileUpload
-                customerId={createdCustomerId}
-                documentType="PAN"
-                entityLevel={isBranch ? "BRANCH" : "HO"}
-                customerBranchId={isBranch ? branchId : null}
-                uploadBy={currentUserId}
-                disabled={!createdCustomerId}
-              />
+              {/* Check if branch is saved before allowing upload */}
+              {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  ⚠️ Please save this branch first before uploading compliance files
+                </div>
+              ) : (
+                <ComplianceFileUpload
+                  customerId={createdCustomerId}
+                  documentType="PAN"
+                  entityLevel={isBranch ? "BRANCH" : "HO"}
+                  customerBranchId={isBranch ? branchId : null}
+                  uploadBy={currentUserId}
+                  disabled={!createdCustomerId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                />
+              )}
             </div>
           )}
           {/* Queue mode: Show upload before customer creation */}
@@ -4264,14 +4278,21 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           )}
           {createdCustomerId && isEditMode && (
             <div className="mt-2">
-              <ComplianceFileUpload
-                customerId={createdCustomerId}
-                documentType="TAN"
-                entityLevel={isBranch ? "BRANCH" : "HO"}
-                customerBranchId={isBranch ? branchId : null}
-                uploadBy={currentUserId}
-                disabled={!createdCustomerId}
-              />
+              {/* Check if branch is saved before allowing upload */}
+              {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  ⚠️ Please save this branch first before uploading compliance files
+                </div>
+              ) : (
+                <ComplianceFileUpload
+                  customerId={createdCustomerId}
+                  documentType="TAN"
+                  entityLevel={isBranch ? "BRANCH" : "HO"}
+                  customerBranchId={isBranch ? branchId : null}
+                  uploadBy={currentUserId}
+                  disabled={!createdCustomerId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                />
+              )}
             </div>
           )}
           {/* Queue mode: Show upload before customer creation */}
@@ -4430,15 +4451,22 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Bank Documents
             </label>
-            <ComplianceFileUpload
-              customerId={createdCustomerId}
-              documentType="BANK"
-              entityLevel={isBranch ? "BRANCH" : "HO"}
-              customerBranchId={isBranch ? branchId : null}
-              uploadBy={currentUserId}
-              disabled={!createdCustomerId}
-              label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
-            />
+            {/* Check if branch is saved before allowing upload */}
+            {isBranch && branchId && !originalBranches.some(b => b.id === branchId) ? (
+              <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                ⚠️ Please save this branch first before uploading compliance files
+              </div>
+            ) : (
+              <ComplianceFileUpload
+                customerId={createdCustomerId}
+                documentType="BANK"
+                entityLevel={isBranch ? "BRANCH" : "HO"}
+                customerBranchId={isBranch ? branchId : null}
+                uploadBy={currentUserId}
+                disabled={!createdCustomerId || (isBranch && !!branchId && !originalBranches.some(b => b.id === branchId))}
+                label="Upload Bank Document (Cancelled Cheque / Bank Proof)"
+              />
+            )}
           </div>
         )}
         {/* Queue mode: Show upload before customer creation */}
