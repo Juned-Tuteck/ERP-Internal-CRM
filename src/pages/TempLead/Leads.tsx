@@ -54,7 +54,7 @@ const TempLeads: React.FC = () => {
   // Define all tabs with their access requirements
   const allTabs = [
     { id: 'leads', name: 'All Temp Leads', icon: Plus, accessKey: 'All Temp Leads' },
-    { id: 'approval', name: 'Temp Lead Approval', icon: CheckCircle, accessKey: 'Temp Lead Approval' },
+    { id: 'approval', name: 'Lead Qualification', icon: CheckCircle, accessKey: 'Temp Lead Approval' },
   ];
 
   // Filter tabs based on user submenu access permissions

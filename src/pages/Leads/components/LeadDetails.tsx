@@ -1052,7 +1052,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Follow-Up
+              Opportunity Stage & Probability
             </button>
             <button
               onClick={() => setActiveTab('assign')}
@@ -1685,20 +1685,20 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                       className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium transition ${getDesignHelpButtonStyle()} disabled:opacity-50 disabled:cursor-not-allowed`}
                       title={
                         designHelpSent
-                          ? 'Design help has been assigned'
+                          ? 'Design request has been assigned'
                           : userData?.id !== displayLead.assignedTo && userData?.role !== 'design head'
-                            ? 'Only assigned user or design head can send for design help'
+                            ? 'Only assigned user or design head can send for design request'
                             : ''
                       }
                     >
                       <Users className="h-4 w-4 mr-2" />
                       {designHelpSent
-                        ? 'Design Help Assigned'
+                        ? 'Design Request Assigned'
                         : userData?.id === displayLead.assignedTo
-                          ? 'Send to Design Head'
+                          ? 'Design Request'
                           : userData?.role === 'design head'
                             ? 'Forward to Design Engineer'
-                            : 'Send for Design Help'}
+                            : 'Send for Design Request'}
                     </button>
                   )}
                 </div>
