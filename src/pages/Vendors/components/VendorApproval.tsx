@@ -118,23 +118,23 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
 
         // ------------------------------------------------------------------------------------------For notifications
         try {
-              await sendNotification({
-                receiver_ids: ['admin'],
-                title: `CRM - Vendor ${actionType === "approve" ? "approved" : "rejected"} : ${selectedVendor.businessName || 'Vendor'}`,
-                message: `Vendor ${selectedVendor.businessName || 'Vendor'} has been ${actionType === "approve" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
-                service_type: 'CRM',
-                link: '/vendors',
-                sender_id: userRole || 'user',
-                access: {
-                  module: "CRM",
-                  menu: "Vendors",
-                }
-              });
-              console.log(`Notification sent for CRM Vendor ${selectedVendor.businessName || 'Vendor'}`);
-          } catch (notifError) {
-            console.error('Failed to send notification:', notifError);
-            // Continue with the flow even if notification fails
-          }
+          await sendNotification({
+            receiver_ids: ['admin'],
+            title: `CRM - Vendor ${actionType === "approve" ? "approved" : "rejected"} : ${selectedVendor.businessName || 'Vendor'}`,
+            message: `Vendor ${selectedVendor.businessName || 'Vendor'} has been ${actionType === "approve" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
+            service_type: 'CRM',
+            link: '/vendors',
+            sender_id: userRole || 'user',
+            access: {
+              module: "CRM",
+              menu: "Vendors",
+            }
+          });
+          console.log(`Notification sent for CRM Vendor ${selectedVendor.businessName || 'Vendor'}`);
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Continue with the flow even if notification fails
+        }
         // ----------------------------------------------------------------------------------------
 
         if (typeof onRefresh === "function") {
@@ -273,7 +273,7 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      {hasActionAccess('Approve', 'Vendor Approval', 'Vendors') && (
+                      {hasActionAccess('Approve', 'Vendor Approval', 'Vendor Master') && (
                         <button
                           onClick={() => handleApprovalClick(vendor, "approve")}
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
@@ -282,7 +282,7 @@ const VendorApproval: React.FC<VendorApprovalProps> = ({
                           Approve
                         </button>
                       )}
-                      {hasActionAccess('Reject', 'Vendor Approval', 'Vendors') && (
+                      {hasActionAccess('Reject', 'Vendor Approval', 'Vendor Master') && (
                         <button
                           onClick={() => handleApprovalClick(vendor, "reject")}
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"

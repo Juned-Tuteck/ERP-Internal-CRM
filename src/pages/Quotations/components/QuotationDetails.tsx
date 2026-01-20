@@ -45,7 +45,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
   };
 
   console.log("quotation:", quotation);
-  
+
 
   // Handler for sending quotation for approval
   // const handleSendForApproval = async () => {
@@ -202,7 +202,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           customer_quotation_id: quotation.id,
           approver_role: selectedRole.role_name,
           approval_status: "PENDING",
-          approval_type:'VARIANCE'
+          approval_type: 'VARIANCE'
         });
       }
 
@@ -212,7 +212,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           customer_quotation_id: quotation.id,
           approver_role: role,
           approval_status: "PENDING",
-          approval_type:'STANDARD'
+          approval_type: 'STANDARD'
         });
       });
 
@@ -390,7 +390,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 detail.installation_price || "0"
               ),
               costDetails: {
-                supplyDiscount:parseFloat(detail.spec_discount || "0"), // Not stored in API, would need separate endpoint
+                supplyDiscount: parseFloat(detail.spec_discount || "0"), // Not stored in API, would need separate endpoint
                 supplyWastage: parseFloat(detail.supply_wastage_pct || "0"),
                 supplyWastageAmount: parseFloat(
                   detail.supply_wastage_amt || "0"
@@ -903,7 +903,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                   </button>
                 )}
               {(quotation.status === "PENDING" ||
-                quotation.status === "DRAFT" || quotation.status === "REVISIT") && hasActionAccess("Edit ", "All Quotations", "Quotations") && (
+                quotation.status === "DRAFT" || quotation.status === "REVISIT") && hasActionAccess("Edit ", "All Quotations", "Quotation Header") && (
                   <button
                     onClick={() => setIsEditModalOpen(true)}
                     disabled={isApprovalSent}

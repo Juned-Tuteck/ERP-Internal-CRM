@@ -760,7 +760,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 )}
               {/* Update Status: Only visible when lead is approved */}
               {displayLead.approvalStatus === "approved" &&
-                displayLead.leadStage !== "Won" && displayLead.leadStage !== "Lost" && hasActionAccess('Update Status', 'All Leads', 'Lead') && (
+                displayLead.leadStage !== "Won" && displayLead.leadStage !== "Lost" && hasActionAccess('Update Status', 'All Leads', 'Lead Creation') && (
                   <button
                     onClick={() => setShowWinLossModal(true)}
                     className="rounded-full p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition"
@@ -798,7 +798,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 </button>
               )} */}
 
-              {(displayLead.approvalStatus === "pending" || displayLead.approvalStatus === "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'customers') && (
+              {(displayLead.approvalStatus === "pending" || displayLead.approvalStatus === "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'Customer Master') && (
                 <button
                   onClick={() => setShowEditModal(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"

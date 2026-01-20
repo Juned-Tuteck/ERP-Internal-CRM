@@ -39,15 +39,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       name: "Customer Master",
       href: "/customers",
       icon: Building2,
-      accessKey: "customers",
+      accessKey: "Customer Master",
     },
-    { name: "Opportunity", href: "/leads", icon: UserPlus, accessKey: "Lead" },
-    { name: "Quotation BOQ / Line Items", href: "/bom", icon: NotebookPen, accessKey: "BOM" },
+    { name: "Opportunity", href: "/leads", icon: UserPlus, accessKey: "Opportunity" },
+    { name: "Quotation BOQ / Line Items", href: "/bom", icon: NotebookPen, accessKey: "Quotation BOQ / Line Items" },
     {
       name: "Quotation Header",
       href: "/quotations",
       icon: ScrollText,
-      accessKey: "Quotations",
+      accessKey: "Quotation Header",
     },
     {
       name: "Sales Orders",
@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: NotepadText,
       accessKey: "Projects",
     },
-    { name: "Vendor Master", href: "/vendors", icon: Truck, accessKey: "Vendors" },
+    { name: "Vendor Master", href: "/vendors", icon: Truck, accessKey: "Vendor Master" },
     {
       name: "Reports",
       href: "/reports",
@@ -78,19 +78,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       name: "Lead Creation",
       href: "/temp-lead",
       icon: UserPlus,
-      accessKey: "Temp Lead",
+      accessKey: "Lead Creation",
     },
     {
       name: "Associate Master",
       href: "/associates",
       icon: UserPlus,
-      accessKey: "Associates",
+      accessKey: "Associate Master",
     },
     {
       name: "Competitor Master",
       href: "/competitors",
       icon: Building2,
-      accessKey: "competitors",
+      accessKey: "Competitor Master",
     }
     // { name: 'Settings', href: '/settings', icon: Settings, accessKey: 'Settings' },
   ];

@@ -336,7 +336,7 @@ const AssociateApproval: React.FC = () => {
                         <Eye className="h-3 w-3 mr-1" />
                         View
                       </button> */}
-                      {hasActionAccess('Approve', 'Associate Approval', 'Associates') && (
+                      {hasActionAccess('Approve', 'Associate Approval', 'Associate Master') && (
                         <button
                           onClick={() => handleApprovalClick(associate, "approve")}
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
@@ -345,7 +345,7 @@ const AssociateApproval: React.FC = () => {
                           Approve
                         </button>
                       )}
-                      {hasActionAccess('Reject', 'Associate Approval', 'Associates') && (
+                      {hasActionAccess('Reject', 'Associate Approval', 'Associate Master') && (
                         <button
                           onClick={() => handleApprovalClick(associate, "reject")}
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"

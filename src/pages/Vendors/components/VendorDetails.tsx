@@ -105,9 +105,9 @@ const VendorDetails: React.FC<
     email: vendor.email || "",
     tanNumber: vendor.tan_number || vendor.tanNumber || "",
     country: vendor.country || "India",
-    currency: typeof vendor.currency === 'string' 
-              ? vendor.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
-              : [],
+    currency: typeof vendor.currency === 'string'
+      ? vendor.currency.replace(/["{}\[\]]/g, '').split(',').map((c: string) => c.trim())
+      : [],
     state: vendor.state || "",
     district: vendor.district || "",
     city: vendor.city || "",
@@ -276,7 +276,7 @@ const VendorDetails: React.FC<
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {(vendor.status === "PENDING" || userData?.role == 'admin') && hasActionAccess('Edit', 'All vendors', 'Vendors') && (
+              {(vendor.status === "PENDING" || userData?.role == 'admin') && hasActionAccess('Edit', 'All vendors', 'Vendor Master') && (
                 <button
                   onClick={() => {
                     console.log("Edit button clicked");
@@ -288,7 +288,7 @@ const VendorDetails: React.FC<
                   <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(vendor.status === "PENDING")) && "Super Admin EDIT"}
                 </button>
               )}
-              {vendor.status === "PENDING" && hasActionAccess('Deactivate', 'All vendors', 'Vendors') && (
+              {vendor.status === "PENDING" && hasActionAccess('Deactivate', 'All vendors', 'Vendor Master') && (
                 <button
                   onClick={() => setIsDeactivateModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"

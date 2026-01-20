@@ -468,7 +468,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
               {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {hasActionAccess('edit', 'All customers', 'customers') && (
+              {hasActionAccess('edit', 'All customers', 'Customer Master') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
@@ -477,7 +477,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({
                   <SquarePen className="h-5 w-5" /> {((customer.status === "approved" || customer.status === "revisit")) && "EDIT after approval"}
                 </button>
               )}
-              {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('Deactivate', 'All customers', 'customers') && (
+              {(customer.status === "pending" || customer.status === "draft") && hasActionAccess('Deactivate', 'All customers', 'Customer Master') && (
                 <button
                   onClick={() => setIsDeactivateModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"
