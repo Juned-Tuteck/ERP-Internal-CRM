@@ -353,7 +353,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const fetchUsersWithLeadAccess = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_AUTH_BASE_URL}/users/by-access-path?module=CRM&menu=Lead`,
+        `${import.meta.env.VITE_AUTH_BASE_URL}/users/by-access-path?module=CRM&menu=Opportunity`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('auth_token')}`
