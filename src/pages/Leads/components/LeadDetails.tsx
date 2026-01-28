@@ -22,7 +22,8 @@ import {
   SquarePen,
   User,
   FileBarChart,
-  PauseCircle
+  PauseCircle,
+  Info
 } from "lucide-react";
 import AddLeadModal from "./AddLeadModal";
 import axios from "axios";
@@ -30,6 +31,10 @@ import { useCRM } from "../../../context/CRMContext";
 import { useToast } from '../../../components/Toast';
 // import { createProjectFromLead, CreateProjectRequest } from "../../../utils/projectApi";
 import { zoneApi, stateApi, districtApi } from '../../../utils/leadZoneStateDistrictApi';
+import { ApprovalButton } from '../../../components/Approvals/ApprovalButton';
+import { ApprovalStatusBadge } from '../../../components/Approvals/ApprovalStatusBadge';
+import { ApprovalHistory } from '../../../components/Approvals/ApprovalHistory';
+import { ApprovalStatus } from '../../../types/approval.types';
 
 interface LeadDetailsProps {
   lead: any;
@@ -63,7 +68,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isGeneratingQuotation, setIsGeneratingQuotation] = useState(false);
   const [showGenerateQuotationModal, setShowGenerateQuotationModal] = useState(false);
-  const { hasActionAccess, userData } = useCRM();
+  const { hasActionAccess, userData, userAccesses } = useCRM();
 
   // Add state for edit modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -909,13 +914,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                 >
                   {displayLead.leadStage}
                 </span>
-                <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getApprovalStatusColor(
-                    displayLead.approvalStatus || "pending"
-                  )}`}
-                >
-                  {displayLead.approvalStatus || "pending"}
-                </span>
+                <ApprovalStatusBadge
+                  status={(displayLead.approvalStatus || 'PENDING') as ApprovalStatus}
+                />
                 {/* <div className="flex items-center">
                   <AlertTriangle
                     className={`h-4 w-4 mr-1 ${getCriticalityColor(
@@ -939,6 +940,38 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               {displayLead.projectValue}L
             </div>
             <div className="flex space-x-2 mt-2">
+              {/* Send for Approval Button */}
+              {userData?.id && (
+                <>
+                  <ApprovalButton
+                    entityType="lead"
+                    entityId={displayLead.id}
+                    accessId={
+                      userAccesses?.find(
+                        (access) =>
+                          access.level_type === 'MENU' &&
+                          access.name.toLowerCase() === 'opportunity'
+                      )?.access_id || ''
+                    }
+                    userId={userData.id}
+                    currentStatus={(displayLead.approvalStatus || 'PENDING') as ApprovalStatus}
+                    onSuccess={() => setRefreshTrigger(prev => prev + 1)}
+                    className="text-xs px-3 py-1.5"
+                  />
+                  {/* Approval History Info Icon */}
+                  {(displayLead.approvalStatus?.toUpperCase() === 'PENDING_FOR_APPROVAL' ||
+                    displayLead.approvalStatus?.toUpperCase() === 'APPROVED') || displayLead.approvalStatus?.toUpperCase() === 'REJECTED' && (
+                      <button
+                        onClick={() => setShowHistoryModal(true)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full text-blue-600 hover:bg-blue-50 transition"
+                        title="View Approval History"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    )}
+                </>
+              )}
+
               {/* Generate Quotation Number Button */}
               {displayLead.approvalStatus === "approved" &&
                 displayLead.leadStage !== "Quoted" &&
@@ -2074,7 +2107,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
       )}
 
       {/* History Modal */}
-      {showHistoryModal && (
+      {/* {showHistoryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -2140,7 +2173,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Delete Modal */}
       {showDeleteModal && (
@@ -2343,6 +2376,41 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     Send
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Approval History
+              </h3>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+              <ApprovalHistory
+                entityType="lead"
+                entityId={displayLead.id}
+              />
+            </div>
+
+            <div className="flex items-center justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Close
               </button>
             </div>
           </div>
