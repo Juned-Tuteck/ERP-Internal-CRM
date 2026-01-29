@@ -960,7 +960,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   />
                   {/* Approval History Info Icon */}
                   {(displayLead.approvalStatus?.toUpperCase() === 'PENDING_FOR_APPROVAL' ||
-                    displayLead.approvalStatus?.toUpperCase() === 'APPROVED') || displayLead.approvalStatus?.toUpperCase() === 'REJECTED' && (
+                    displayLead.approvalStatus?.toUpperCase() === 'APPROVED' || displayLead.approvalStatus?.toUpperCase() === 'REJECTED') && (
                       <button
                         onClick={() => setShowHistoryModal(true)}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-full text-blue-600 hover:bg-blue-50 transition"

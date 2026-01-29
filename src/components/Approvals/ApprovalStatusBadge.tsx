@@ -11,7 +11,7 @@ export const ApprovalStatusBadge: React.FC<ApprovalStatusBadgeProps> = ({
     className = ''
 }) => {
     const getStatusConfig = (status: ApprovalStatus) => {
-        switch (status) {
+        switch (status.toUpperCase()) {
             case 'APPROVED':
                 return {
                     label: 'Approved',
