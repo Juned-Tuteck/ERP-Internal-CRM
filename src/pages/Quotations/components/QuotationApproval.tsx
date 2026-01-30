@@ -63,11 +63,11 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
 }) => {
   //----------------------------------------------------------------------------------- For Notification
   const token = localStorage.getItem('auth_token') || '';
-  const { userData } = useCRM();
+  const { userData, userAccesses } = useCRM();
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
   //------------------------------------------------------------------------------------
- 
+
   const [selectedQuotation, setSelectedQuotation] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approve" | "reject" | "revisit">("approve");
@@ -83,10 +83,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
   const [selectedQuotationNumber, setSelectedQuotationNumber] = useState("");
   const { hasActionAccess } = useCRM();
 
-  const roleHierarchy = {
-          level1: "sales manager",
-          level2: "crm zonal head"
-        };
+  const [roleHierarchy, setRoleHierarchy] = useState<Record<string, string>>({});
 
   // Check if user can take action based on hierarchy
   const canTakeAction = (quotation: any, action: "approve" | "reject" | "revisit") => {
@@ -98,17 +95,32 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
       return { canAct: false, reason: "No pending approval for your role" };
     }
 
-    // If current user is level2, check if level1 is approved
-    if (userRole === roleHierarchy.level2) {
-      const level1Approval = quotation.approvals?.find(
-        (approval: ApprovalDetail) => approval.approver_role === roleHierarchy.level1
-      );
+    // Find the current user's level in the hierarchy
+    let currentUserLevel: number | null = null;
+    for (const [level, roleName] of Object.entries(roleHierarchy)) {
+      if (roleName === userRole) {
+        currentUserLevel = parseInt(level.replace('level', ''));
+        break;
+      }
+    }
 
-      if (!level1Approval || level1Approval.approval_status !== "APPROVED") {
-        return { 
-          canAct: false, 
-          reason: `${roleHierarchy.level1} approval is pending so you cannot ${action}` 
-        };
+    // If user's level is found and it's not level1, check all previous levels
+    if (currentUserLevel && currentUserLevel > 1) {
+      // Check all previous levels (from level1 to level(n-1))
+      for (let i = 1; i < currentUserLevel; i++) {
+        const previousLevelRole = roleHierarchy[`level${i}`];
+        if (previousLevelRole) {
+          const previousLevelApproval = quotation.approvals?.find(
+            (approval: ApprovalDetail) => approval.approver_role === previousLevelRole
+          );
+
+          if (!previousLevelApproval || previousLevelApproval.approval_status !== "APPROVED") {
+            return {
+              canAct: false,
+              reason: `${previousLevelRole} approval is pending so you cannot ${action}`
+            };
+          }
+        }
       }
     }
 
@@ -118,7 +130,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
   // Handle hierarchy-based approval click
   const handleHierarchyApprovalClick = (quotation: any, action: "approve" | "reject" | "revisit") => {
     const { canAct, reason } = canTakeAction(quotation, action);
-    
+
     if (!canAct) {
       setReasonMessage(reason);
       setShowReasonPopup(true);
@@ -152,6 +164,56 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
 
     fetchQuotations();
   }, [userRole]);
+
+  // Fetch role hierarchy from API
+  useEffect(() => {
+    const fetchRoleHierarchy = async () => {
+      try {
+        // Get access_id for Quotation module
+        const quotationAccess = userAccesses?.find(
+          (access) =>
+            access.level_type === 'MENU' &&
+            access.name.toLowerCase() === 'quotation header'
+        );
+
+        if (!quotationAccess?.access_id) {
+          console.warn('Quotation access_id not found');
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/approvals/hierarchy/${quotationAccess.access_id}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          // Transform the API response to { level1: "role_name", level2: "role_name", ... }
+          const hierarchy: Record<string, string> = {};
+          data.data.forEach((item: any) => {
+            hierarchy[`level${item.hierarchy_level}`] = item.role_name;
+          });
+
+          const reversed: Record<string, string> = {};
+          const levels = Object.keys(hierarchy).length;
+
+          for (let i = 1; i <= levels; i++) {
+            reversed[`level${levels - i + 1}`] = hierarchy[`level${i}`];
+          }
+
+          console.log("**Hierarchy", hierarchy);
+          console.log("**Reversed", reversed);
+
+          setRoleHierarchy(reversed);
+        }
+      } catch (error) {
+        console.error('Error fetching role hierarchy:', error);
+      }
+    };
+
+    if (userAccesses && userAccesses.length > 0) {
+      fetchRoleHierarchy();
+    }
+  }, [userAccesses]);
 
   // Calculate total value from API data
   const calculateTotalValue = (apiQuotation: QuotationData) => {
@@ -303,15 +365,19 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
 
         // Step 1: Always update the approval status first
         await updateQuotationDecision(
-          currentUserApproval.approval_id, 
-          status, 
+          currentUserApproval.approval_id,
+          status,
           userData?.name || userData?.email || userRole,
           reason || undefined
         );
 
         // Step 2: Update the main customer quotation table for different scenarios
-        if (userRole === roleHierarchy.level2 && actionType === "approve") {
-          // For Level 2 (CRM Zonal Head) final approval
+        // Find the highest level in the hierarchy
+        const hierarchyLevels = Object.keys(roleHierarchy).length;
+        const finalLevelRole = roleHierarchy[`level${hierarchyLevels}`];
+
+        if (userRole === finalLevelRole && actionType === "approve") {
+          // For final level approval, update the main quotation status to APPROVED
           await updateCustomerQuotation(selectedQuotation.id, {
             approval_status: status,
             updated_by: userData?.id || userData?.email || userRole
@@ -342,20 +408,20 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
 
         // ------------------------------------------------------------------------------------------For notifications
         try {
-            const actionText = actionType === "approve" ? "Approved" : actionType === "reject" ? "Rejected" : "Marked for Revisit";
-            await sendNotification({
-              receiver_ids: ['admin'],
-              title: `Quotation ${actionText} Successfully For : ${selectedQuotation.quotationNumber||'Quotation'}`,
-              message: `Quotation ${actionText.toLowerCase()} successfully by ${userData?.name || 'a user'}`,
-              service_type: 'CRM',
-              link: '/quotations',
-              sender_id: userRole || 'user',
-              access: {
-                module: "CRM",
-                menu: "Quotations",
-              }
-            });
-            console.log(`Notification sent for CRM Quotation of ${selectedQuotation.quotationNumber||'Quotation'}`);
+          const actionText = actionType === "approve" ? "Approved" : actionType === "reject" ? "Rejected" : "Marked for Revisit";
+          await sendNotification({
+            receiver_ids: ['admin'],
+            title: `Quotation ${actionText} Successfully For : ${selectedQuotation.quotationNumber || 'Quotation'}`,
+            message: `Quotation ${actionText.toLowerCase()} successfully by ${userData?.name || 'a user'}`,
+            service_type: 'CRM',
+            link: '/quotations',
+            sender_id: userRole || 'user',
+            access: {
+              module: "CRM",
+              menu: "Quotations",
+            }
+          });
+          console.log(`Notification sent for CRM Quotation of ${selectedQuotation.quotationNumber || 'Quotation'}`);
         } catch (notifError) {
           console.error('Failed to send notification:', notifError);
           // Continue with the flow even if notification fails
@@ -513,13 +579,12 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                                 {approval.approver_role}:
                               </span>
                               <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                                  approval.approval_status === "APPROVED"
-                                    ? "bg-green-100 text-green-800 border-green-200"
-                                    : approval.approval_status === "REJECTED"
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${approval.approval_status === "APPROVED"
+                                  ? "bg-green-100 text-green-800 border-green-200"
+                                  : approval.approval_status === "REJECTED"
                                     ? "bg-red-100 text-red-800 border-red-200"
                                     : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                                }`}
+                                  }`}
                               >
                                 {approval.approval_status}
                               </span>
@@ -565,11 +630,11 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                           // console.log('hasActionAccess Approve:', hasActionAccess("Approve", "Quotation Approval", "Quotations"));
                           // console.log('hasActionAccess Reject:', hasActionAccess("Reject", "Quotation Approval", "Quotations"));
                           // console.log('hasActionAccess Revisit:', hasActionAccess("Revisit", "Quotation Approval", "Quotations"));
-                          
-                          const canApprove = hasActionAccess("Approve", "Quotation Approval", "Quotations");
-                          const canReject = hasActionAccess("Reject", "Quotation Approval", "Quotations");
-                          const canRevisit = hasActionAccess("Revisit", "Quotation Approval", "Quotations");
-                          
+
+                          const canApprove = hasActionAccess("Approve", "Quotation Approval", "Quotation Header");
+                          const canReject = hasActionAccess("Reject", "Quotation Approval", "Quotation Header");
+                          const canRevisit = hasActionAccess("Revisit", "Quotation Approval", "Quotation Header");
+
                           return (
                             <div className="flex items-center flex-wrap gap-2">
                               {canApprove ? (
@@ -622,13 +687,12 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                             <div className="flex items-center gap-2">
                               <div className="flex flex-col space-y-1">
                                 <span
-                                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide border ${
-                                    currentUserApproval.approval_status === "APPROVED"
-                                      ? "bg-green-100 text-green-800 border-green-300"
-                                      : currentUserApproval.approval_status === "REJECTED"
+                                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide border ${currentUserApproval.approval_status === "APPROVED"
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : currentUserApproval.approval_status === "REJECTED"
                                       ? "bg-red-100 text-red-800 border-red-300"
                                       : "bg-gray-100 text-gray-700 border-gray-300"
-                                  }`}
+                                    }`}
                                 >
                                   {currentUserApproval.approval_status === "APPROVED" && (
                                     <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
@@ -690,8 +754,8 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                 {actionType === "approve"
                   ? "Approve Quotation"
                   : actionType === "reject"
-                  ? "Reject Quotation"
-                  : "Revisit Quotation"}
+                    ? "Reject Quotation"
+                    : "Revisit Quotation"}
               </h3>
               <button
                 onClick={() => setShowReasonModal(false)}
@@ -718,8 +782,8 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                     {actionType === "approve"
                       ? "Approve this quotation?"
                       : actionType === "reject"
-                      ? "Reject this quotation?"
-                      : "Mark this quotation for revisit?"}
+                        ? "Reject this quotation?"
+                        : "Mark this quotation for revisit?"}
                   </p>
                 </div>
               </div>
@@ -729,8 +793,8 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                   {actionType === "approve"
                     ? "Approval Notes (Optional)"
                     : actionType === "reject"
-                    ? "Rejection Reason *"
-                    : "Revisit Notes *"}
+                      ? "Rejection Reason *"
+                      : "Revisit Notes *"}
                 </label>
                 <textarea
                   value={reason}
@@ -741,8 +805,8 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                     actionType === "approve"
                       ? "Add any notes..."
                       : actionType === "reject"
-                      ? "Please provide reason for rejection..."
-                      : "Please provide reason for revisit..."
+                        ? "Please provide reason for rejection..."
+                        : "Please provide reason for revisit..."
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -762,22 +826,21 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                 disabled={
                   ((actionType === "reject" || actionType === "revisit") && !reason.trim()) || actionLoading
                 }
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  actionType === "approve"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : actionType === "reject"
+                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${actionType === "approve"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : actionType === "reject"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-yellow-600 hover:bg-yellow-700"
-                } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+                  } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {actionLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {actionType === "approve" 
-                      ? "Approving..." 
-                      : actionType === "reject" 
-                      ? "Rejecting..." 
-                      : "Marking for Revisit..."}
+                    {actionType === "approve"
+                      ? "Approving..."
+                      : actionType === "reject"
+                        ? "Rejecting..."
+                        : "Marking for Revisit..."}
                   </>
                 ) : (
                   <>
@@ -841,7 +904,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                   </p>
                 </div>
               </div>
-              
+
               {/* Additional info */}
               <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
                 <div className="flex items-center space-x-2">
@@ -902,97 +965,95 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
                   <div className="text-sm text-gray-600 mb-4">
                     Total {selectedApprovalHistory.length} approval record(s) found in history
                   </div>
-                  
+
                   {/* Timeline-style display */}
                   <div className="relative">
                     {selectedApprovalHistory
                       .sort((a, b) => new Date(b.approval_created_at).getTime() - new Date(a.approval_created_at).getTime())
                       .map((approval, index) => (
-                      <div key={approval.approval_id} className="relative flex items-start space-x-4 pb-6">
-                        {/* Timeline line */}
-                        {index < selectedApprovalHistory.length - 1 && (
-                          <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-gray-200"></div>
-                        )}
-                        
-                        {/* Timeline dot */}
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                          approval.approval_status === "APPROVED"
+                        <div key={approval.approval_id} className="relative flex items-start space-x-4 pb-6">
+                          {/* Timeline line */}
+                          {index < selectedApprovalHistory.length - 1 && (
+                            <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-gray-200"></div>
+                          )}
+
+                          {/* Timeline dot */}
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${approval.approval_status === "APPROVED"
                             ? "bg-green-100 text-green-600"
                             : approval.approval_status === "REJECTED"
-                            ? "bg-red-100 text-red-600"
-                            : "bg-yellow-100 text-yellow-600"
-                        }`}>
-                          {approval.approval_status === "APPROVED" ? (
-                            <CheckCircle className="h-4 w-4" />
-                          ) : approval.approval_status === "REJECTED" ? (
-                            <XCircle className="h-4 w-4" />
-                          ) : (
-                            <Clock className="h-4 w-4" />
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center space-x-3">
-                                <span className="text-sm font-semibold text-gray-900 capitalize">
-                                  {approval.approver_role}
-                                </span>
-                                <span
-                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                    approval.approval_status === "APPROVED"
-                                      ? "bg-green-100 text-green-800"
-                                      : approval.approval_status === "REJECTED"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-yellow-100 text-yellow-800"
-                                  }`}
-                                >
-                                  {approval.approval_status}
-                                </span>
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {new Date(approval.approval_created_at).toLocaleString("en-IN", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true
-                                })}
-                              </div>
-                            </div>
-                            
-                            {approval.approved_by && (
-                              <div className="mb-2">
-                                <span className="text-xs text-gray-600">Approved By: </span>
-                                <span className="text-xs font-medium text-gray-900">{approval.approved_by}</span>
-                              </div>
-                            )}
-                            
-                            {approval.approval_comment && (
-                              <div className="mt-2">
-                                <span className="text-xs text-gray-600">Comment: </span>
-                                <p className="text-xs text-gray-900 mt-1 italic">"{approval.approval_comment}"</p>
-                              </div>
-                            )}
-                            
-                            {approval.approval_updated_at && (
-                              <div className="mt-2 text-xs text-gray-500">
-                                Last Updated: {new Date(approval.approval_updated_at).toLocaleString("en-IN", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true
-                                })}
-                              </div>
+                              ? "bg-red-100 text-red-600"
+                              : "bg-yellow-100 text-yellow-600"
+                            }`}>
+                            {approval.approval_status === "APPROVED" ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : approval.approval_status === "REJECTED" ? (
+                              <XCircle className="h-4 w-4" />
+                            ) : (
+                              <Clock className="h-4 w-4" />
                             )}
                           </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center space-x-3">
+                                  <span className="text-sm font-semibold text-gray-900 capitalize">
+                                    {approval.approver_role}
+                                  </span>
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${approval.approval_status === "APPROVED"
+                                      ? "bg-green-100 text-green-800"
+                                      : approval.approval_status === "REJECTED"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-yellow-100 text-yellow-800"
+                                      }`}
+                                  >
+                                    {approval.approval_status}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {new Date(approval.approval_created_at).toLocaleString("en-IN", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true
+                                  })}
+                                </div>
+                              </div>
+
+                              {approval.approved_by && (
+                                <div className="mb-2">
+                                  <span className="text-xs text-gray-600">Approved By: </span>
+                                  <span className="text-xs font-medium text-gray-900">{approval.approved_by}</span>
+                                </div>
+                              )}
+
+                              {approval.approval_comment && (
+                                <div className="mt-2">
+                                  <span className="text-xs text-gray-600">Comment: </span>
+                                  <p className="text-xs text-gray-900 mt-1 italic">"{approval.approval_comment}"</p>
+                                </div>
+                              )}
+
+                              {approval.approval_updated_at && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                  Last Updated: {new Date(approval.approval_updated_at).toLocaleString("en-IN", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
               ) : (

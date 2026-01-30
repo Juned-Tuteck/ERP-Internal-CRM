@@ -312,7 +312,7 @@ const CompetitorApproval: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center space-x-2">
-                                            {hasActionAccess('Approve', 'Competitor Approval', 'competitors') && (
+                                            {hasActionAccess('Approve', 'Competitor Approval', 'Competitor Master') && (
                                                 <button
                                                     onClick={() => handleApprovalClick(competitor, "approve")}
                                                     className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
@@ -321,7 +321,7 @@ const CompetitorApproval: React.FC = () => {
                                                     Approve
                                                 </button>
                                             )}
-                                            {hasActionAccess('Reject', 'Competitor Approval', 'competitors') && (
+                                            {hasActionAccess('Reject', 'Competitor Approval', 'Competitor Master') && (
                                                 <button
                                                     onClick={() => handleApprovalClick(competitor, "reject")}
                                                     className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"

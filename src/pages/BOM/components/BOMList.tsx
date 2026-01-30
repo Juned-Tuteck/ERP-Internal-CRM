@@ -26,7 +26,7 @@ interface BOM {
   createdDate: string;
   bom_type: string;
   bomNumber: string;
-  lead_number:string;
+  lead_number: string;
   status: "draft" | "pending_for_approval" | "approved" | "rejected" | "revisit";
 }
 
@@ -624,7 +624,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      {hasActionAccess('Edit ', 'Boms', 'BOM') && (
+                      {hasActionAccess('Edit ', 'Boms', 'Quotation BOQ / Line Items') && (
                         <button
                           className={`text-blue-600 hover:text-blue-900 ${bom.status === "approved" || bom.status === "rejected" || bom.status === "pending_for_approval"
                             ? "opacity-50 cursor-not-allowed pointer-events-none"
@@ -641,7 +641,7 @@ const BOMList: React.FC<BOMListProps> = ({ selectedBOM, onSelectBOM }) => {
                           <Edit className="h-4 w-4" />
                         </button>
                       )}
-                      {hasActionAccess('Download', 'Boms', 'BOM') && (
+                      {hasActionAccess('Download', 'Boms', 'Quotation BOQ / Line Items') && (
                         <button className="text-indigo-600 hover:text-indigo-900">
                           <Download className="h-4 w-4" />
                         </button>

@@ -14,13 +14,13 @@ import { useCRM } from "../../../context/CRMContext";
 import useNotifications from '../../../hook/useNotifications';
 
 const CustomerApproval: React.FC = () => {
-   //----------------------------------------------------------------------------------- For Notification
+  //----------------------------------------------------------------------------------- For Notification
   const token = localStorage.getItem('auth_token') || '';
   const { userData } = useCRM();
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
   //------------------------------------------------------------------------------------
-  
+
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [actionType, setActionType] = useState<"approve" | "reject">("approve");
@@ -132,23 +132,23 @@ const CustomerApproval: React.FC = () => {
         if (response.status === 200) {
           // ------------------------------------------------------------------------------------------For notifications
           try {
-                await sendNotification({
-                  receiver_ids: ['admin'],
-                  title: `CRM - Customer ${actionType === "approve" ? "approved" : "rejected"} : ${selectedCustomer.businessName || 'Customer'}`,
-                  message: `Customer ${selectedCustomer.businessName || 'Customer'} has been ${actionType === "approve" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
-                  service_type: 'CRM',
-                  link: '/customers',
-                  sender_id: userRole || 'user',
-                  access: {
-                    module: "CRM",
-                    menu: "customers",
-                  }
-                });
-                console.log(`Notification sent for CRM Customer ${selectedCustomer.businessName || 'Customer'}`);
-            } catch (notifError) {
-              console.error('Failed to send notification:', notifError);
-              // Continue with the flow even if notification fails
-            }
+            await sendNotification({
+              receiver_ids: ['admin'],
+              title: `CRM - Customer ${actionType === "approve" ? "approved" : "rejected"} : ${selectedCustomer.businessName || 'Customer'}`,
+              message: `Customer ${selectedCustomer.businessName || 'Customer'} has been ${actionType === "approve" ? "approved" : "rejected"} by ${userData?.name || 'a user'}`,
+              service_type: 'CRM',
+              link: '/customers',
+              sender_id: userRole || 'user',
+              access: {
+                module: "CRM",
+                menu: "customers",
+              }
+            });
+            console.log(`Notification sent for CRM Customer ${selectedCustomer.businessName || 'Customer'}`);
+          } catch (notifError) {
+            console.error('Failed to send notification:', notifError);
+            // Continue with the flow even if notification fails
+          }
           // ----------------------------------------------------------------------------------------
 
           // Refresh the customer list to show updated data
@@ -344,7 +344,7 @@ const CustomerApproval: React.FC = () => {
                         <Eye className="h-3 w-3 mr-1" />
                         View
                       </button> */}
-                      {hasActionAccess('Approve', 'Customer Approval', 'customers') && (
+                      {hasActionAccess('Approve', 'Customer Approval', 'Customer Master') && (
                         <button
                           onClick={() => handleApprovalClick(customer, "approve")}
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-green-600 hover:bg-green-700"
@@ -353,7 +353,7 @@ const CustomerApproval: React.FC = () => {
                           Approve
                         </button>
                       )}
-                      {hasActionAccess('Reject', 'Customer Approval', 'customers') && (
+                      {hasActionAccess('Reject', 'Customer Approval', 'Customer Master') && (
                         <button
                           onClick={() => handleApprovalClick(customer, "reject")}
                           className="inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700"

@@ -54,7 +54,7 @@ const TempLeads: React.FC = () => {
   // Define all tabs with their access requirements
   const allTabs = [
     { id: 'leads', name: 'All Temp Leads', icon: Plus, accessKey: 'All Temp Leads' },
-    { id: 'approval', name: 'Temp Lead Approval', icon: CheckCircle, accessKey: 'Temp Lead Approval' },
+    { id: 'approval', name: 'Lead Qualification', icon: CheckCircle, accessKey: 'Temp Lead Approval' },
   ];
 
   // Filter tabs based on user submenu access permissions
@@ -97,7 +97,7 @@ const TempLeads: React.FC = () => {
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </button> */}
-            {activeTab === 'leads' && hasActionAccess('Create Lead', 'All Temp Leads', 'Temp Lead') && (
+            {activeTab === 'leads' && hasActionAccess('Create Lead', 'All Temp Leads', 'Lead Creation') && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"

@@ -45,7 +45,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
   };
 
   console.log("quotation:", quotation);
-  
+
 
   // Handler for sending quotation for approval
   // const handleSendForApproval = async () => {
@@ -139,11 +139,6 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
 
     setIsSendingForApproval(true);
     try {
-      const roleHierarchy = {
-        level1: "sales manager",
-        level2: "crm zonal head"
-      };
-
       console.log("Quotation Details for Approval:", quotationDetails);
       const profit_percentage = Number(quotationDetails?.profitPercentage ?? 0);
       console.log("Calculated Profit Percentage:", profit_percentage);
@@ -202,17 +197,18 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
           customer_quotation_id: quotation.id,
           approver_role: selectedRole.role_name,
           approval_status: "PENDING",
-          approval_type:'VARIANCE'
+          approval_type: 'VARIANCE'
         });
       }
 
+      console.log("roleHierarchy", roleHierarchy);
       // Add hardcoded hierarchy roles (if you still want them after the selected role)
       Object.values(roleHierarchy).forEach((role: string) => {
         approvals.push({
           customer_quotation_id: quotation.id,
           approver_role: role,
           approval_status: "PENDING",
-          approval_type:'STANDARD'
+          approval_type: 'STANDARD'
         });
       });
 
@@ -257,7 +253,8 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
   const [loading, setLoading] = useState(false);
   const [isSendingForApproval, setIsSendingForApproval] = useState(false);
   const [isApprovalSent, setIsApprovalSent] = useState(false);
-  const { hasActionAccess } = useCRM();
+  const [roleHierarchy, setRoleHierarchy] = useState<Record<string, string>>({});
+  const { hasActionAccess, userAccesses } = useCRM();
 
   // Fetch detailed quotation information when quotation is selected
   useEffect(() => {
@@ -390,7 +387,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                 detail.installation_price || "0"
               ),
               costDetails: {
-                supplyDiscount:parseFloat(detail.spec_discount || "0"), // Not stored in API, would need separate endpoint
+                supplyDiscount: parseFloat(detail.spec_discount || "0"), // Not stored in API, would need separate endpoint
                 supplyWastage: parseFloat(detail.supply_wastage_pct || "0"),
                 supplyWastageAmount: parseFloat(
                   detail.supply_wastage_amt || "0"
@@ -717,6 +714,56 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
     fetchQuotationDetails();
   }, [quotation, isEditModalOpen]);
 
+  // Fetch role hierarchy from API
+  useEffect(() => {
+    const fetchRoleHierarchy = async () => {
+      try {
+        // Get access_id for Quotation module
+        const quotationAccess = userAccesses?.find(
+          (access) =>
+            access.level_type === 'MENU' &&
+            access.name.toLowerCase() === 'quotation header'
+        );
+
+        if (!quotationAccess?.access_id) {
+          console.warn('Quotation access_id not found');
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/approvals/hierarchy/${quotationAccess.access_id}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          // Transform the API response to { level1: "role_name", level2: "role_name", ... }
+          const hierarchy: Record<string, string> = {};
+          data.data.forEach((item: any) => {
+            hierarchy[`level${item.hierarchy_level}`] = item.role_name;
+          });
+
+          const reversed: Record<string, string> = {};
+          const levels = Object.keys(hierarchy).length;
+
+          for (let i = 1; i <= levels; i++) {
+            reversed[`level${levels - i + 1}`] = hierarchy[`level${i}`];
+          }
+
+          console.log("**Quotation Hierarchy", hierarchy);
+          console.log("**Quotation Reversed", reversed);
+
+          setRoleHierarchy(reversed);
+        }
+      } catch (error) {
+        console.error('Error fetching role hierarchy:', error);
+      }
+    };
+
+    if (userAccesses && userAccesses.length > 0) {
+      fetchRoleHierarchy();
+    }
+  }, [userAccesses]);
+
   if (!quotation) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
@@ -903,7 +950,7 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
                   </button>
                 )}
               {(quotation.status === "PENDING" ||
-                quotation.status === "DRAFT" || quotation.status === "REVISIT") && hasActionAccess("Edit ", "All Quotations", "Quotations") && (
+                quotation.status === "DRAFT" || quotation.status === "REVISIT") && hasActionAccess("Edit ", "All Quotations", "Quotation Header") && (
                   <button
                     onClick={() => setIsEditModalOpen(true)}
                     disabled={isApprovalSent}

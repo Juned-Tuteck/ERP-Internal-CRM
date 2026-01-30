@@ -51,14 +51,14 @@ interface BOMDetail {
   }>;
 }
 
-const BOMViewModal: React.FC<BOMViewModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  bomId 
+const BOMViewModal: React.FC<BOMViewModalProps> = ({
+  isOpen,
+  onClose,
+  bomId
 }) => {
   //----------------------------------------------------------------------------------- For Notification
   const token = localStorage.getItem('auth_token') || '';
-  const { userData } = useCRM();
+  const { userData, userAccesses } = useCRM();
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
   //------------------------------------------------------------------------------------
@@ -67,30 +67,26 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [sendingForApproval, setSendingForApproval] = useState(false);
   const [showApprovalHistory, setShowApprovalHistory] = useState(false);
-
-  const roleHierarchy = {
-    level1: "design engineer",
-    level2: "sales manager"
-  };
+  const [roleHierarchy, setRoleHierarchy] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchBOMDetail = async () => {
       if (!bomId) return;
-      
+
       try {
         setLoading(true);
         setError(null);
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bom/${bomId}`);
         const data = await response.json();
         const apiBOM = data.data;
-        
+
         // Map API response to UI format
         const mappedBOM: BOMDetail = {
           id: apiBOM.id,
           name: apiBOM.name,
-          lead_number:apiBOM.lead_number,
-          lead_business_name:apiBOM.business_name,
-         bomTemplateNumber: apiBOM.bom_template_number,
+          lead_number: apiBOM.lead_number,
+          lead_business_name: apiBOM.business_name,
+          bomTemplateNumber: apiBOM.bom_template_number,
           workType: apiBOM.work_type || 'Unknown',
           description: apiBOM.description || '',
           totalPrice: apiBOM.total_price || 0,
@@ -116,7 +112,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
             }))
           }))
         };
-        
+
         setBomDetail(mappedBOM);
       } catch (error) {
         console.error('Error fetching BOM details:', error);
@@ -130,6 +126,56 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
       fetchBOMDetail();
     }
   }, [isOpen, bomId]);
+
+  // Fetch role hierarchy from API
+  useEffect(() => {
+    const fetchRoleHierarchy = async () => {
+      try {
+        // Get access_id for BOM module
+        const bomAccess = userAccesses?.find(
+          (access) =>
+            access.level_type === 'MENU' &&
+            access.name.toLowerCase() === 'quotation boq / line items'
+        );
+
+        if (!bomAccess?.access_id) {
+          console.warn('BOM access_id not found');
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/approvals/hierarchy/${bomAccess.access_id}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          // Transform the API response to { level1: "role_name", level2: "role_name", ... }
+          const hierarchy: Record<string, string> = {};
+          data.data.forEach((item: any) => {
+            hierarchy[`level${item.hierarchy_level}`] = item.role_name;
+          });
+
+          const reversed: Record<string, string> = {};
+          const levels = Object.keys(hierarchy).length;
+
+          for (let i = 1; i <= levels; i++) {
+            reversed[`level${levels - i + 1}`] = hierarchy[`level${i}`];
+          }
+
+          console.log("**Hierarchy", hierarchy);
+          console.log("**Reversed", reversed);
+
+          setRoleHierarchy(reversed);
+        }
+      } catch (error) {
+        console.error('Error fetching role hierarchy:', error);
+      }
+    };
+
+    if (isOpen && userAccesses && userAccesses.length > 0) {
+      fetchRoleHierarchy();
+    }
+  }, [isOpen, userAccesses]);
 
   const getWorkTypeColor = (workType: string) => {
     switch (workType) {
@@ -173,7 +219,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
       if (!prev) return prev;
       return {
         ...prev,
-        specs: prev.specs.map(spec => 
+        specs: prev.specs.map(spec =>
           spec.id === specId ? { ...spec, isExpanded: !spec.isExpanded } : spec
         )
       };
@@ -185,20 +231,13 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
 
     try {
       setSendingForApproval(true);
-      
-      // Create approval records for both levels in the hierarchy
-      const approvals = [
-        {
-          bom_id: bomDetail.id,
-          approver_role: roleHierarchy.level1,
-          approval_status: "PENDING"
-        },
-        {
-          bom_id: bomDetail.id,
-          approver_role: roleHierarchy.level2,
-          approval_status: "PENDING"
-        }
-      ];
+
+      // Create approval records for all levels in the hierarchy dynamically
+      const approvals = Object.entries(roleHierarchy).map(([, roleName]) => ({
+        bom_id: bomDetail.id,
+        approver_role: roleName,
+        approval_status: "PENDING"
+      }));
 
       await createBulkBOMApprovals({ approvals });
 
@@ -220,13 +259,16 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
 
       // Update local state
       setBomDetail(prev => prev ? { ...prev, approvalStatus: 'PENDING' } : prev);
-      
+
       // ------------------------------------------------------------------------------------------For notifications
       try {
+        // Create a comma-separated list of all roles in the hierarchy
+        const rolesList = Object.values(roleHierarchy).join(', ');
+
         await sendNotification({
           receiver_ids: ['admin'],
           title: `Send for approval : ${bomDetail.bomNumber || 'BOM'}`,
-          message: `Send for approval ${bomDetail.bomNumber || 'BOM'} successfully to ${roleHierarchy.level1} and ${roleHierarchy.level2}.`,
+          message: `Send for approval ${bomDetail.bomNumber || 'BOM'} successfully to ${rolesList}.`,
           service_type: 'CRM',
           link: '/bom',
           sender_id: userRole || 'user',
@@ -288,11 +330,11 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                     <FileText className="h-8 w-8 text-blue-500" />
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">{bomDetail.name}</h2>
-                     <div>
-                       <p className="text-sm font-bold text-blue-600">BOM : {bomDetail.bomNumber || '-'}</p>
-                       <p className="text-sm font-bold text-blue-600">LEAD : {bomDetail.lead_number || '-'} - {bomDetail.lead_business_name}</p>
-                       <p className="text-sm font-bold text-green-600">Template : {bomDetail.bomTemplateNumber || '-'}</p>
-                     </div>
+                      <div>
+                        <p className="text-sm font-bold text-blue-600">BOM : {bomDetail.bomNumber || '-'}</p>
+                        <p className="text-sm font-bold text-blue-600">LEAD : {bomDetail.lead_number || '-'} - {bomDetail.lead_business_name}</p>
+                        <p className="text-sm font-bold text-green-600">Template : {bomDetail.bomTemplateNumber || '-'}</p>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -312,11 +354,11 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(bomDetail.approvalStatus)}`}>
                         {bomDetail.approvalStatus}
                       </span>
-                      
+
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm font-medium text-gray-700">Description:</span>
@@ -346,7 +388,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                   <div className="space-y-4">
                     {bomDetail.specs.map((spec) => (
                       <div key={spec.id} className="border border-gray-200 rounded-lg">
-                        <div 
+                        <div
                           className="p-4 bg-gray-50 border-b border-gray-200 cursor-pointer"
                           onClick={() => toggleSpecExpansion(spec.id)}
                         >
@@ -365,7 +407,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                             </div>
                           </div>
                         </div>
-                        
+
                         {spec.isExpanded && (
                           <div className="p-4">
                             {spec.items.length > 0 ? (
@@ -414,7 +456,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                         )}
                       </div>
                     ))}
-                    
+
                     {/* Grand Total */}
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <div className="flex justify-between items-center">
@@ -447,7 +489,7 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
 
         <div className="flex justify-between p-6 border-t border-gray-200">
           <div>
-            {bomDetail && (bomDetail.approvalStatus.toLowerCase() === 'revisit'|| bomDetail.approvalStatus.toLowerCase() === 'pending') && (
+            {bomDetail && (bomDetail.approvalStatus.toLowerCase() === 'revisit' || bomDetail.approvalStatus.toLowerCase() === 'pending') && (
               <button
                 onClick={handleSendForApproval}
                 disabled={sendingForApproval}
@@ -499,54 +541,54 @@ const BOMViewModal: React.FC<BOMViewModalProps> = ({
                   {bomDetail.approvalDetails
                     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
                     .map((approval) => (
-                    <div 
-                      key={approval.id} 
-                      className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm font-medium text-gray-900 capitalize">
-                                {approval.approver_role.replace('_', ' ')}
-                              </span>
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(approval.approval_status)}`}>
-                                {approval.approval_status}
-                              </span>
+                      <div
+                        key={approval.id}
+                        className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-medium text-gray-900 capitalize">
+                                  {approval.approver_role.replace('_', ' ')}
+                                </span>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(approval.approval_status)}`}>
+                                  {approval.approval_status}
+                                </span>
+                              </div>
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                              <div>
+                                <span className="text-xs font-medium text-gray-500">Approved By:</span>
+                                <p className="text-sm text-gray-900">{approval.approved_by || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <span className="text-xs font-medium text-gray-500">Date:</span>
+                                <p className="text-sm text-gray-900">
+                                  {new Date(approval.updated_at).toLocaleString('en-IN', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+
+                            {approval.approval_comment && (
+                              <div>
+                                <span className="text-xs font-medium text-gray-500">Comment:</span>
+                                <p className="text-sm text-gray-700 mt-1 p-2 bg-white rounded border">
+                                  {approval.approval_comment}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                            <div>
-                              <span className="text-xs font-medium text-gray-500">Approved By:</span>
-                              <p className="text-sm text-gray-900">{approval.approved_by || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <span className="text-xs font-medium text-gray-500">Date:</span>
-                              <p className="text-sm text-gray-900">
-                                {new Date(approval.updated_at).toLocaleString('en-IN', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {approval.approval_comment && (
-                            <div>
-                              <span className="text-xs font-medium text-gray-500">Comment:</span>
-                              <p className="text-sm text-gray-700 mt-1 p-2 bg-white rounded border">
-                                {approval.approval_comment}
-                              </p>
-                            </div>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">

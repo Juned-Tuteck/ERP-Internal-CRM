@@ -46,6 +46,8 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
   const [states, setStates] = useState<Array<{ id: string; name: string }>>([]);
   const [districts, setDistricts] = useState<Array<{ id: string; name: string }>>([]);
 
+  console.log("Competitor---", Competitor);
+
   const [mappedApiData, setMappedApiData] = useState<any>({
     ...Competitor,
     panNumber: "ABCDE1234F",
@@ -434,7 +436,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
               {/* <p className="text-xs text-gray-500">Total Revenue</p> */}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {hasActionAccess('Edit', 'All competitors', 'competitors') && (
+              {hasActionAccess('Edit', 'All competitors', 'Competitor Master') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
@@ -443,7 +445,7 @@ const CompetitorDetails: React.FC<CompetitorDetailsProps> = ({
                   <SquarePen className="h-5 w-5" /> {((Competitor.status === "approved" || Competitor.status === "revisit")) && "EDIT after approval"}
                 </button>
               )}
-              {(Competitor.status === "pending" || Competitor.status === "draft") && hasActionAccess('Deactivate', 'All Competitors', 'Competitors') && (
+              {(Competitor.status === "pending" || Competitor.status === "draft") && hasActionAccess('Deactivate', 'All competitors', 'Competitor Master') && (
                 <button
                   onClick={() => setIsDeactivateModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"

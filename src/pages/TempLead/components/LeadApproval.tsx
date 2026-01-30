@@ -337,7 +337,7 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                         {lead.approvalStatus !== "APPROVED" &&
                           lead.approvalStatus !== "REJECTED" ? (
                           <>
-                            {hasActionAccess('Approve', 'Lead Approval', 'Lead') && (
+                            {hasActionAccess('Approve', 'Lead Approval', 'Lead Creation') && (
                               <button
                                 onClick={() =>
                                   handleApprovalClick(lead, "approved")
@@ -348,7 +348,7 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                                 Approve
                               </button>
                             )}
-                            {hasActionAccess('Reject', 'Lead Approval', 'Lead') && (
+                            {hasActionAccess('Reject', 'Lead Approval', 'Lead Creation') && (
                               <button
                                 onClick={() =>
                                   handleApprovalClick(lead, "rejected")

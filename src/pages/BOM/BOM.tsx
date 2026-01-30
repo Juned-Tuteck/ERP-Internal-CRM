@@ -140,7 +140,7 @@ const BOM: React.FC = () => {
             <Filter className="h-4 w-4 mr-2" />
             Filter
           </button> */}
-          {activeTab === "templates" && hasActionAccess('Create Template', 'Bom templates', 'BOM') && (
+          {activeTab === "templates" && hasActionAccess('Create Template', 'Bom templates', 'Quotation BOQ / Line Items') && (
             <button
               onClick={() => setIsCreateTemplateOpen(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
@@ -149,7 +149,7 @@ const BOM: React.FC = () => {
               Create Template
             </button>
           )}
-          {activeTab === "boms" && hasActionAccess('Create BOM', 'Boms', 'BOM') && (
+          {activeTab === "boms" && hasActionAccess('Create BOM', 'Boms', 'Quotation BOQ / Line Items') && (
             <button
               onClick={() => setIsCreateBOMOpen(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"

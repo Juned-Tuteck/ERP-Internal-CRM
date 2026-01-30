@@ -350,7 +350,7 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2 mt-1">
-              {hasActionAccess('edit', 'All Associates', 'Associates') && (
+              {hasActionAccess('edit', 'All Associates', 'Associate Master') && (
                 <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
@@ -359,7 +359,7 @@ const AssociateDetails: React.FC<AssociateDetailsProps> = ({
                   <SquarePen className="h-5 w-5" />
                 </button>
               )}
-              {(mappedApiData.status === "PENDING" || mappedApiData.status === "draft") && hasActionAccess('Deactivate', 'All Associates', 'Associates') && (
+              {(mappedApiData.status === "PENDING" || mappedApiData.status === "draft") && hasActionAccess('Deactivate', 'All Associates', 'Associate Master') && (
                 <button
                   onClick={() => setIsDeactivateModalOpen(true)}
                   className="rounded-full p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 transition"

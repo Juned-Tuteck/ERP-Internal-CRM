@@ -72,7 +72,7 @@ const Leads: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Leads Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Opportunity Management</h1>
         </div>
         <div className="text-center py-12">
           <div className="text-gray-400 text-6xl mb-4">🔒</div>
@@ -87,7 +87,7 @@ const Leads: React.FC = () => {
     <ToastProvider>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Leads Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Opportunity Management</h1>
           <div className="flex space-x-3">
             {/* <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
               <Download className="h-4 w-4 mr-2" />
@@ -97,13 +97,13 @@ const Leads: React.FC = () => {
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </button> */}
-            {activeTab === 'leads' && hasActionAccess('Create Lead', 'All Leads', 'Lead') && (
+            {activeTab === 'leads' && hasActionAccess('Create Lead', 'All Leads', 'Opportunity') && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-500 hover:bg-primary-600"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create Lead
+                Opportunity Creation
               </button>
             )}
           </div>

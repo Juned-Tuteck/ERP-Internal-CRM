@@ -399,7 +399,7 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                   </td> */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      {hasActionAccess('Edit ', 'Bom templates', 'BOM') && (
+                      {hasActionAccess('Edit ', 'Bom templates', 'Quotation BOQ / Line Items') && (
                         <button
                           className="text-blue-600 hover:text-blue-900"
                           onClick={(e) => {
@@ -410,12 +410,12 @@ const BOMTemplateList: React.FC<BOMTemplateListProps> = ({
                           <Edit className="h-4 w-4" />
                         </button>
                       )}
-                      {hasActionAccess('Download', 'Bom templates', 'BOM') && (
+                      {hasActionAccess('Download', 'Bom templates', 'Quotation BOQ / Line Items') && (
                         <button className="text-indigo-600 hover:text-indigo-900">
                           <Download className="h-4 w-4" />
                         </button>
                       )}
-                      {hasActionAccess('Delete', 'Bom templates', 'BOM') && (
+                      {hasActionAccess('Delete', 'Bom templates', 'Quotation BOQ / Line Items') && (
                         <button
                           className="text-red-600 hover:text-red-900"
                           onClick={(e) => {
