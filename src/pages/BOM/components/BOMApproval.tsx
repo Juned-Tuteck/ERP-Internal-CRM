@@ -59,7 +59,7 @@ interface BOMApprovalProps {
 const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
   //----------------------------------------------------------------------------------- For Notification
   const token = localStorage.getItem('auth_token') || '';
-  const { userData } = useCRM();
+  const { userData, userAccesses } = useCRM();
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
   //------------------------------------------------------------------------------------
@@ -79,10 +79,7 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
   const [selectedBOMNumber, setSelectedBOMNumber] = useState("");
   const { hasActionAccess } = useCRM();
 
-  const roleHierarchy = {
-    level1: "design engineer",
-    level2: "sales manager"
-  };
+  const [roleHierarchy, setRoleHierarchy] = useState<Record<string, string>>({});
 
   // Check if user can take action based on hierarchy
   const canTakeAction = (bom: any, action: "approve" | "reject" | "revisit") => {
@@ -94,17 +91,32 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
       return { canAct: false, reason: "No pending approval for your role" };
     }
 
-    // If current user is level2, check if level1 is approved
-    if (userRole === roleHierarchy.level2) {
-      const level1Approval = bom.approvals?.find(
-        (approval: ApprovalDetail) => approval.approver_role === roleHierarchy.level1
-      );
+    // Find the current user's level in the hierarchy
+    let currentUserLevel: number | null = null;
+    for (const [level, roleName] of Object.entries(roleHierarchy)) {
+      if (roleName === userRole) {
+        currentUserLevel = parseInt(level.replace('level', ''));
+        break;
+      }
+    }
 
-      if (!level1Approval || level1Approval.approval_status !== "APPROVED") {
-        return {
-          canAct: false,
-          reason: `${roleHierarchy.level1} approval is pending so you cannot ${action}`
-        };
+    // If user's level is found and it's not level1, check all previous levels
+    if (currentUserLevel && currentUserLevel > 1) {
+      // Check all previous levels (from level1 to level(n-1))
+      for (let i = 1; i < currentUserLevel; i++) {
+        const previousLevelRole = roleHierarchy[`level${i}`];
+        if (previousLevelRole) {
+          const previousLevelApproval = bom.approvals?.find(
+            (approval: ApprovalDetail) => approval.approver_role === previousLevelRole
+          );
+
+          if (!previousLevelApproval || previousLevelApproval.approval_status !== "APPROVED") {
+            return {
+              canAct: false,
+              reason: `${previousLevelRole} approval is pending so you cannot ${action}`
+            };
+          }
+        }
       }
     }
 
@@ -148,6 +160,56 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
 
     fetchBOMs();
   }, [userRole]);
+
+  // Fetch role hierarchy from API
+  useEffect(() => {
+    const fetchRoleHierarchy = async () => {
+      try {
+        // Get access_id for BOM module
+        const bomAccess = userAccesses?.find(
+          (access) =>
+            access.level_type === 'MENU' &&
+            access.name.toLowerCase() === 'quotation boq / line items'
+        );
+
+        if (!bomAccess?.access_id) {
+          console.warn('BOM access_id not found');
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/approvals/hierarchy/${bomAccess.access_id}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          // Transform the API response to { level1: "role_name", level2: "role_name", ... }
+          const hierarchy: Record<string, string> = {};
+          data.data.forEach((item: any) => {
+            hierarchy[`level${item.hierarchy_level}`] = item.role_name;
+          });
+
+          const reversed: Record<string, string> = {};
+          const levels = Object.keys(hierarchy).length;
+
+          for (let i = 1; i <= levels; i++) {
+            reversed[`level${levels - i + 1}`] = hierarchy[`level${i}`];
+          }
+
+          console.log("**Hierarchy", hierarchy);
+          console.log("**Reversed", reversed);
+
+          setRoleHierarchy(reversed);
+        }
+      } catch (error) {
+        console.error('Error fetching role hierarchy:', error);
+      }
+    };
+
+    if (userAccesses && userAccesses.length > 0) {
+      fetchRoleHierarchy();
+    }
+  }, [userAccesses]);
 
   // Calculate total value from API data
   const calculateTotalValue = (apiBOM: BOMData) => {
@@ -286,8 +348,12 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
         );
 
         // Step 2: Update the main BOM table for different scenarios
-        if (userRole === roleHierarchy.level2 && actionType === "approve") {
-          // For Level 2 (CRM Zonal Head) final approval
+        // Find the highest level in the hierarchy
+        const hierarchyLevels = Object.keys(roleHierarchy).length;
+        const finalLevelRole = roleHierarchy[`level${hierarchyLevels}`];
+
+        if (userRole === finalLevelRole && actionType === "approve") {
+          // For final level approval, update the main BOM status to APPROVED
           await updateBOM(selectedBOM.id, {
             approval_status: status,
             updated_by: userData?.id || userData?.email || userRole
@@ -490,10 +556,10 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
                               </span>
                               <span
                                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${approval.approval_status === "APPROVED"
-                                    ? "bg-green-100 text-green-800 border-green-200"
-                                    : approval.approval_status === "REJECTED"
-                                      ? "bg-red-100 text-red-800 border-red-200"
-                                      : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                  ? "bg-green-100 text-green-800 border-green-200"
+                                  : approval.approval_status === "REJECTED"
+                                    ? "bg-red-100 text-red-800 border-red-200"
+                                    : "bg-yellow-100 text-yellow-800 border-yellow-200"
                                   }`}
                               >
                                 {approval.approval_status}
@@ -578,10 +644,10 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
                               <div className="flex flex-col space-y-1">
                                 <span
                                   className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide border ${currentUserApproval.approval_status === "APPROVED"
-                                      ? "bg-green-100 text-green-800 border-green-300"
-                                      : currentUserApproval.approval_status === "REJECTED"
-                                        ? "bg-red-100 text-red-800 border-red-300"
-                                        : "bg-gray-100 text-gray-700 border-gray-300"
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : currentUserApproval.approval_status === "REJECTED"
+                                      ? "bg-red-100 text-red-800 border-red-300"
+                                      : "bg-gray-100 text-gray-700 border-gray-300"
                                     }`}
                                 >
                                   {currentUserApproval.approval_status === "APPROVED" && (
@@ -719,10 +785,10 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
                   ((actionType === "reject" || actionType === "revisit") && !reason.trim()) || actionLoading
                 }
                 className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${actionType === "approve"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : actionType === "reject"
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-yellow-600 hover:bg-yellow-700"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : actionType === "reject"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-yellow-600 hover:bg-yellow-700"
                   } disabled:bg-gray-300 disabled:cursor-not-allowed`}
               >
                 {actionLoading ? (
@@ -871,10 +937,10 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
 
                           {/* Timeline dot */}
                           <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${approval.approval_status === "APPROVED"
-                              ? "bg-green-100 text-green-600"
-                              : approval.approval_status === "REJECTED"
-                                ? "bg-red-100 text-red-600"
-                                : "bg-yellow-100 text-yellow-600"
+                            ? "bg-green-100 text-green-600"
+                            : approval.approval_status === "REJECTED"
+                              ? "bg-red-100 text-red-600"
+                              : "bg-yellow-100 text-yellow-600"
                             }`}>
                             {approval.approval_status === "APPROVED" ? (
                               <CheckCircle className="h-4 w-4" />
@@ -895,10 +961,10 @@ const BOMApproval: React.FC<BOMApprovalProps> = ({ onApprovalAction }) => {
                                   </span>
                                   <span
                                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${approval.approval_status === "APPROVED"
-                                        ? "bg-green-100 text-green-800"
-                                        : approval.approval_status === "REJECTED"
-                                          ? "bg-red-100 text-red-800"
-                                          : "bg-yellow-100 text-yellow-800"
+                                      ? "bg-green-100 text-green-800"
+                                      : approval.approval_status === "REJECTED"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-yellow-100 text-yellow-800"
                                       }`}
                                   >
                                     {approval.approval_status}
