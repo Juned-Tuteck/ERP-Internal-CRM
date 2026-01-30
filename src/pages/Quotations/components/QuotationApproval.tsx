@@ -63,7 +63,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
 }) => {
   //----------------------------------------------------------------------------------- For Notification
   const token = localStorage.getItem('auth_token') || '';
-  const { userData } = useCRM();
+  const { userData, userAccesses } = useCRM();
   const userRole = userData?.role || '';
   const { sendNotification } = useNotifications(userRole, token);
   //------------------------------------------------------------------------------------
@@ -83,10 +83,7 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
   const [selectedQuotationNumber, setSelectedQuotationNumber] = useState("");
   const { hasActionAccess } = useCRM();
 
-  const roleHierarchy = {
-    level1: "sales manager",
-    level2: "crm zonal head"
-  };
+  const [roleHierarchy, setRoleHierarchy] = useState<Record<string, string>>({});
 
   // Check if user can take action based on hierarchy
   const canTakeAction = (quotation: any, action: "approve" | "reject" | "revisit") => {
@@ -98,17 +95,32 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
       return { canAct: false, reason: "No pending approval for your role" };
     }
 
-    // If current user is level2, check if level1 is approved
-    if (userRole === roleHierarchy.level2) {
-      const level1Approval = quotation.approvals?.find(
-        (approval: ApprovalDetail) => approval.approver_role === roleHierarchy.level1
-      );
+    // Find the current user's level in the hierarchy
+    let currentUserLevel: number | null = null;
+    for (const [level, roleName] of Object.entries(roleHierarchy)) {
+      if (roleName === userRole) {
+        currentUserLevel = parseInt(level.replace('level', ''));
+        break;
+      }
+    }
 
-      if (!level1Approval || level1Approval.approval_status !== "APPROVED") {
-        return {
-          canAct: false,
-          reason: `${roleHierarchy.level1} approval is pending so you cannot ${action}`
-        };
+    // If user's level is found and it's not level1, check all previous levels
+    if (currentUserLevel && currentUserLevel > 1) {
+      // Check all previous levels (from level1 to level(n-1))
+      for (let i = 1; i < currentUserLevel; i++) {
+        const previousLevelRole = roleHierarchy[`level${i}`];
+        if (previousLevelRole) {
+          const previousLevelApproval = quotation.approvals?.find(
+            (approval: ApprovalDetail) => approval.approver_role === previousLevelRole
+          );
+
+          if (!previousLevelApproval || previousLevelApproval.approval_status !== "APPROVED") {
+            return {
+              canAct: false,
+              reason: `${previousLevelRole} approval is pending so you cannot ${action}`
+            };
+          }
+        }
       }
     }
 
@@ -152,6 +164,56 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
 
     fetchQuotations();
   }, [userRole]);
+
+  // Fetch role hierarchy from API
+  useEffect(() => {
+    const fetchRoleHierarchy = async () => {
+      try {
+        // Get access_id for Quotation module
+        const quotationAccess = userAccesses?.find(
+          (access) =>
+            access.level_type === 'MENU' &&
+            access.name.toLowerCase() === 'quotation header'
+        );
+
+        if (!quotationAccess?.access_id) {
+          console.warn('Quotation access_id not found');
+          return;
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/approvals/hierarchy/${quotationAccess.access_id}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          // Transform the API response to { level1: "role_name", level2: "role_name", ... }
+          const hierarchy: Record<string, string> = {};
+          data.data.forEach((item: any) => {
+            hierarchy[`level${item.hierarchy_level}`] = item.role_name;
+          });
+
+          const reversed: Record<string, string> = {};
+          const levels = Object.keys(hierarchy).length;
+
+          for (let i = 1; i <= levels; i++) {
+            reversed[`level${levels - i + 1}`] = hierarchy[`level${i}`];
+          }
+
+          console.log("**Hierarchy", hierarchy);
+          console.log("**Reversed", reversed);
+
+          setRoleHierarchy(reversed);
+        }
+      } catch (error) {
+        console.error('Error fetching role hierarchy:', error);
+      }
+    };
+
+    if (userAccesses && userAccesses.length > 0) {
+      fetchRoleHierarchy();
+    }
+  }, [userAccesses]);
 
   // Calculate total value from API data
   const calculateTotalValue = (apiQuotation: QuotationData) => {
@@ -310,8 +372,12 @@ const QuotationApproval: React.FC<QuotationApprovalProps> = ({
         );
 
         // Step 2: Update the main customer quotation table for different scenarios
-        if (userRole === roleHierarchy.level2 && actionType === "approve") {
-          // For Level 2 (CRM Zonal Head) final approval
+        // Find the highest level in the hierarchy
+        const hierarchyLevels = Object.keys(roleHierarchy).length;
+        const finalLevelRole = roleHierarchy[`level${hierarchyLevels}`];
+
+        if (userRole === finalLevelRole && actionType === "approve") {
+          // For final level approval, update the main quotation status to APPROVED
           await updateCustomerQuotation(selectedQuotation.id, {
             approval_status: status,
             updated_by: userData?.id || userData?.email || userRole

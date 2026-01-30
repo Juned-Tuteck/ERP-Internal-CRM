@@ -204,6 +204,7 @@ export const getTempCustomers = async (): Promise<any[]> => {
     }
   );
 
-  return response.data.data || [];
+  // return response.data.data
+  return response.data.data.filter((customer: any) => customer.approval_status.toUpperCase() === 'APPROVED') || [];
 };
 
