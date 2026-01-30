@@ -934,13 +934,15 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="flex items-center text-lg font-bold text-green-600">
-              <TrendingUp className="h-5 w-5 mr-1" />
-              {displayLead.projectValue}L
+          <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-brand-50 to-brand-100 p-3 rounded-lg border border-brand-200">
+            {/* Project Value Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full shadow-sm">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-bold text-green-600">{displayLead.projectValue}L</span>
             </div>
-            <div className="flex space-x-2 mt-2">
-              {/* Send for Approval Button */}
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1.5">
               {userData?.id && (
                 <>
                   <ApprovalButton
@@ -958,21 +960,21 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                     onSuccess={() => setRefreshTrigger(prev => prev + 1)}
                     className="text-xs px-3 py-1.5"
                   />
-                  {/* Approval History Info Icon */}
+
                   {(displayLead.approvalStatus?.toUpperCase() === 'PENDING_FOR_APPROVAL' ||
-                    displayLead.approvalStatus?.toUpperCase() === 'APPROVED' || displayLead.approvalStatus?.toUpperCase() === 'REJECTED') && (
+                    displayLead.approvalStatus?.toUpperCase() === 'APPROVED' ||
+                    displayLead.approvalStatus?.toUpperCase() === 'REJECTED') && (
                       <button
                         onClick={() => setShowHistoryModal(true)}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-full text-blue-600 hover:bg-blue-50 transition"
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors"
                         title="View Approval History"
                       >
-                        <Info className="h-4 w-4" />
+                        <Info className="h-3.5 w-3.5" />
                       </button>
                     )}
                 </>
               )}
 
-              {/* Generate Quotation Number Button */}
               {displayLead.approvalStatus === "approved" &&
                 displayLead.leadStage !== "Quoted" &&
                 displayLead.leadStage !== "Won" &&
@@ -981,85 +983,44 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onConvert }) => {
                   <button
                     onClick={() => setShowGenerateQuotationModal(true)}
                     disabled={isGeneratingQuotation}
-                    className="rounded-full p-2 text-gray-500 hover:text-purple-500 hover:bg-purple-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-purple-600 hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Generate Quotation Number"
                   >
-                    {isGeneratingQuotation ? (
-                      <div className="animate-spin">
-                        <FileBarChart className="h-5 w-5" />
-                      </div>
-                    ) : (
-                      <FileBarChart className="h-5 w-5" />
-                    )}
+                    <FileBarChart className={`h-3.5 w-3.5 ${isGeneratingQuotation ? 'animate-spin' : ''}`} />
                   </button>
                 )}
-              {/* Update Status: Only visible when lead is approved */}
+
               {displayLead.approvalStatus === "approved" &&
-                displayLead.leadStage !== "Won" && displayLead.leadStage !== "Lost" && hasActionAccess('Update Status', 'All Leads', 'Opportunity') && (
+                displayLead.leadStage !== "Won" &&
+                displayLead.leadStage !== "Lost" &&
+                hasActionAccess('Update Status', 'All Leads', 'Opportunity') && (
                   <button
                     onClick={() => setShowWinLossModal(true)}
-                    className="rounded-full p-2 text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-colors"
                     title="Update Status"
                   >
-                    <GitPullRequestArrow className="h-5 w-5" />
+                    <GitPullRequestArrow className="h-3.5 w-3.5" />
                   </button>
                 )}
-              {/* History Button */}
-              {/* {hasActionAccess('View History', 'All Leads', 'Lead') && (
-                <button
-                  onClick={() => setShowHistoryModal(true)}
-                  className="rounded-full p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition"
-                  title="View History"
-                >
-                  <History className="h-5 w-5" />
-                </button>
-              )} */}
-              {/* Edit Button */}
-              {/* {hasActionAccess('Edit', 'All Leads', 'Lead') && (
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  className={`rounded-full p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 transition ${displayLead.approvalStatus === "approved" ||
-                    displayLead.approvalStatus === "rejected"
-                    ? "opacity-50 cursor-not-allowed pointer-events-none"
-                    : ""
-                    }`}
-                  title="Edit Lead"
-                  disabled={
-                    displayLead.approvalStatus === "approved" ||
-                    displayLead.approvalStatus === "rejected"
-                  }
-                >
-                  <Edit2 className="h-5 w-5" />
-                </button>
-              )} */}
 
-              {(displayLead.approvalStatus === "pending" || displayLead.approvalStatus === "draft" || userData?.role == 'admin') && hasActionAccess('edit', 'All customers', 'Customer Master') && (
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  className="rounded-full p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition"
-                  title="Edit Customer"
-                >
-                  <SquarePen className="h-5 w-5" /> {(userData?.role == 'admin' && !(displayLead.approvalStatus === "pending" || displayLead.approvalStatus === "draft")) && "Super Admin EDIT"}
-                </button>
-              )}
-              {/* Delete Button */}
-              {/* <button
-                onClick={() => setShowDeleteModal(true)}
-                className="rounded-full p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 transition"
-                title="Delete Lead"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button> */}
-              {/* Create Project Button */}
-              {/* {displayLead.leadStage === "Won" && (
-                <button
-                  onClick={() => onConvert(displayLead.id)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-                >
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  Create Project
-                </button>
-              )} */}
+              {(displayLead.approvalStatus === "pending" ||
+                displayLead.approvalStatus === "draft" ||
+                userData?.role === 'admin') &&
+                hasActionAccess('edit', 'All customers', 'Customer Master') && (
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors group relative"
+                    title="Edit Customer"
+                  >
+                    <SquarePen className="h-3.5 w-3.5" />
+                    {userData?.role === 'admin' &&
+                      !(displayLead.approvalStatus === "pending" || displayLead.approvalStatus === "draft") && (
+                        <span className="absolute -top-8 right-0 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          Admin Override
+                        </span>
+                      )}
+                  </button>
+                )}
             </div>
           </div>
         </div>
