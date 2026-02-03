@@ -333,10 +333,10 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                   : `${filteredLeads.length} leads awaiting approval`}
               </p>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-amber-600">
+            {/* <div className="flex items-center space-x-2 text-sm text-amber-600">
               <Clock className="h-4 w-4" />
               <span>Requires {getPendingRoleName()} Approval</span>
-            </div>
+            </div> */}
           </div>
 
           {/* Search Bar - Right Aligned */}
@@ -469,68 +469,70 @@ const LeadApproval: React.FC<LeadApprovalProps> = ({ onApprovalAction }) => {
                       </div>
                     </td> */}
                     <td className="px-6 py-4">
-                      <div className="flex flex-col space-y-1">
-                        {lead.approvalStatus !== "APPROVED" &&
-                          lead.approvalStatus !== "REJECTED" ? (
-                          <>
-                            {(() => {
-                              const { canApprove, message } = canUserApprove(lead.id);
-                              const hasApproveAccess = hasActionAccess('Approve', 'Lead Approval', 'Opportunity');
-                              const hasRejectAccess = hasActionAccess('Reject', 'Lead Approval', 'Opportunity');
-                              const isDisabled = !canApprove;
+                      {lead.approvalStatus === 'PENDING_FOR_APPROVAL' && (
+                        <div className="flex flex-col space-y-1">
+                          {lead.approvalStatus !== "APPROVED" &&
+                            lead.approvalStatus !== "REJECTED" ? (
+                            <>
+                              {(() => {
+                                const { canApprove, message } = canUserApprove(lead.id);
+                                const hasApproveAccess = hasActionAccess('Approve', 'Lead Approval', 'Opportunity');
+                                const hasRejectAccess = hasActionAccess('Reject', 'Lead Approval', 'Opportunity');
+                                const isDisabled = !canApprove;
 
-                              return (
-                                <>
-                                  <div className="flex items-center space-x-2">
-                                    {hasApproveAccess && (
-                                      <button
-                                        onClick={() => handleApprovalClick(lead, "approved")}
-                                        disabled={isDisabled}
-                                        className={`inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white ${isDisabled
-                                          ? 'bg-gray-400 cursor-not-allowed opacity-60'
-                                          : 'bg-green-600 hover:bg-green-700'
-                                          }`}
-                                        title={isDisabled ? message : 'Approve this lead'}
-                                      >
-                                        <CheckCircle className="h-3 w-3 mr-1" />
-                                        Approve
-                                      </button>
+                                return (
+                                  <>
+                                    <div className="flex items-center space-x-2">
+                                      {hasApproveAccess && (
+                                        <button
+                                          onClick={() => handleApprovalClick(lead, "approved")}
+                                          disabled={isDisabled}
+                                          className={`inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white ${isDisabled
+                                            ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                                            : 'bg-green-600 hover:bg-green-700'
+                                            }`}
+                                          title={isDisabled ? message : 'Approve this lead'}
+                                        >
+                                          <CheckCircle className="h-3 w-3 mr-1" />
+                                          Approve
+                                        </button>
+                                      )}
+                                      {hasRejectAccess && (
+                                        <button
+                                          onClick={() => handleApprovalClick(lead, "rejected")}
+                                          disabled={isDisabled}
+                                          className={`inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white ${isDisabled
+                                            ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                                            : 'bg-red-600 hover:bg-red-700'
+                                            }`}
+                                          title={isDisabled ? message : 'Reject this lead'}
+                                        >
+                                          <XCircle className="h-3 w-3 mr-1" />
+                                          Reject
+                                        </button>
+                                      )}
+                                    </div>
+                                    {isDisabled && message && (
+                                      <p className="text-xs text-gray-500 italic mt-1">
+                                        {message}
+                                      </p>
                                     )}
-                                    {hasRejectAccess && (
-                                      <button
-                                        onClick={() => handleApprovalClick(lead, "rejected")}
-                                        disabled={isDisabled}
-                                        className={`inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-white ${isDisabled
-                                          ? 'bg-gray-400 cursor-not-allowed opacity-60'
-                                          : 'bg-red-600 hover:bg-red-700'
-                                          }`}
-                                        title={isDisabled ? message : 'Reject this lead'}
-                                      >
-                                        <XCircle className="h-3 w-3 mr-1" />
-                                        Reject
-                                      </button>
-                                    )}
-                                  </div>
-                                  {isDisabled && message && (
-                                    <p className="text-xs text-gray-500 italic mt-1">
-                                      {message}
-                                    </p>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </>
-                        ) : (
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${lead.approvalStatus === "APPROVED"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                              }`}
-                          >
-                            {lead.approvalStatus}
-                          </span>
-                        )}
-                      </div>
+                                  </>
+                                );
+                              })()}
+                            </>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${lead.approvalStatus === "APPROVED"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                                }`}
+                            >
+                              {lead.approvalStatus}
+                            </span>
+                          )}
+                        </div>)
+                      }
                     </td>
                   </tr>
                 ))}
