@@ -203,11 +203,11 @@ export const updateQuotationDecision = async (
   } = {
     status: status.toLowerCase()
   };
-  
+
   if (approved_by) {
     requestBody.approved_by = approved_by;
   }
-  
+
   if (approval_comment) {
     requestBody.approval_comment = approval_comment;
   }
@@ -287,4 +287,54 @@ export const updateQuotationStatus = async (id: string, status: string) => {
     approval_status: status
   });
   return response.data;
+};
+
+// Download quotation as PDF
+export const downloadQuotationPDF = async (id: string) => {
+  const response = await axios.get(`${API_BASE_URL}/customer-quotation/${id}/download-pdf`, {
+    responseType: 'arraybuffer', // More reliable for binary data across browsers
+    headers: {
+      'Accept': 'application/pdf'
+    }
+  });
+
+  // Create blob with explicit PDF type from arraybuffer
+  const blob = new Blob([response.data], { type: 'application/pdf' });
+
+  // Verify blob is not empty
+  if (blob.size === 0) {
+    throw new Error('Downloaded PDF is empty');
+  }
+
+  console.log('PDF blob created:', blob.size, 'bytes');
+
+  // Create a temporary URL for the blob
+  const url = window.URL.createObjectURL(blob);
+
+  // Create a temporary anchor element and trigger download
+  const link = document.createElement('a');
+  link.href = url;
+
+  // Extract filename from Content-Disposition header or use default
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = `Quotation_${id}.pdf`;
+
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1];
+    }
+  }
+
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+
+  // Cleanup with slight delay to ensure download starts
+  setTimeout(() => {
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }, 100);
+
+  return { success: true, filename };
 };
