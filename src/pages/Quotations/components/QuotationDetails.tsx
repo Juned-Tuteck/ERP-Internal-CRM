@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useCRM } from "../../../context/CRMContext";
 import CreateQuotationModal from "./CreateQuotationModal";
-import { getQuotationById, deleteQuotation, callRoleVariances, createBulkCustomerQuotationApprovals, updateQuotationStatus } from "../../../utils/quotationApi";
+import { getQuotationById, deleteQuotation, callRoleVariances, createBulkCustomerQuotationApprovals, updateQuotationStatus, downloadQuotationPDF } from "../../../utils/quotationApi";
 
 interface QuotationDetailsProps {
   quotation: any;
@@ -253,8 +253,26 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
   const [loading, setLoading] = useState(false);
   const [isSendingForApproval, setIsSendingForApproval] = useState(false);
   const [isApprovalSent, setIsApprovalSent] = useState(false);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [roleHierarchy, setRoleHierarchy] = useState<Record<string, string>>({});
   const { hasActionAccess, userAccesses } = useCRM();
+
+  // Handler for downloading quotation PDF
+  const handleDownloadPDF = async () => {
+    if (!quotation?.id) return;
+
+    setIsDownloadingPDF(true);
+    try {
+      await downloadQuotationPDF(quotation.id);
+      // Success - the file will be downloaded automatically
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      alert("Failed to download PDF. Please try again.");
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
+
 
   // Fetch detailed quotation information when quotation is selected
   useEffect(() => {
@@ -930,6 +948,16 @@ const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation, onQuotat
               {new Date(quotation.expiryDate).toLocaleDateString("en-IN")}
             </p>
             <div className="flex space-x-2 mt-2 items-center">
+              {/* Download PDF Button */}
+              <button
+                onClick={handleDownloadPDF}
+                disabled={isDownloadingPDF}
+                className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Download Quotation PDF"
+              >
+                <Download className="h-3 w-3 mr-1" />
+                {isDownloadingPDF ? "Downloading..." : "Download PDF"}
+              </button>
               {/* <button className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
                 <Download className="h-3 w-3 mr-1" />
                 Export
