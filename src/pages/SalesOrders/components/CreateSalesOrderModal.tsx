@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, ChevronLeft, ChevronRight, Plus, Trash2, Upload } from 'lucide-react';
 import { createSalesOrder, updateSalesOrderStep1, updateSalesOrderContacts, updateSalesOrderComments, getLeadWonQuotations, getQuotationById, LeadWonQuotation } from '../../../utils/salesOrderApi';
+import { getProjectCategories, Lookup } from '../../../utils/lookupsApi';
 
 interface CreateSalesOrderModalProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
   const [loading, setLoading] = useState(false);
   const [quotations, setQuotations] = useState<LeadWonQuotation[]>([]);
   const [loadingQuotations, setLoadingQuotations] = useState(false);
+  const [projectCategories, setProjectCategories] = useState<Lookup[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(false);
 
   const getInitialFormData = () => ({
     // Step 1: General Information
@@ -114,8 +117,24 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
       } else {
         fetchQuotations();
       }
+      // Always fetch lookups when modal opens
+      fetchLookups();
     }
   }, [isOpen, editMode, salesOrderData]);
+
+  const fetchLookups = async () => {
+    try {
+      setLoadingLookups(true);
+      const categories = await getProjectCategories();
+      setProjectCategories(categories);
+    } catch (error) {
+      console.error('Error fetching lookups:', error);
+      // Fallback to empty arrays if fetch fails
+      setProjectCategories([]);
+    } finally {
+      setLoadingLookups(false);
+    }
+  };
 
   const prefillFormData = (data: any) => {
     setFormData({
@@ -260,7 +279,6 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
     'Gurgaon HQ': ['Arjun Mehta', 'Deepika Joshi', 'Rohit Sharma']
   };
 
-  const projectCategories = ['Commercial', 'Residential', 'Industrial', 'Healthcare', 'Educational', 'Government'];
   const guaranteeTypes = ['ADVANCE PAYMENT GUARANTEE', 'BID BOND', 'FINANCIAL GUARANTEE', 'PERFORMANCE GUARANTEE'];
   const projectTemplates = ['Standard Ventilation Project', 'Commercial HVAC Project', 'Healthcare AMC Project', 'Residential Retrofit Project', 'Commercial Chiller Project'];
   const purposes = ['Performance Guarantee', 'Advance Payment Guarantee', 'Retention Money Guarantee', 'Bid Bond'];
@@ -974,11 +992,12 @@ const CreateSalesOrderModal: React.FC<CreateSalesOrderModalProps> = ({ isOpen, o
                             value={formData.projectCategory}
                             onChange={handleInputChange}
                             required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={loadingLookups}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                           >
-                            <option value="">Select Category</option>
+                            <option value="">{loadingLookups ? 'Loading...' : 'Select Category'}</option>
                             {projectCategories.map(category => (
-                              <option key={category} value={category}>{category}</option>
+                              <option key={category.id} value={category.id}>{category.title}</option>
                             ))}
                           </select>
                         </div>

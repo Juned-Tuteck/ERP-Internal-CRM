@@ -4,6 +4,7 @@ import CreateSalesOrderModal from './CreateSalesOrderModal';
 import { getSalesOrderById, getSalesOrderContactDetails, getSalesOrderComments, addSalesOrderComment, deleteSalesOrder, submitSalesOrderForApproval } from '../../../utils/salesOrderApi';
 import { getAllRolesInOrder } from '../../../utils/roleHierarchy';
 import { createProjectFromSalesOrder,updateSOStatusToProjectCreated } from '../../../utils/projectApi';
+import { getLookupTitleById } from '../../../utils/lookupsApi';
 
 interface SalesOrderDetailsProps {
   salesOrder: any;
@@ -20,6 +21,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [projectCreated, setProjectCreated] = useState(false);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -35,6 +37,15 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
         ]);
 
         setFullSalesOrder(details);
+        
+        // Fetch and map category name if project_category exists
+        if (details?.project_category) {
+          const categoryTitle = await getLookupTitleById(details.project_category, 'LOOKUP_PROJECT_TYPE');
+          setCategoryName(categoryTitle);
+        } else {
+          setCategoryName(null);
+        }
+        
         // setContacts(contactsData);
         // setComments(commentsData);
       } catch (error) {
@@ -171,7 +182,7 @@ const SalesOrderDetails: React.FC<SalesOrderDetailsProps> = ({ salesOrder, onRef
     workOrderNumber: fullSalesOrder.work_order_number || 'N/A',
     workOrderAmount: fullSalesOrder.work_order_amount ? `₹${parseFloat(fullSalesOrder.work_order_amount).toLocaleString('en-IN')}` : 'N/A',
     workOrderDate: fullSalesOrder.work_order_date || 'N/A',
-    projectCategory: fullSalesOrder.project_category || 'N/A',
+    projectCategory: categoryName || fullSalesOrder.project_category || 'N/A',
     projectTemplate: fullSalesOrder.project_template || 'N/A',
     projectAddress: fullSalesOrder.project_address || 'N/A',
     projectStartDate: fullSalesOrder.estimated_start_date || 'N/A',
